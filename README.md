@@ -31,7 +31,7 @@ Este proyecto es una implementación del juego de cartas **Guiñote** utilizando
 
 ### Instalación y ejecución
 
-// ODO
+//TODO
 
 ## Uso
 
