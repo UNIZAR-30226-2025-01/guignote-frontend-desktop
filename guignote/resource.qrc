@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/hide_password.png.png</file>
+        <file>icons/show_password.png</file>
+        <file>images/gold_ling.png</file>
+        <file>images/app_logo.png</file>
+    </qresource>
+</RCC>
