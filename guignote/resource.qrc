@@ -2,7 +2,11 @@
     <qresource prefix="/">
         <file>icons/hide_password.png.png</file>
         <file>icons/show_password.png</file>
-        <file>images/gold_ling.png</file>
         <file>images/app_logo.png</file>
+        <file>images/app_logo_white.png</file>
+        <file>images/app_logo_no_letters.png</file>
+        <file>fonts/GlossypersonaluseRegular-eZL93.otf</file>
+        <file>images/sword_king.png</file>
+        <file>images/set-golden-border-ornaments/gold_ornaments.png</file>
     </qresource>
 </RCC>
