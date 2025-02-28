@@ -89,7 +89,7 @@ MainWindow::MainWindow(QWidget *parent)
                           "padding: 12px 25px;"
                           "}"
                           "QPushButton:hover {"
-                          "background-color: #1f5a1f;"
+                          "background-color: #9b9b9b;"
                           "}";
     loginButton->setStyleSheet(buttonStyle);
     registerButton->setStyleSheet(buttonStyle);
