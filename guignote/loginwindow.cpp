@@ -20,6 +20,7 @@ LoginWindow::LoginWindow(QWidget *parent)
     // Ajustar un tamaño fijo (puedes modificarlo según tu preferencia)
     setFixedSize(480, 500);
 
+
     // Estilo general de la ventana
     setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
@@ -38,6 +39,8 @@ LoginWindow::LoginWindow(QWidget *parent)
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(15);
     mainLayout->setAlignment(Qt::AlignCenter);
+
+
 
     // Título "Iniciar Sesión"
     QLabel *titleLabel = new QLabel("Iniciar Sesión", this);
@@ -91,23 +94,26 @@ LoginWindow::LoginWindow(QWidget *parent)
     // Checkbox para "Recordar contraseña"
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
     QString checkBoxStyle = R"(
-        QCheckBox {
-            color: #ffffff;             /* Color del texto */
-            font-size: 14px;
-        }
-        QCheckBox::indicator {
-            width: 16px;               /* Ajusta el tamaño del indicador */
-            height: 16px;
-        }
-        QCheckBox::indicator:unchecked {
-            background-color: #c2c2c3; /* Fondo cuando está sin marcar */
-            border: 1px solid #545454; /* Borde */
-        }
-        QCheckBox::indicator:checked {
-            background-color: #545454; /* Fondo cuando está marcada */
-            border: 1px solid #e0e0e0;
-        }
-    )";
+    QCheckBox {
+        color: #ffffff;             /* Color del texto */
+        font-size: 14px;
+    }
+    QCheckBox::indicator {
+        width: 16px;               /* Ajusta el tamaño del indicador */
+        height: 16px;
+    }
+    QCheckBox::indicator:unchecked {
+        background-color: #c2c2c3; /* Fondo cuando está sin marcar */
+        border: 1px solid #545454; /* Borde */
+        image: none;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #545454; /* Fondo cuando está marcado */
+        border: 1px solid #e0e0e0;
+        image: url("icons/cross.png"); /* Aquí se muestra la imagen de la cruz */
+    }
+)";
+
     rememberCheck->setStyleSheet(checkBoxStyle);
     extraLayout->addWidget(rememberCheck);
     mainLayout->addLayout(extraLayout);
