@@ -17,7 +17,11 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        menu.h
+        menu.cpp
+        menu.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
 )
+
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(guignote

@@ -194,5 +194,5 @@ void MainWindow::repositionOrnaments() {
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+    delete ui;  // Solo eliminar si `ui` fue inicializado
 }
