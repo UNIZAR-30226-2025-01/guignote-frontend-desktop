@@ -8,5 +8,7 @@
         <file>fonts/GlossypersonaluseRegular-eZL93.otf</file>
         <file>images/sword_king.png</file>
         <file>images/set-golden-border-ornaments/gold_ornaments.png</file>
+        <file>icons/cross.png</file>
+        <file>icons/door.png</file>
     </qresource>
 </RCC>

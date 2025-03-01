@@ -7,12 +7,12 @@
 #include <QFrame>
 #include <QPushButton>
 #include <QGraphicsDropShadowEffect>
-#include <QGraphicsBlurEffect>
 #include <QFontDatabase>
 #include <QResizeEvent>
 #include <QTransform>
+#include <QDialog>
+#include <QApplication>
 #include "loginwindow.h"
-
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -20,12 +20,13 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomLeft(nullptr), cornerBottomRight(nullptr)
 {
     ui->setupUi(this);
+    setWindowTitle("Inicio");
 
     setMinimumSize(1090, 600);
     setMaximumSize(1920, 1080);
     resize(1090, 600);
 
-    // Si no existe, creamos el centralwidget
+    // Crear centralwidget si no existe
     if (!ui->centralwidget) {
         QWidget *central = new QWidget(this);
         setCentralWidget(central);
@@ -37,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
                         "fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
                         "}");
 
-    // Caja central (con shadow)
+    // Caja central (con sombra)
     QFrame *centralBox = new QFrame(ui->centralwidget);
     centralBox->setStyleSheet("QFrame {"
                               "background-color: #171718;"
@@ -102,7 +103,6 @@ MainWindow::MainWindow(QWidget *parent)
         loginWin->show();
     });
 
-
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     buttonLayout->setAlignment(Qt::AlignCenter);
     buttonLayout->addWidget(loginButton, 0, Qt::AlignCenter);
@@ -115,14 +115,74 @@ MainWindow::MainWindow(QWidget *parent)
     QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
     mainLayout->addStretch();
     mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
+
+    // --- NUEVO: Botón de salida con icono ---
+    QPushButton *exitIconButton = new QPushButton(ui->centralwidget);
+    exitIconButton->setIcon(QIcon(":/icons/door.png")); // Asegúrate de que la ruta sea la correcta
+    exitIconButton->setIconSize(QSize(50,50));
+    exitIconButton->setFlat(true);
+    exitIconButton->setStyleSheet("QPushButton { color: #ffffff; font-size: 18px; }"
+                                  "QPushButton:hover { color: #dddddd; }");
+    exitIconButton->setCursor(Qt::PointingHandCursor);
+    boxLayout->addWidget(exitIconButton, 0, Qt::AlignRight | Qt::AlignBottom);
     mainLayout->addStretch();
     ui->centralwidget->setLayout(mainLayout);
+
+    // Conexión: Al hacer click en el botón de salida se muestra el pop up de confirmación
+    connect(exitIconButton, &QPushButton::clicked, [=]() {
+        QDialog *confirmDialog = new QDialog(this);
+        confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+        confirmDialog->setModal(true);
+        confirmDialog->setFixedSize(300,150);
+        confirmDialog->setStyleSheet("QDialog {"
+                                     "background-color: #171718;"
+                                     "border-radius: 5px;"
+                                     "padding: 20px;"
+                                     "}");
+
+        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
+        dialogShadow->setBlurRadius(10);
+        dialogShadow->setColor(QColor(0, 0, 0, 80));
+        dialogShadow->setOffset(4, 4);
+        confirmDialog->setGraphicsEffect(dialogShadow);
+
+        QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
+        QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
+        confirmLabel->setStyleSheet("QFrame {"
+                      "background-color: #171718;"
+                      "border-radius: 5px;"
+                      "}");
+        confirmLabel->setAlignment(Qt::AlignCenter);
+        dialogLayout->addWidget(confirmLabel);
+
+        QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
+        QPushButton *yesButton = new QPushButton("Sí", confirmDialog);
+        QPushButton *noButton = new QPushButton("No", confirmDialog);
+        yesButton->setStyleSheet(buttonStyle);
+        noButton->setStyleSheet(buttonStyle);
+        yesButton->setFixedSize(100,40);
+        noButton->setFixedSize(100,40);
+        dialogButtonLayout->addWidget(yesButton);
+        dialogButtonLayout->addWidget(noButton);
+        dialogLayout->addLayout(dialogButtonLayout);
+
+        connect(yesButton, &QPushButton::clicked, [=]() {
+            qApp->quit();
+        });
+        connect(noButton, &QPushButton::clicked, [=]() {
+            confirmDialog->close();
+        });
+
+        // Centrar el diálogo en la ventana principal
+        confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        confirmDialog->show();
+    });
 
     // ---- Decoraciones en las esquinas (fuera de centralBox) ----
     ornamentSize = QSize(300, 299);
     QPixmap ornamentPixmap(":/images/set-golden-border-ornaments/gold_ornaments.png");
 
-    // Esquina superior izquierda (original)
+    // Esquina superior izquierda
     cornerTopLeft = new QLabel(ui->centralwidget);
     QPixmap topLeftPixmap = ornamentPixmap.scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     cornerTopLeft->setPixmap(topLeftPixmap);
@@ -132,7 +192,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerTopLeft->setStyleSheet("background: transparent;");
     cornerTopLeft->raise();
 
-    // Esquina superior derecha (voltear horizontalmente)
+    // Esquina superior derecha (volteada horizontalmente)
     cornerTopRight = new QLabel(ui->centralwidget);
     QTransform transformH;
     transformH.scale(-1, 1);
@@ -145,7 +205,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerTopRight->setStyleSheet("background: transparent;");
     cornerTopRight->raise();
 
-    // Esquina inferior izquierda (voltear verticalmente)
+    // Esquina inferior izquierda (volteada verticalmente)
     cornerBottomLeft = new QLabel(ui->centralwidget);
     QTransform transformV;
     transformV.scale(1, -1);
@@ -158,7 +218,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomLeft->setStyleSheet("background: transparent;");
     cornerBottomLeft->raise();
 
-    // Esquina inferior derecha (voltear horizontal y verticalmente)
+    // Esquina inferior derecha (volteada horizontal y verticalmente)
     cornerBottomRight = new QLabel(ui->centralwidget);
     QTransform transformHV;
     transformHV.scale(-1, -1);
@@ -171,7 +231,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomRight->setStyleSheet("background: transparent;");
     cornerBottomRight->raise();
 
-    // Posicionar las decoraciones (se actualizará en resizeEvent)
+    // Posicionar decoraciones en las esquinas
     repositionOrnaments();
 }
 
