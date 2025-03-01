@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
-        <file>icons/hide_password.png.png</file>
+        <file>icons/hide_password.png</file>
         <file>icons/show_password.png</file>
         <file>images/app_logo.png</file>
         <file>images/app_logo_white.png</file>
@@ -10,5 +10,8 @@
         <file>images/set-golden-border-ornaments/gold_ornaments.png</file>
         <file>icons/cross.png</file>
         <file>icons/door.png</file>
+        <file>icons/padlock.png</file>
+        <file>icons/user.png</file>
+        <file>icons/email.png</file>
     </qresource>
 </RCC>

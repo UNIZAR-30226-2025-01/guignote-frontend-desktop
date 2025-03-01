@@ -1,4 +1,5 @@
 #include "loginwindow.h"
+#include "registerwindow.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -17,11 +18,7 @@ LoginWindow::LoginWindow(QWidget *parent)
 {
     // Configurar la ventana sin bordes
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
-    // Ajustar un tamaño fijo (puedes modificarlo según tu preferencia)
     setFixedSize(480, 500);
-
-
-    // Estilo general de la ventana
     setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
     // Cargar la fuente personalizada
@@ -40,8 +37,6 @@ LoginWindow::LoginWindow(QWidget *parent)
     mainLayout->setSpacing(15);
     mainLayout->setAlignment(Qt::AlignCenter);
 
-
-
     // Título "Iniciar Sesión"
     QLabel *titleLabel = new QLabel("Iniciar Sesión", this);
     titleLabel->setFont(titleFont);
@@ -49,71 +44,70 @@ LoginWindow::LoginWindow(QWidget *parent)
     titleLabel->setAlignment(Qt::AlignCenter);
     mainLayout->addWidget(titleLabel);
 
-    // Estilo para QLineEdit con más padding vertical y tamaño de fuente menor para evitar recortes
+    // Estilo para QLineEdit
     QString lineEditStyle =
         "QLineEdit {"
         "   background-color: #c2c2c3;"
         "   color: #171718;"
         "   border-radius: 15px;"
-        "   font-size: 18px;"     // Se reduce un poco la fuente
-        "   padding: 8px 10px;"   // Aumenta padding para evitar cortes
+        "   font-size: 18px;"
+        "   padding: 8px 10px;"
         "}";
 
     // Campo para el usuario
     QLineEdit *usernameEdit = new QLineEdit(this);
-    usernameEdit->setPlaceholderText("Usuario");
+    usernameEdit->setPlaceholderText("Usuario o Correo");
     usernameEdit->setStyleSheet(lineEditStyle);
     usernameEdit->setFixedWidth(250);
+    usernameEdit->addAction(QIcon(":/icons/user.png"), QLineEdit::LeadingPosition);
     mainLayout->addWidget(usernameEdit, 0, Qt::AlignCenter);
 
     // Campo para la contraseña
     QLineEdit *passwordEdit = new QLineEdit(this);
     passwordEdit->setPlaceholderText("Contraseña");
     passwordEdit->setEchoMode(QLineEdit::Password);
-    // Agregamos espacio a la derecha para el icono
     passwordEdit->setStyleSheet(lineEditStyle + "padding-right: 40px;");
     passwordEdit->setFixedWidth(250);
+    passwordEdit->addAction(QIcon(":/icons/padlock.png"), QLineEdit::LeadingPosition);
     mainLayout->addWidget(passwordEdit, 0, Qt::AlignCenter);
 
-    // Añadir acción con icono en la parte derecha del campo de contraseña
-    QAction *togglePasswordAction = passwordEdit->addAction(QIcon("icons/hide_password.png"), QLineEdit::TrailingPosition);
-    connect(togglePasswordAction, &QAction::triggered, this, [=]() {
+    // Acción para alternar visibilidad de la contraseña
+    QAction *togglePasswordAction = passwordEdit->addAction(QIcon(":/icons/hide_password.png"), QLineEdit::TrailingPosition);
+    bool passwordHidden = true;
+    connect(togglePasswordAction, &QAction::triggered, this, [=]() mutable {
         passwordHidden = !passwordHidden;
         passwordEdit->setEchoMode(passwordHidden ? QLineEdit::Password : QLineEdit::Normal);
-        // Cambiar el icono según el estado
-        QIcon icon(passwordHidden ? QIcon("icons/hide_password.png") : QIcon("icons/show_password.png"));
+        QIcon icon(passwordHidden ? QIcon(":/icons/hide_password.png") : QIcon(":/icons/show_password.png"));
         togglePasswordAction->setIcon(icon);
     });
 
+    // Layout extra para olvido de contraseña y checkbox
     QHBoxLayout *extraLayout = new QHBoxLayout();
-
-    QLabel *forgotLabel = new QLabel("he olvidado mi contraseña", this);
+    QLabel *forgotLabel = new QLabel("¿Has olvidado tu contraseña?", this);
     forgotLabel->setStyleSheet("color: #ffffff; text-decoration: underline; font-size: 14px;");
     extraLayout->addWidget(forgotLabel);
 
-    // Checkbox para "Recordar contraseña"
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
     QString checkBoxStyle = R"(
     QCheckBox {
-        color: #ffffff;             /* Color del texto */
+        color: #ffffff;
         font-size: 14px;
     }
     QCheckBox::indicator {
-        width: 16px;               /* Ajusta el tamaño del indicador */
+        width: 16px;
         height: 16px;
     }
     QCheckBox::indicator:unchecked {
-        background-color: #c2c2c3; /* Fondo cuando está sin marcar */
-        border: 1px solid #545454; /* Borde */
+        background-color: #c2c2c3;
+        border: 1px solid #545454;
         image: none;
     }
     QCheckBox::indicator:checked {
-        background-color: #545454; /* Fondo cuando está marcado */
+        background-color: #c2c2c3;
         border: 1px solid #e0e0e0;
-        image: url("icons/cross.png"); /* Aquí se muestra la imagen de la cruz */
+        image: url(":/icons/cross.png");
     }
-)";
-
+    )";
     rememberCheck->setStyleSheet(checkBoxStyle);
     extraLayout->addWidget(rememberCheck);
     mainLayout->addLayout(extraLayout);
@@ -141,9 +135,20 @@ LoginWindow::LoginWindow(QWidget *parent)
     backButton->setStyleSheet(buttonStyle);
     backButton->setFixedSize(200, 50);
     mainLayout->addWidget(backButton, 0, Qt::AlignCenter);
-
-    // Conectar el botón "Volver" para cerrar la ventana
     connect(backButton, &QPushButton::clicked, this, &LoginWindow::close);
+
+    // Layout extra con botón para ir a la ventana de registro
+    QHBoxLayout *extraLayout1 = new QHBoxLayout();
+    QPushButton *regButtonLink = new QPushButton("¿Aún no tienes cuenta? Crea una nueva", this);
+    regButtonLink->setStyleSheet("QPushButton { color: #ffffff; text-decoration: underline; font-size: 14px; background: transparent; border: none; }");
+    extraLayout1->addWidget(regButtonLink);
+    mainLayout->addLayout(extraLayout1);
+    connect(regButtonLink, &QPushButton::clicked, [=]() {
+        RegisterWindow *regWin = new RegisterWindow();
+        regWin->move(this->geometry().center() - regWin->rect().center());
+        regWin->show();
+    });
+    connect(regButtonLink, &QPushButton::clicked, this, &LoginWindow::close);
 }
 
 LoginWindow::~LoginWindow() {}

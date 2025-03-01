@@ -29,6 +29,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         resource.qrc
         loginwindow.h loginwindow.cpp
+        registerwindow.h registerwindow.cpp
 
 
     )

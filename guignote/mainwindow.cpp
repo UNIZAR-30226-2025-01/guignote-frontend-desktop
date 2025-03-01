@@ -13,6 +13,7 @@
 #include <QDialog>
 #include <QApplication>
 #include "loginwindow.h"
+#include "registerwindow.h"  // Incluir el header de la ventana de registro
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
@@ -80,7 +81,7 @@ MainWindow::MainWindow(QWidget *parent)
     boxLayout->addSpacing(50);
 
     QPushButton *loginButton = new QPushButton("Iniciar Sesión", centralBox);
-    QPushButton *registerButton = new QPushButton("Registrarse", centralBox);
+    QPushButton *registerButton = new QPushButton("Crear Cuenta", centralBox);
     QString buttonStyle = "QPushButton {"
                           "background-color: #c2c2c3;"
                           "color: #171718;"
@@ -97,17 +98,25 @@ MainWindow::MainWindow(QWidget *parent)
     loginButton->setFixedSize(250, 50);
     registerButton->setFixedSize(250, 50);
 
+    // Conexión para mostrar la ventana de inicio de sesión
     connect(loginButton, &QPushButton::clicked, [=]() {
         LoginWindow *loginWin = new LoginWindow();
         loginWin->move(this->geometry().center() - loginWin->rect().center());
         loginWin->show();
     });
 
+    // Conexión para mostrar la ventana de registro
+    connect(registerButton, &QPushButton::clicked, [=]() {
+        RegisterWindow *regWin = new RegisterWindow();
+        regWin->move(this->geometry().center() - regWin->rect().center());
+        regWin->show();
+    });
+
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     buttonLayout->setAlignment(Qt::AlignCenter);
+    buttonLayout->setSpacing(30);
     buttonLayout->addWidget(loginButton, 0, Qt::AlignCenter);
     buttonLayout->addWidget(registerButton, 0, Qt::AlignCenter);
-    buttonLayout->setSpacing(20);
     boxLayout->addLayout(buttonLayout);
     centralBox->setLayout(boxLayout);
 
@@ -116,7 +125,7 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addStretch();
     mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
 
-    // --- NUEVO: Botón de salida con icono ---
+    // Botón de salida con icono ---
     QPushButton *exitIconButton = new QPushButton(ui->centralwidget);
     exitIconButton->setIcon(QIcon(":/icons/door.png")); // Asegúrate de que la ruta sea la correcta
     exitIconButton->setIconSize(QSize(50,50));
@@ -149,9 +158,9 @@ MainWindow::MainWindow(QWidget *parent)
         QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
         QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
         confirmLabel->setStyleSheet("QFrame {"
-                      "background-color: #171718;"
-                      "border-radius: 5px;"
-                      "}");
+                                    "background-color: #171718;"
+                                    "border-radius: 5px;"
+                                    "}");
         confirmLabel->setAlignment(Qt::AlignCenter);
         dialogLayout->addWidget(confirmLabel);
 
