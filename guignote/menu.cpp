@@ -24,21 +24,12 @@ menu::menu(QWidget *parent) :
     // ------------- IMAGENES CARTAS -------------
 
     // Crear QLabel para la imagen de las cartas
-    cardLabel = new QLabel(this);
+    cartasAtras = new QLabel(this);
 
-    // Cargar la imagen desde los recursos
-    QPixmap cardPixmap(":/images/card_backs.png");
+    // ------------------------------------------
 
-    // Asegurar que el pixmap usa canal alfa (transparencia)
-    cardPixmap = cardPixmap.scaled(200, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    cardLabel->setPixmap(cardPixmap);
-
-    // Hacer que QLabel sea transparente
-    cardLabel->setAttribute(Qt::WA_TranslucentBackground);
-    cardLabel->setStyleSheet("background: transparent;");
-
-    // Definir el tamaño del QLabel según la imagen
-    cardLabel->setFixedSize(cardPixmap.size());
+    // Crear QLabel para la imagen de las cartas
+    cartasDelante = new QLabel(this);
 
     // ------------------------------------------
 
@@ -183,8 +174,8 @@ void menu::resizeEvent(QResizeEvent *event) {
     // Definir tamaños mínimo y máximo para la imagen
     int minImageWidth = 150;
     int minImageHeight = 225;
-    int maxImageWidth = 600;
-    int maxImageHeight = 900;
+    int maxImageWidth = 800;
+    int maxImageHeight = 1200;
 
     // Calcular tamaño proporcionalmente al tamaño de la ventana
     int imageWidth = minImageWidth + (maxImageWidth - minImageWidth) *
@@ -196,17 +187,37 @@ void menu::resizeEvent(QResizeEvent *event) {
     imageWidth = std::max(minImageWidth, std::min(imageWidth, maxImageWidth));
     imageHeight = std::max(minImageHeight, std::min(imageHeight, maxImageHeight));
 
-    // Cargar y escalar la imagen
-    QPixmap cardPixmap(":/images/card_backs.png");
-    cardPixmap = cardPixmap.scaled(imageWidth, imageHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    cardLabel->setPixmap(cardPixmap);
-    cardLabel->setFixedSize(cardPixmap.size());
+    // Cargar la imagen desde los recursos de las cartas boca abajo
+    QPixmap cardPixmapAtras(":/images/card_backs_2.png");
+    // Asegurar que el pixmap usa canal alfa (transparencia)
+    cardPixmapAtras = cardPixmapAtras.scaled(imageWidth, imageHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    cartasAtras->setPixmap(cardPixmapAtras);
+    // Hacer que QLabel sea transparente
+    cartasAtras->setAttribute(Qt::WA_TranslucentBackground);
+    cartasAtras->setStyleSheet("background: transparent;");
+    // Definir el tamaño del QLabel según la imagen
+    cartasAtras->setFixedSize(cardPixmapAtras.size());
 
     // Reposicionar la imagen en el centro de la pantalla
-    int posX = this->width() / 2 - cardLabel->width() / 2;
+    int posX = this->width() / 2 - cartasAtras->width() / 2;
     int posY = 85;
-    cardLabel->move(posX, posY);
+    cartasAtras->move(posX, posY);
 
+    // Cargar la imagen desde los recursos
+    QPixmap cardPixmapDelante(":/images/card_fronts.png");
+    // Asegurar que el pixmap usa canal alfa (transparencia)
+    cardPixmapDelante = cardPixmapDelante.scaled(imageWidth, imageHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    cartasDelante->setPixmap(cardPixmapDelante);
+    // Hacer que QLabel sea transparente
+    cartasDelante->setAttribute(Qt::WA_TranslucentBackground);
+    cartasDelante->setStyleSheet("background: transparent;");
+    // Definir el tamaño del QLabel según la imagen
+    cartasDelante->setFixedSize(cardPixmapDelante.size());
+
+    // Reposicionar la imagen en el centro de la pantalla
+    posX = this->width() / 2 - cartasDelante->width() / 2;
+    posY = this->height() - cartasDelante->height() - 5;
+    cartasDelante->move(posX, posY);
 
     QWidget::resizeEvent(event);
 }
