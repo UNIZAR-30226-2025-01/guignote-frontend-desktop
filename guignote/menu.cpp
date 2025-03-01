@@ -9,7 +9,7 @@ menu::menu(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::menu)  // Inicialización de la UI
 {
-    ui->setupUi(this);  // Cargar el diseño de `menu.ui`
+    ui->setupUi(this);  // Cargar el diseño de menu.ui
 
     // Configuración del fondo con gradiente y barra superior
     this->setStyleSheet("QWidget {"
@@ -20,6 +20,27 @@ menu::menu(QWidget *parent) :
                         "background-color: #171718;"
                         "height: 40px;"
                         "}");
+
+    // ------------- IMAGENES CARTAS -------------
+
+    // Crear QLabel para la imagen de las cartas
+    cardLabel = new QLabel(this);
+
+    // Cargar la imagen desde los recursos
+    QPixmap cardPixmap(":/images/card_backs.png");
+
+    // Asegurar que el pixmap usa canal alfa (transparencia)
+    cardPixmap = cardPixmap.scaled(200, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    cardLabel->setPixmap(cardPixmap);
+
+    // Hacer que QLabel sea transparente
+    cardLabel->setAttribute(Qt::WA_TranslucentBackground);
+    cardLabel->setStyleSheet("background: transparent;");
+
+    // Definir el tamaño del QLabel según la imagen
+    cardLabel->setFixedSize(cardPixmap.size());
+
+    // ------------------------------------------
 
     // Crear barra superior
     topBar = new QLabel(this);
@@ -72,16 +93,19 @@ menu::menu(QWidget *parent) :
 
     // Estilo para los botones
     button1v1->setStyleSheet("QPushButton {"
-                             "background-color: gold;"
-                             "border: 2px solid #b8860b;"
-                             "border-radius: 10px;"
+                             "background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, "
+                             "stop:0 #FFD700, stop:0.5 #DAA520, stop:1 #B8860B);"
+                             "border: 3px solid #B8860B;"
+                             "border-radius: 15px;"
                              "padding: 10px;"
-                             "font-size: 16px;"
+                             "font-size: 18px;"
                              "font-weight: bold;"
-                             "color: black;"
+                             "color: #3E2723;"
                              "}"
                              "QPushButton:hover {"
-                             "background-color: #ffd700;"
+                             "background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, "
+                             "stop:0 #FFD700, stop:0.5 #FFC107, stop:1 #FFA500);"
+                             "border: 3px solid #FFD700;"
                              "}");
 
     button2v2->setStyleSheet(button1v1->styleSheet()); // Aplicar el mismo estilo
@@ -110,6 +134,10 @@ void menu::repositionOrnaments() {
     cornerTopRight->move(w - cornerTopRight->width(), topOffset);
     cornerBottomLeft->move(0, h - cornerBottomLeft->height());
     cornerBottomRight->move(w - cornerBottomRight->width(), h - cornerBottomRight->height());
+    QList<QLabel*> corners = {cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight};
+    for (QLabel* corner : corners) {
+        corner->lower();
+    }
 }
 
 void menu::resizeEvent(QResizeEvent *event) {
@@ -152,6 +180,34 @@ void menu::resizeEvent(QResizeEvent *event) {
     button1v1->setGeometry(centerX1, centerY, buttonWidth, buttonHeight);
     button2v2->setGeometry(centerX2, centerY, buttonWidth, buttonHeight);
 
+    // Definir tamaños mínimo y máximo para la imagen
+    int minImageWidth = 150;
+    int minImageHeight = 225;
+    int maxImageWidth = 600;
+    int maxImageHeight = 900;
+
+    // Calcular tamaño proporcionalmente al tamaño de la ventana
+    int imageWidth = minImageWidth + (maxImageWidth - minImageWidth) *
+                                         ((this->width() - 400) / (float)(1920 - 400));
+    int imageHeight = minImageHeight + (maxImageHeight - minImageHeight) *
+                                           ((this->height() - 400) / (float)(1080 - 400));
+
+    // Asegurar que los valores no sean menores que el mínimo o mayores que el máximo
+    imageWidth = std::max(minImageWidth, std::min(imageWidth, maxImageWidth));
+    imageHeight = std::max(minImageHeight, std::min(imageHeight, maxImageHeight));
+
+    // Cargar y escalar la imagen
+    QPixmap cardPixmap(":/images/card_backs.png");
+    cardPixmap = cardPixmap.scaled(imageWidth, imageHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    cardLabel->setPixmap(cardPixmap);
+    cardLabel->setFixedSize(cardPixmap.size());
+
+    // Reposicionar la imagen en el centro de la pantalla
+    int posX = this->width() / 2 - cardLabel->width() / 2;
+    int posY = 85;
+    cardLabel->move(posX, posY);
+
+
     QWidget::resizeEvent(event);
 }
 
@@ -159,5 +215,5 @@ void menu::resizeEvent(QResizeEvent *event) {
 
 // Destructor de la clase menu
 menu::~menu() {
-    delete ui;  // Solo eliminar si `ui` fue inicializado
+    delete ui;  // Solo eliminar si ui fue inicializado
 }

@@ -29,6 +29,7 @@ private:
     QLabel *topBar;
     QPushButton *button1v1;
     QPushButton *button2v2;
+    QLabel *cardLabel;
 };
 
 #endif // MENU_H

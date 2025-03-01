@@ -10,5 +10,7 @@
         <file>images/set-golden-border-ornaments/gold_ornaments.png</file>
         <file>icons/cross.png</file>
         <file>icons/door.png</file>
+        <file>images/card_back.png</file>
+        <file>images/card_backs.png</file>
     </qresource>
 </RCC>
