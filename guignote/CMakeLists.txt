@@ -30,6 +30,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         resource.qrc
         loginwindow.h loginwindow.cpp
         registerwindow.h registerwindow.cpp
+        recoverpasswordwindow.h recoverpasswordwindow.cpp
 
 
     )

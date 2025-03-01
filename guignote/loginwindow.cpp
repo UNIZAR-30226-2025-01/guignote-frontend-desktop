@@ -1,5 +1,7 @@
 #include "loginwindow.h"
+#include "menu.h"
 #include "registerwindow.h"
+#include "recoverpasswordwindow.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -81,36 +83,46 @@ LoginWindow::LoginWindow(QWidget *parent)
         togglePasswordAction->setIcon(icon);
     });
 
-    // Layout extra para olvido de contraseña y checkbox
+    // Layout extra para "olvido de contraseña" y checkbox
     QHBoxLayout *extraLayout = new QHBoxLayout();
-    QLabel *forgotLabel = new QLabel("¿Has olvidado tu contraseña?", this);
-    forgotLabel->setStyleSheet("color: #ffffff; text-decoration: underline; font-size: 14px;");
-    extraLayout->addWidget(forgotLabel);
+
+    // Se utiliza un QPushButton para "¿Has olvidado tu contraseña?" (enlace clickable)
+    QPushButton *forgotPasswordButton = new QPushButton("¿Has olvidado tu contraseña?", this);
+    forgotPasswordButton->setStyleSheet("QPushButton { color: #ffffff; text-decoration: underline; font-size: 14px; background: transparent; border: none; }");
+    extraLayout->addWidget(forgotPasswordButton);
 
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
     QString checkBoxStyle = R"(
-    QCheckBox {
-        color: #ffffff;
-        font-size: 14px;
-    }
-    QCheckBox::indicator {
-        width: 16px;
-        height: 16px;
-    }
-    QCheckBox::indicator:unchecked {
-        background-color: #c2c2c3;
-        border: 1px solid #545454;
-        image: none;
-    }
-    QCheckBox::indicator:checked {
-        background-color: #c2c2c3;
-        border: 1px solid #e0e0e0;
-        image: url(":/icons/cross.png");
-    }
+        QCheckBox {
+            color: #ffffff;
+            font-size: 14px;
+        }
+        QCheckBox::indicator {
+            width: 16px;
+            height: 16px;
+        }
+        QCheckBox::indicator:unchecked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+            image: none;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+            image: url(":/icons/cross.png");
+        }
     )";
     rememberCheck->setStyleSheet(checkBoxStyle);
     extraLayout->addWidget(rememberCheck);
     mainLayout->addLayout(extraLayout);
+
+    // Conectar el botón "olvidé la contraseña" a la pantalla de recuperación
+    connect(forgotPasswordButton, &QPushButton::clicked, [=]() {
+        RecoverPasswordWindow *recoverWin = new RecoverPasswordWindow();
+        recoverWin->move(this->geometry().center() - recoverWin->rect().center());
+        recoverWin->show();
+    });
+    connect(forgotPasswordButton, &QPushButton::clicked, this, &LoginWindow::close);
 
     // Botón para iniciar sesión
     QPushButton *loginButton = new QPushButton("Iniciar Sesión", this);
@@ -129,6 +141,17 @@ LoginWindow::LoginWindow(QWidget *parent)
     loginButton->setStyleSheet(buttonStyle);
     loginButton->setFixedSize(200, 50);
     mainLayout->addWidget(loginButton, 0, Qt::AlignCenter);
+
+    // Conexión para el botón de "Iniciar Sesión" con el menú principal
+    connect(loginButton, &QPushButton::clicked, [=]() {
+        // TODO: Conectar con el backend para validar credenciales
+
+        // Conexión con el menú principal
+        menu *menuWin = new menu();
+        menuWin->move(this->geometry().center() - menuWin->rect().center());
+        menuWin->show();
+        this->close();
+    });
 
     // Botón para volver
     QPushButton *backButton = new QPushButton("Volver", this);
