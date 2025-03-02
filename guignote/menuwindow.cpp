@@ -1,13 +1,13 @@
-#include "menu.h"
-#include "ui_menu.h"
+#include "menuwindow.h"
+#include "ui_menuwindow.h"
 #include <QPixmap>
 #include <QTransform>
 #include <QPushButton>
 
 // Constructor de la clase menu
-menu::menu(QWidget *parent) :
+MenuWindow::MenuWindow(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::menu)  // Inicialización de la UI
+    ui(new Ui::MenuWindow)  // Inicialización de la UI
 {
     ui->setupUi(this);  // Cargar el diseño de menu.ui
 
@@ -115,7 +115,7 @@ menu::menu(QWidget *parent) :
 }
 
 // Función para reubicar los ornamentos en la pantalla
-void menu::repositionOrnaments() {
+void MenuWindow::repositionOrnaments() {
     int w = this->width();
     int h = this->height();
 
@@ -131,7 +131,7 @@ void menu::repositionOrnaments() {
     }
 }
 
-void menu::resizeEvent(QResizeEvent *event) {
+void MenuWindow::resizeEvent(QResizeEvent *event) {
     topBar->setGeometry(0, 0, this->width(), 40); // Ajustar barra superior al redimensionar
     repositionOrnaments();
 
@@ -174,8 +174,8 @@ void menu::resizeEvent(QResizeEvent *event) {
     // Definir tamaños mínimo y máximo para la imagen
     int minImageWidth = 150;
     int minImageHeight = 225;
-    int maxImageWidth = 800;
-    int maxImageHeight = 1200;
+    int maxImageWidth = 600;
+    int maxImageHeight = 900;
 
     // Calcular tamaño proporcionalmente al tamaño de la ventana
     int imageWidth = minImageWidth + (maxImageWidth - minImageWidth) *
@@ -225,6 +225,6 @@ void menu::resizeEvent(QResizeEvent *event) {
 
 
 // Destructor de la clase menu
-menu::~menu() {
+MenuWindow::~MenuWindow() {
     delete ui;  // Solo eliminar si ui fue inicializado
 }

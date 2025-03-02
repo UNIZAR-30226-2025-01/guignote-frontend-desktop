@@ -17,9 +17,9 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
-        menu.h
-        menu.cpp
-        menu.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
+        menuwindow.h
+        menuwindow.cpp
+        menuwindow.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
 )
 
 

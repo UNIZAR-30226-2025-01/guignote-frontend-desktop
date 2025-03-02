@@ -1,18 +1,18 @@
-#ifndef MENU_H
-#define MENU_H
+#ifndef MENUWINDOW_H
+#define MENUWINDOW_H
 
 #include <QWidget>
 #include <QLabel>
 #include <QSize>
 #include <QPushButton>
-#include "ui_menu.h"
+#include "ui_menuwindow.h"
 
-class menu : public QWidget {
+class MenuWindow : public QWidget {
     Q_OBJECT
 
 public:
-    explicit menu(QWidget *parent = nullptr);
-    ~menu();
+    explicit MenuWindow(QWidget *parent = nullptr);
+    ~MenuWindow();
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -20,7 +20,7 @@ protected:
 private:
     void repositionOrnaments();
 
-    Ui::menu *ui;
+    Ui::MenuWindow *ui;
     QSize ornamentSize;
     QLabel *cornerTopLeft;
     QLabel *cornerTopRight;
@@ -33,4 +33,4 @@ private:
     QLabel *cartasDelante;
 };
 
-#endif // MENU_H
+#endif // MENUWINDOW_H
