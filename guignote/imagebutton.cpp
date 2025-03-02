@@ -16,7 +16,7 @@ ImageButton::ImageButton(const QString &imagePath, const QString &text, QWidget 
 
     textLabel = new QLabel(text, this);
     textLabel->setAlignment(Qt::AlignCenter);
-    textLabel->setStyleSheet("color: white; font-size: 18px; background: transparent;");
+    textLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); background: transparent;");
     textLabel->setGeometry(0, 0, width(), height());
     textLabel->hide();  // Ocultar texto al inicio
 }
@@ -31,9 +31,9 @@ QPixmap ImageButton::generateDarkenedPixmap(const QPixmap &source) {
 
             // Si el píxel no es completamente transparente
             if (color.alpha() > 0) {
-                int r = qMax(color.red() * 0.7, 0.0);   // Reduce brillo al 70%
-                int g = qMax(color.green() * 0.7, 0.0);
-                int b = qMax(color.blue() * 0.7, 0.0);
+                int r = qMax(color.red() * 0.5, 0.0);   // Reduce brillo al 50%
+                int g = qMax(color.green() * 0.5, 0.0);
+                int b = qMax(color.blue() * 0.5, 0.0);
                 line[x] = QColor(r, g, b, color.alpha()).rgba(); // Mantiene la transparencia
             }
         }
@@ -41,6 +41,7 @@ QPixmap ImageButton::generateDarkenedPixmap(const QPixmap &source) {
 
     return QPixmap::fromImage(img);
 }
+
 
 
 void ImageButton::enterEvent(QEnterEvent *event) {

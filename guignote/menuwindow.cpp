@@ -44,15 +44,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
         qDebug() << "Botón 2v2 presionado";
     });
 
-    // ------------- BARRA SUPERIOR -------------
-
-    // Crear barra superior
-    topBar = new QLabel(this);
-    topBar->setObjectName("topBar");
-    topBar->setFixedHeight(80);
-    topBar->setStyleSheet("background-color: #171718;");
-    topBar->setGeometry(0, 0, this->width(), 40);
-
     // ------------- ORNAMENTOS ESQUINAS -------------
 
     // Tamaño de los ornamentos
@@ -101,7 +92,7 @@ void MenuWindow::repositionOrnaments() {
     int w = this->width();
     int h = this->height();
 
-    int topOffset = 80;  // Desplazar las esquinas superiores por la barra
+    int topOffset = 0;
 
     cornerTopLeft->move(0, topOffset);
     cornerTopRight->move(w - cornerTopRight->width(), topOffset);
@@ -114,7 +105,6 @@ void MenuWindow::repositionOrnaments() {
 }
 
 void MenuWindow::resizeEvent(QResizeEvent *event) {
-    topBar->setGeometry(0, 0, this->width(), 40); // Ajustar barra superior al redimensionar
     repositionOrnaments();
 
     int w = this->width();
@@ -133,9 +123,6 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
 
     QWidget::resizeEvent(event);
 }
-
-
-
 
 // Destructor de la clase menu
 MenuWindow::~MenuWindow() {
