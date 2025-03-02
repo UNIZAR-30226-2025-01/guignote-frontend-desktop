@@ -1,5 +1,5 @@
 #include "loginwindow.h"
-#include "menu.h"
+#include "menuwindow.h"
 #include "registerwindow.h"
 #include "recoverpasswordwindow.h"
 
@@ -147,7 +147,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         // TODO: Conectar con el backend para validar credenciales
 
         // Conexión con el menú principal
-        menu *menuWin = new menu();
+        MenuWindow *menuWin = new MenuWindow();
         menuWin->move(this->geometry().center() - menuWin->rect().center());
         menuWin->show();
         this->close();

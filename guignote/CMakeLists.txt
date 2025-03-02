@@ -17,9 +17,9 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
-        menu.h
-        menu.cpp
-        menu.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
+        menuwindow.h
+        menuwindow.cpp
+        menuwindow.ui
 )
 
 
@@ -31,8 +31,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         loginwindow.h loginwindow.cpp
         registerwindow.h registerwindow.cpp
         recoverpasswordwindow.h recoverpasswordwindow.cpp
-
-
+        menuwindow.h menuwindow.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET guignote APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
