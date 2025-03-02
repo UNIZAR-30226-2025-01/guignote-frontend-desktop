@@ -19,7 +19,7 @@ set(PROJECT_SOURCES
         mainwindow.ui
         menuwindow.h
         menuwindow.cpp
-        menuwindow.ui
+        menuwindow.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
 )
 
 
