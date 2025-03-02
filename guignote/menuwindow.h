@@ -5,6 +5,10 @@
 #include <QLabel>
 #include <QSize>
 #include <QPushButton>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QMainWindow>
+#include "imagebutton.h"
 #include "ui_menuwindow.h"
 
 class MenuWindow : public QWidget {
@@ -27,10 +31,8 @@ private:
     QLabel *cornerBottomLeft;
     QLabel *cornerBottomRight;
     QLabel *topBar;
-    QPushButton *button1v1;
-    QPushButton *button2v2;
-    QLabel *cartasAtras;
-    QLabel *cartasDelante;
+    ImageButton *boton1v1;
+    ImageButton *boton2v2;
 };
 
 #endif // MENUWINDOW_H

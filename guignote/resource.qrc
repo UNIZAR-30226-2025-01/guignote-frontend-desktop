@@ -16,5 +16,7 @@
         <file>images/card_backs.png</file>
         <file>images/card_backs_2.png</file>
         <file>images/card_fronts.png</file>
+        <file>images/cartaBoton.png</file>
+        <file>images/cartasBoton.png</file>
     </qresource>
 </RCC>
