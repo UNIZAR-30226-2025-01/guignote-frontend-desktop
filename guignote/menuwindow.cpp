@@ -117,43 +117,23 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     topBar->setGeometry(0, 0, this->width(), 40); // Ajustar barra superior al redimensionar
     repositionOrnaments();
 
-    // Definir tamaños de ventana para interpolación
-    int minWindowWidth = 400;
-    int maxWindowWidth = 1920;
+    int w = this->width();
+    int h = this->height();
+    int buttonSpacing = w / 10; // Espaciado proporcional al tamaño de la ventana
 
-    // Calcular separación dinámicamente
-    int minSeparation = 10;
-    int maxSeparation = 75;
-    int separacion = minSeparation + (maxSeparation - minSeparation) *
-                                         ((this->width() - minWindowWidth) / (float)(maxWindowWidth - minWindowWidth));
-    separacion = std::max(minSeparation, std::min(separacion, maxSeparation));
+    int buttonWidth = boton1v1->width();
+    int buttonHeight = boton1v1->height();
 
-    // Definir tamaños mínimo y máximo para las cartas
-    int minImageWidth = 150;
-    int minImageHeight = 225;
-    int maxImageWidth = 600;
-    int maxImageHeight = 900;
+    int totalWidth = (2 * buttonWidth) + buttonSpacing;
+    int startX = (w - totalWidth) / 2;
+    int startY = (h - buttonHeight) / 2;
 
-    // Calcular tamaño proporcionalmente al tamaño de la ventana
-    int imageWidth = minImageWidth + (maxImageWidth - minImageWidth) *
-                                         ((this->width() - 400) / (float)(1920 - 400));
-    int imageHeight = minImageHeight + (maxImageHeight - minImageHeight) *
-                                           ((this->height() - 400) / (float)(1080 - 400));
-
-    // Asegurar que los valores no sean menores que el mínimo o mayores que el máximo
-    imageWidth = std::max(minImageWidth, std::min(imageWidth, maxImageWidth));
-    imageHeight = std::max(minImageHeight, std::min(imageHeight, maxImageHeight));
-
-    // Recolocamos los botones
-    int totalWidth = 2 * imageWidth + separacion;
-    int startX = (this->width() - totalWidth) / 2;
-    int centerY = this->height() / 2 - imageHeight / 2;
-
-    boton1v1->setGeometry(startX, centerY, imageWidth, imageHeight);
-    boton2v2->setGeometry(startX + imageWidth + separacion, centerY, imageWidth, imageHeight);
+    boton1v1->move(startX, startY);
+    boton2v2->move(startX + buttonWidth + buttonSpacing, startY);
 
     QWidget::resizeEvent(event);
 }
+
 
 
 
