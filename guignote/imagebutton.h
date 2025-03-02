@@ -3,6 +3,7 @@
 
 #include <QLabel>
 #include <QPixmap>
+#include <QSize>
 #include <QMouseEvent>
 #include <QEnterEvent>  // Agregar para Qt 6
 
@@ -11,6 +12,7 @@ class ImageButton : public QLabel {
 
 public:
     explicit ImageButton(const QString &imagePath, const QString &text, QWidget *parent = nullptr);
+    QSize updatesize(int h);
 
 signals:
     void clicked();

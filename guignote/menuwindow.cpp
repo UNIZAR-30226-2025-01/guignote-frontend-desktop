@@ -30,8 +30,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // ------------- IMAGENES CARTAS -------------
 
     // Crear los botones
-    boton1v1 = new ImageButton(":/images/cartaBoton.png", "1v1", this);
-    boton2v2 = new ImageButton(":/images/cartasBoton.png", "2v2", this);
+    boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
+    boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
     // ------------- TEMPORAL -------------
 
@@ -111,9 +111,13 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     int h = this->height();
     int buttonSpacing = w / 10; // Espaciado proporcional al tamaño de la ventana
 
-    int buttonWidth = boton1v1->width();
-    int buttonHeight = boton1v1->height();
+    // Redimensionar los botones
+    QSize size = boton1v1->updatesize(h);
+    size = boton2v2->updatesize(h);
+    int buttonWidth = size.width();
+    int buttonHeight = size.height();
 
+    // Calcular la posición central
     int totalWidth = (2 * buttonWidth) + buttonSpacing;
     int startX = (w - totalWidth) / 2;
     int startY = (h - buttonHeight) / 2;
