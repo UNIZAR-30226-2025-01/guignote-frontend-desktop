@@ -192,7 +192,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                         qDebug() << "Token recibido:" << token;
                         // Aquí se puede almacenar el token según se requiera.
                         // Luego se abre la ventana del menú principal.
-                        MenuWindow *menuWin = new MenuWindow();
+                        menu *menuWin = new menu();
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
                         this->close();
