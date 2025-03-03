@@ -14,6 +14,7 @@
 #include <QIcon>
 #include <QAction>
 #include <QDebug>
+#include <QPainter>
 
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -24,10 +25,19 @@
 LoginWindow::LoginWindow(QWidget *parent)
     : QWidget(parent), passwordHidden(true)
 {
-    // Configurar la ventana sin bordes
-    setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    // Solo aplicar los flags si no se ha pasado un parent
+    if (!parent) {
+        // Configurar la ventana sin bordes
+        setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    }
+    // Asegurar que el fondo no es transparente
+    setAttribute(Qt::WA_StyledBackground, true);
+    setStyleSheet(
+        "background-color: #171718;"
+        "border-radius: 30px;"
+        "padding: 20px;"
+        );
     setFixedSize(480, 500);
-    setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
     // Cargar la fuente personalizada
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
@@ -219,7 +229,9 @@ LoginWindow::LoginWindow(QWidget *parent)
     backButton->setStyleSheet(buttonStyle);
     backButton->setFixedSize(200, 50);
     mainLayout->addWidget(backButton, 0, Qt::AlignCenter);
-    connect(backButton, &QPushButton::clicked, this, &LoginWindow::close);
+    connect(backButton, &QPushButton::clicked, [=]() {
+        emit volverClicked();
+    });
 
     // Layout extra con botón para ir a la ventana de registro
     QHBoxLayout *extraLayout1 = new QHBoxLayout();
@@ -233,6 +245,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         regWin->show();
     });
     connect(regButtonLink, &QPushButton::clicked, this, &LoginWindow::close);
+
 }
 
 LoginWindow::~LoginWindow() {}

@@ -10,6 +10,9 @@ class RegisterWindow : public QWidget
 public:
     explicit RegisterWindow(QWidget *parent = nullptr);
     ~RegisterWindow();
+
+signals:
+    void volverClicked(); // Señal para ocultar la ventana cuando toque
 };
 
 #endif // REGISTERWINDOW_H
