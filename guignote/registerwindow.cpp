@@ -10,6 +10,12 @@
 #include <QAction>
 #include <QToolButton>
 #include <QDebug>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+
 
 RegisterWindow::RegisterWindow(QWidget *parent)
     : QWidget(parent)
@@ -154,6 +160,64 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     registerButton->setStyleSheet(buttonStyle);
     registerButton->setFixedSize(200, 50);
     mainLayout->addWidget(registerButton, 0, Qt::AlignCenter);
+
+    // FUNCIÓN PARA CONECTAR EL BOTÓN DE REGISTRO A LA PETICIÓN DJANGO (cortesía de José Manuel)
+    connect(registerButton, &QPushButton::clicked, this, [=]() {
+        // Recolectar datos de los campos
+        QString nombre = usernameEdit->text().trimmed();
+        QString correo = emailEdit->text().trimmed();
+        QString contrasegna = passwordEdit->text();
+        QString confirmContrasegna = confirmPasswordEdit->text();
+
+        // Validar que las contraseñas coincidan
+        if (contrasegna != confirmContrasegna) {
+            qWarning() << "Las contraseñas no coinciden.";
+            return;
+        }
+
+        // Crear el objeto JSON con los datos
+        QJsonObject json;
+        json["nombre"] = nombre;
+        json["correo"] = correo;
+        json["contrasegna"] = contrasegna;
+
+        QJsonDocument doc(json);
+        QByteArray data = doc.toJson();
+
+        // Configurar la URL del endpoint del backend
+        QUrl url("http://188.165.76.134:8000/usuarios/crear_usuario/");
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+        // Crear el gestor de red
+        QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+        connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
+            if (reply->error() == QNetworkReply::NoError) {
+                // Procesar la respuesta (por ejemplo, extraer el token JWT)
+                QByteArray responseData = reply->readAll();
+                QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+                if (responseDoc.isObject()) {
+                    QJsonObject respObj = responseDoc.object();
+                    if (respObj.contains("token")) {
+                        QString token = respObj["token"].toString();
+                        qDebug() << "Token recibido:" << token;
+                        // Aquí puedes almacenar el token según lo requieras
+                    } else {
+                        qWarning() << "Respuesta sin token:" << responseData;
+                    }
+                }
+            } else {
+                qWarning() << "Error en la petición:" << reply->errorString();
+            }
+            reply->deleteLater();
+            manager->deleteLater();
+        });
+
+        // Enviar la petición POST con el JSON generado
+        manager->post(request, data);
+    });
+
+
 
     // Botón para volver
     QPushButton *backButton = new QPushButton("Volver", this);
