@@ -20,8 +20,13 @@
 RegisterWindow::RegisterWindow(QWidget *parent)
     : QWidget(parent)
 {
-    // Configurar la ventana sin bordes y tamaño fijo
+    // Solo aplicar los flags si no tiene un parent
+    if (!parent) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    }
+
+    // Asegurar que el fondo no sea transparente:
+    setAttribute(Qt::WA_StyledBackground, true);
     setFixedSize(540, 600);
     setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
@@ -225,8 +230,10 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     backButton->setFixedSize(200, 50);
     mainLayout->addWidget(backButton, 0, Qt::AlignCenter);
 
-    // Conectar el botón "Volver" para cerrar la ventana
-    connect(backButton, &QPushButton::clicked, this, &RegisterWindow::close);
+    // Conectamos el botón volver para cerrar la ventana
+    connect(backButton, &QPushButton::clicked, [=]() {
+        emit volverClicked();
+    });
 }
 
 RegisterWindow::~RegisterWindow() {}
