@@ -1,21 +1,27 @@
 #ifndef LOGINWINDOW_H
 #define LOGINWINDOW_H
 
-#include <QWidget>
+#include <QDialog>
 
-class LoginWindow : public QWidget
+class LoginWindow : public QDialog
 {
     Q_OBJECT
+
 public:
     explicit LoginWindow(QWidget *parent = nullptr);
     ~LoginWindow();
 
 signals:
-    void volverClicked(); // Señal para notificar que se pulsó "Volver"
+    // Se emite cuando el usuario pulsa “¿No tienes cuenta? Crea una”
+    void openRegisterRequested();
+
+protected:
+    void showEvent(QShowEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
-    // Para gestionar el estado de visibilidad de la contraseña
-    bool passwordHidden;
+    QWidget *backgroundOverlay;
 };
 
 #endif // LOGINWINDOW_H

@@ -21,5 +21,6 @@
         <file>icons/settings.png</file>
         <file>icons/friends.png</file>
         <file>icons/divider.png</file>
+        <file>icons/preferences.png</file>
     </qresource>
 </RCC>

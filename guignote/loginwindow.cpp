@@ -1,8 +1,6 @@
 #include "loginwindow.h"
 #include "menuwindow.h"
-#include "registerwindow.h"
 #include "recoverpasswordwindow.h"
-
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -15,31 +13,25 @@
 #include <QAction>
 #include <QDebug>
 #include <QPainter>
-
+#include <QEvent>
+#include <QCloseEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrl>
 
 LoginWindow::LoginWindow(QWidget *parent)
-    : QWidget(parent), passwordHidden(true)
+    : QDialog(parent),
+    backgroundOverlay(nullptr)
 {
-    // Solo aplicar los flags si no se ha pasado un parent
-    if (!parent) {
-        // Configurar la ventana sin bordes
-        setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
-    }
-    // Asegurar que el fondo no es transparente
+    setModal(true);
+    setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
-    setStyleSheet(
-        "background-color: #171718;"
-        "border-radius: 30px;"
-        "padding: 20px;"
-        );
+    setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(480, 500);
 
-    // Cargar la fuente personalizada
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
     QFont titleFont;
     if (fontId != -1) {
@@ -49,20 +41,17 @@ LoginWindow::LoginWindow(QWidget *parent)
         titleFont = QFont("Arial", 32, QFont::Bold);
     }
 
-    // Layout principal (vertical)
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(15);
     mainLayout->setAlignment(Qt::AlignCenter);
 
-    // Título "Iniciar Sesión"
     QLabel *titleLabel = new QLabel("Iniciar Sesión", this);
     titleLabel->setFont(titleFont);
     titleLabel->setStyleSheet("color: #ffffff;");
     titleLabel->setAlignment(Qt::AlignCenter);
     mainLayout->addWidget(titleLabel);
 
-    // Estilo para QLineEdit
     QString lineEditStyle =
         "QLineEdit {"
         "   background-color: #c2c2c3;"
@@ -72,7 +61,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         "   padding: 8px 10px;"
         "}";
 
-    // Campo para el usuario
+    // Usuario/Correo
     QLineEdit *usernameEdit = new QLineEdit(this);
     usernameEdit->setPlaceholderText("Usuario o Correo");
     usernameEdit->setStyleSheet(lineEditStyle);
@@ -80,7 +69,7 @@ LoginWindow::LoginWindow(QWidget *parent)
     usernameEdit->addAction(QIcon(":/icons/user.png"), QLineEdit::LeadingPosition);
     mainLayout->addWidget(usernameEdit, 0, Qt::AlignCenter);
 
-    // Campo para la contraseña
+    // Contraseña
     QLineEdit *passwordEdit = new QLineEdit(this);
     passwordEdit->setPlaceholderText("Contraseña");
     passwordEdit->setEchoMode(QLineEdit::Password);
@@ -89,22 +78,27 @@ LoginWindow::LoginWindow(QWidget *parent)
     passwordEdit->addAction(QIcon(":/icons/padlock.png"), QLineEdit::LeadingPosition);
     mainLayout->addWidget(passwordEdit, 0, Qt::AlignCenter);
 
-    // Acción para alternar visibilidad de la contraseña
+    // Mostrar/ocultar contraseña
     QAction *togglePasswordAction = passwordEdit->addAction(QIcon(":/icons/hide_password.png"), QLineEdit::TrailingPosition);
     bool passwordHidden = true;
     connect(togglePasswordAction, &QAction::triggered, this, [=]() mutable {
         passwordHidden = !passwordHidden;
         passwordEdit->setEchoMode(passwordHidden ? QLineEdit::Password : QLineEdit::Normal);
-        QIcon icon(passwordHidden ? QIcon(":/icons/hide_password.png") : QIcon(":/icons/show_password.png"));
-        togglePasswordAction->setIcon(icon);
+        togglePasswordAction->setIcon(QIcon(passwordHidden ? ":/icons/hide_password.png" : ":/icons/show_password.png"));
     });
 
-    // Layout extra para "olvido de contraseña" y checkbox
+    // Layout horizontal con “¿Olvidaste tu contraseña?” y el checkbox de “Recordar”
     QHBoxLayout *extraLayout = new QHBoxLayout();
-
-    // Se utiliza un QPushButton para "¿Has olvidado tu contraseña?" (enlace clickable)
     QPushButton *forgotPasswordButton = new QPushButton("¿Has olvidado tu contraseña?", this);
-    forgotPasswordButton->setStyleSheet("QPushButton { color: #ffffff; text-decoration: underline; font-size: 14px; background: transparent; border: none; }");
+    forgotPasswordButton->setStyleSheet(
+        "QPushButton {"
+        "  color: #ffffff;"
+        "  text-decoration: underline;"
+        "  font-size: 14px;"
+        "  background: transparent;"
+        "  border: none;"
+        "}"
+        );
     extraLayout->addWidget(forgotPasswordButton);
 
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
@@ -120,7 +114,6 @@ LoginWindow::LoginWindow(QWidget *parent)
         QCheckBox::indicator:unchecked {
             background-color: #c2c2c3;
             border: 1px solid #545454;
-            image: none;
         }
         QCheckBox::indicator:checked {
             background-color: #c2c2c3;
@@ -132,15 +125,14 @@ LoginWindow::LoginWindow(QWidget *parent)
     extraLayout->addWidget(rememberCheck);
     mainLayout->addLayout(extraLayout);
 
-    // Conectar el botón "olvidé la contraseña" a la pantalla de recuperación
-    connect(forgotPasswordButton, &QPushButton::clicked, [=]() {
-        RecoverPasswordWindow *recoverWin = new RecoverPasswordWindow();
+    // Recuperar contraseña
+    connect(forgotPasswordButton, &QPushButton::clicked, this, [=]() {
+        RecoverPasswordWindow *recoverWin = new RecoverPasswordWindow(this);
         recoverWin->move(this->geometry().center() - recoverWin->rect().center());
         recoverWin->show();
     });
-    connect(forgotPasswordButton, &QPushButton::clicked, this, &LoginWindow::close);
 
-    // Botón para iniciar sesión
+    // Botón “Iniciar Sesión”
     QPushButton *loginButton = new QPushButton("Iniciar Sesión", this);
     QString buttonStyle =
         "QPushButton {"
@@ -158,20 +150,16 @@ LoginWindow::LoginWindow(QWidget *parent)
     loginButton->setFixedSize(200, 50);
     mainLayout->addWidget(loginButton, 0, Qt::AlignCenter);
 
-    // Conexión para el botón de "Iniciar Sesión" con el backend
+    // Lógica para iniciar sesión (petición POST)
     connect(loginButton, &QPushButton::clicked, [=]() {
-        // Recogemos los datos de los campos
         QString userOrEmail = usernameEdit->text().trimmed();
         QString contrasegna = passwordEdit->text();
 
-        // En caso de campos vacíos, envíamos un warning de falta de campos
         if (userOrEmail.isEmpty() || contrasegna.isEmpty()) {
             qWarning() << "Faltan campos";
             return;
         }
 
-        // Crear el objeto JSON con los datos.
-        // Según la documentación, se puede enviar "nombre" o "correo", dependiendo del contenido.
         QJsonObject json;
         if (userOrEmail.contains('@')) {
             json["correo"] = userOrEmail;
@@ -180,16 +168,13 @@ LoginWindow::LoginWindow(QWidget *parent)
         }
         json["contrasegna"] = contrasegna;
 
-        // Configuramos el documento JSON
         QJsonDocument doc(json);
         QByteArray data = doc.toJson();
 
-        // Configurar la URL del endpoint (se utiliza la IP proporcionada)
         QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-        // Crear el gestor de red para enviar la petición
         QNetworkAccessManager *manager = new QNetworkAccessManager(this);
         connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
             if (reply->error() == QNetworkReply::NoError) {
@@ -200,9 +185,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
-                        // Aquí se puede almacenar el token según se requiera.
-                        // Luego se abre la ventana del menú principal.
-                        MenuWindow *menuWin = new MenuWindow();
+                        MenuWindow *menuWin = new MenuWindow(this);
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
                         this->close();
@@ -219,33 +202,77 @@ LoginWindow::LoginWindow(QWidget *parent)
             manager->deleteLater();
         });
 
-        // Enviar la petición POST con el JSON generado
         manager->post(request, data);
     });
-
 
     // Botón para volver
     QPushButton *backButton = new QPushButton("Volver", this);
     backButton->setStyleSheet(buttonStyle);
     backButton->setFixedSize(200, 50);
     mainLayout->addWidget(backButton, 0, Qt::AlignCenter);
-    connect(backButton, &QPushButton::clicked, [=]() {
-        emit volverClicked();
-    });
+    connect(backButton, &QPushButton::clicked, this, &QDialog::close);
 
-    // Layout extra con botón para ir a la ventana de registro
-    QHBoxLayout *extraLayout1 = new QHBoxLayout();
-    QPushButton *regButtonLink = new QPushButton("¿Aún no tienes cuenta? Crea una nueva", this);
-    regButtonLink->setStyleSheet("QPushButton { color: #ffffff; text-decoration: underline; font-size: 14px; background: transparent; border: none; }");
-    extraLayout1->addWidget(regButtonLink);
-    mainLayout->addLayout(extraLayout1);
+    // Por último, el texto “¿No tienes cuenta? Crea una”
+    QHBoxLayout *registerLinkLayout = new QHBoxLayout();
+    QPushButton *regButtonLink = new QPushButton("¿Aún no tienes cuenta? Crea una", this);
+    regButtonLink->setStyleSheet(
+        "QPushButton {"
+        "  color: #ffffff;"
+        "  text-decoration: underline;"
+        "  font-size: 14px;"
+        "  background: transparent;"
+        "  border: none;"
+        "}"
+        );
+    registerLinkLayout->addWidget(regButtonLink);
+    mainLayout->addLayout(registerLinkLayout);
+
+    // Aquí emitimos la señal openRegisterRequested()
     connect(regButtonLink, &QPushButton::clicked, [=]() {
-        RegisterWindow *regWin = new RegisterWindow();
-        regWin->move(this->geometry().center() - regWin->rect().center());
-        regWin->show();
+        this->close(); // cerramos LoginWindow
+        emit openRegisterRequested();
     });
-    connect(regButtonLink, &QPushButton::clicked, this, &LoginWindow::close);
-
 }
 
-LoginWindow::~LoginWindow() {}
+LoginWindow::~LoginWindow()
+{
+}
+
+void LoginWindow::showEvent(QShowEvent *event)
+{
+    QDialog::showEvent(event);
+    if (parentWidget()) {
+        backgroundOverlay = new QWidget(parentWidget());
+        backgroundOverlay->setStyleSheet("background-color: rgba(0, 0, 0, 128);");
+        backgroundOverlay->setGeometry(parentWidget()->rect());
+        backgroundOverlay->show();
+        backgroundOverlay->raise();
+        parentWidget()->installEventFilter(this);
+        this->move(parentWidget()->geometry().center() - this->rect().center());
+    }
+}
+
+void LoginWindow::closeEvent(QCloseEvent *event)
+{
+    if (parentWidget()) {
+        parentWidget()->removeEventFilter(this);
+    }
+    if (backgroundOverlay) {
+        backgroundOverlay->deleteLater();
+        backgroundOverlay = nullptr;
+    }
+    QDialog::closeEvent(event);
+}
+
+bool LoginWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == parentWidget() && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+        if (parentWidget()) {
+            this->move(parentWidget()->geometry().center() - this->rect().center());
+            if (backgroundOverlay) {
+                backgroundOverlay->setGeometry(parentWidget()->rect());
+            }
+        }
+    }
+    return QDialog::eventFilter(watched, event);
+}
