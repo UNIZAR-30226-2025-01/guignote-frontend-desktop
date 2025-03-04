@@ -12,6 +12,7 @@
 #include <QTransform>
 #include <QDialog>
 #include <QApplication>
+#include <QPainter>
 #include "loginwindow.h"
 #include "registerwindow.h"  // Incluir el header de la ventana de registro
 
@@ -99,33 +100,30 @@ MainWindow::MainWindow(QWidget *parent)
     registerButton->setFixedSize(250, 50);
 
     // Conexión para mostrar la ventana de inicio de sesión
-    // mainwindow.cpp, en el slot del botón "Iniciar Sesión":
     connect(loginButton, &QPushButton::clicked, [=]() {
         // Crear el LoginWindow como hijo de 'centralBox'
         LoginWindow *loginWin = new LoginWindow(centralBox);
         loginWin->setAttribute(Qt::WA_DeleteOnClose);
 
         // Calcular la posición para centrar el login dentro de 'centralBox'
-        QRect centralRect = centralBox->rect();  // Coordenadas locales de centralBox
+        QRect centralRect = centralBox->rect();
         int x = centralRect.center().x() - loginWin->width() / 2;
         int y = centralRect.center().y() - loginWin->height() / 2;
         loginWin->move(x, y);
-        loginWin->raise();  // <---- FORZAR QUE ESTÉ ENCIMA
+        loginWin->raise();
         loginWin->show();
 
         // Conectar la señal "volverClicked" para ocultar el login
         connect(loginWin, SIGNAL(volverClicked()), loginWin, SLOT(hide()));
     });
 
-
     // Conexión para mostrar la ventana de registro
-    // mainwindow.cpp, en el slot del botón "Crear Cuenta":
     connect(registerButton, &QPushButton::clicked, [=]() {
         // Guardar el tamaño original de centralBox antes de cambiarlo
         static QSize originalSize = centralBox->size();
 
         // Aumentar temporalmente el tamaño de centralBox
-        centralBox->setFixedSize(400, 550);  // 🔹 Ajusta el tamaño según lo necesario
+        centralBox->setFixedSize(400, 550);
 
         RegisterWindow *regWin = new RegisterWindow(centralBox);
         regWin->setAttribute(Qt::WA_DeleteOnClose);
@@ -139,14 +137,12 @@ MainWindow::MainWindow(QWidget *parent)
         regWin->raise();
         regWin->show();
 
-        // 🔹 Restaurar el tamaño de centralBox cuando se oculte RegisterWindow
+        // Restaurar el tamaño de centralBox cuando se oculte RegisterWindow
         connect(regWin, &RegisterWindow::volverClicked, [=]() {
-            centralBox->setFixedSize(originalSize);  // ✅ Restaurar tamaño original
+            centralBox->setFixedSize(originalSize);
             regWin->hide();
         });
     });
-
-
 
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     buttonLayout->setAlignment(Qt::AlignCenter);
@@ -161,20 +157,43 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->addStretch();
     mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
 
-    // Botón de salida con icono ---
+    // --- Botón de salida con icono ---
     QPushButton *exitIconButton = new QPushButton(ui->centralwidget);
-    exitIconButton->setIcon(QIcon(":/icons/door.png")); // Asegúrate de que la ruta sea la correcta
+
+    // Cargar el pixmap original de la puerta
+    QPixmap doorPixmap(":/icons/door.png");
+    // Crear el pixmap oscurecido
+    QPixmap darkenedDoor = doorPixmap;
+    {
+        QPainter painter(&darkenedDoor);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(darkenedDoor.rect(), QColor(120, 120, 120, 100));
+        painter.end();
+    }
+
+    // Asignar el icono normal inicialmente
+    exitIconButton->setIcon(QIcon(doorPixmap));
     exitIconButton->setIconSize(QSize(50,50));
     exitIconButton->setFlat(true);
-    exitIconButton->setStyleSheet("QPushButton { color: #ffffff; font-size: 18px; }"
-                                  "QPushButton:hover { color: #dddddd; }");
+    exitIconButton->setStyleSheet(
+        "QPushButton {"
+        "   background-color: transparent;"
+        "   border: none;"
+        "}"
+        "QPushButton:pressed {"
+        "   background-color: transparent;"
+        "}"
+        );
     exitIconButton->setCursor(Qt::PointingHandCursor);
-    boxLayout->addWidget(exitIconButton, 0, Qt::AlignRight | Qt::AlignBottom);
-    mainLayout->addStretch();
-    ui->centralwidget->setLayout(mainLayout);
 
-    // Conexión: Al hacer click en el botón de salida se muestra el pop up de confirmación
+    // Al presionar el botón se oscurece la imagen (aunque no se restablece al soltar)
+    connect(exitIconButton, &QPushButton::pressed, [=]() {
+        exitIconButton->setIcon(QIcon(darkenedDoor));
+    });
+
+    // Al hacer click, antes de mostrar el warning, se mantiene la imagen oscura
     connect(exitIconButton, &QPushButton::clicked, [=]() {
+        // Crear el diálogo de confirmación
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
@@ -218,10 +237,19 @@ MainWindow::MainWindow(QWidget *parent)
             confirmDialog->close();
         });
 
+        // Al cerrarse el diálogo se restaura el icono original
+        connect(confirmDialog, &QDialog::finished, [=](int) {
+            exitIconButton->setIcon(QIcon(doorPixmap));
+        });
+
         // Centrar el diálogo en la ventana principal
         confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
         confirmDialog->show();
     });
+
+    boxLayout->addWidget(exitIconButton, 0, Qt::AlignRight | Qt::AlignBottom);
+    mainLayout->addStretch();
+    ui->centralwidget->setLayout(mainLayout);
 
     // ---- Decoraciones en las esquinas (fuera de centralBox) ----
     ornamentSize = QSize(300, 299);
