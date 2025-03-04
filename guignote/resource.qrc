@@ -16,5 +16,6 @@
         <file>images/card_backs.png</file>
         <file>images/card_backs_2.png</file>
         <file>images/card_fronts.png</file>
+        <file>icons/preferences.png</file>
     </qresource>
 </RCC>
