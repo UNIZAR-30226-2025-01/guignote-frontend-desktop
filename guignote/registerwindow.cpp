@@ -24,6 +24,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QMessageBox>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUrl>
@@ -171,7 +172,16 @@ RegisterWindow::RegisterWindow(QWidget *parent)
 
         // Verificar que ambas contraseñas coincidan.
         if (contrasegna != confirmContrasegna) {
-            qWarning() << "Las contraseñas no coinciden.";
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("Error de autenticación");
+            msgBox.setText("Las contraseñas no coinciden.");
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setStandardButtons(QMessageBox::Ok);
+            msgBox.setStyleSheet("QLabel { color: #ffffff; font-size: 14px; } "
+                                 "QPushButton { background-color: #c2c2c3; border: none; border-radius: 5px; padding: 5px; } "
+                                 "QMessageBox { background-color: #171718; }");
+            msgBox.exec();
+            return;
             return;
         }
 
@@ -191,6 +201,7 @@ RegisterWindow::RegisterWindow(QWidget *parent)
 
         QNetworkAccessManager *manager = new QNetworkAccessManager(this);
         connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
+            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             // Procesar la respuesta del servidor.
             if (reply->error() == QNetworkReply::NoError) {
                 QByteArray responseData = reply->readAll();
@@ -201,7 +212,7 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
-                        MenuWindow *menuWin = new MenuWindow(this);
+                        MenuWindow *menuWin = new MenuWindow();
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
                         this->close();
@@ -209,6 +220,17 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                         qWarning() << "Respuesta sin token:" << responseData;
                     }
                 }
+            } else if (statusCode == 400) {
+                // Mostrar mensaje de error estético: usuario no encontrado.
+                QMessageBox msgBox(this);
+                msgBox.setWindowTitle("Error de autenticación");
+                msgBox.setText("Correo o nombre de usuario ya en uso o campos sin completar");
+                msgBox.setIcon(QMessageBox::Critical);
+                msgBox.setStandardButtons(QMessageBox::Ok);
+                msgBox.setStyleSheet("QLabel { color: #ffffff; font-size: 14px; } "
+                                     "QPushButton { background-color: #c2c2c3; border: none; border-radius: 5px; padding: 5px; } "
+                                     "QMessageBox { background-color: #171718; }");
+                msgBox.exec();
             } else {
                 qWarning() << "Error en la petición:" << reply->errorString();
             }

@@ -175,7 +175,6 @@ LoginWindow::LoginWindow(QWidget *parent)
         QString contrasegna = passwordEdit->text();
 
         // Validar que ambos campos contengan datos.
-        // Validar que ambos campos contengan datos.
         if (userOrEmail.isEmpty() || contrasegna.isEmpty()) {
             QMessageBox msgBox(this);
             msgBox.setWindowTitle("Error de autenticación");
@@ -202,7 +201,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         QByteArray data = doc.toJson();
 
         // Configuración de la petición POST a la URL de autenticación.
-        QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");
+        QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion");
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -220,7 +219,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
-                        MenuWindow *menuWin = new MenuWindow(this);
+                        MenuWindow *menuWin = new MenuWindow();
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
                         this->close();
