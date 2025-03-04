@@ -1,15 +1,15 @@
-#ifndef CLICKABLEIMAGE_H
-#define CLICKABLEIMAGE_H
+#ifndef ICON_H
+#define ICON_H
 
 #include <QLabel>
 #include <QWidget>
 #include <QMouseEvent>
 
-class ClickableImage : public QLabel {
+class Icon : public QLabel {
     Q_OBJECT
 
 public:
-    explicit ClickableImage(QWidget *parent = nullptr);
+    explicit Icon(QWidget *parent = nullptr);
 
     // Método para cargar una imagen
     void setImage(const QString &imagePath, int width = 100, int height = 100);
@@ -21,4 +21,4 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 };
 
-#endif // CLICKABLEIMAGE_H
+#endif // ICON_H

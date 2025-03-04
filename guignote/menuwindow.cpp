@@ -11,7 +11,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
     bottomBar(nullptr),
     topBar(nullptr),
     settings(nullptr),
-    friends(nullptr)
+    friends(nullptr),
+    divider(nullptr)
 {
     ui->setupUi(this);  // Cargar el diseño de menu.ui
 
@@ -53,20 +54,22 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // ------------- SETTINGS Y FRIENDS -------------
 
-    ClickableImage *settings = new ClickableImage(this);
-    ClickableImage *friends = new ClickableImage(this);
+    settings = new Icon(this);
+    friends = new Icon(this);
+    divider = new Icon(this);
 
     settings->setImage(":/icons/settings.png", 60, 60);
     friends->setImage(":/icons/friends.png", 60, 60);
+    divider->setImage(":/icons/divider.png", 60, 60);
 
     // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
 
     // Conectar señales de clic a funciones
-    connect(settings, &ClickableImage::clicked, this, []() {
+    connect(settings, &Icon::clicked, this, []() {
         qDebug() << "¡Botón de Configuración clickeado!";
     });
 
-    connect(friends, &ClickableImage::clicked, this, []() {
+    connect(friends, &Icon::clicked, this, []() {
         qDebug() << "¡Botón de Amigos clickeado!";
     });
 
@@ -166,14 +169,34 @@ void MenuWindow::repositionBars() {
 
     topBar->setGeometry(xPosT, 0, barWidthTop, barHeight);
     bottomBar->setGeometry(xPosB, yPos, barWidthBottom, barHeight);
-    settings->move(xPosB-10,yPos);
 }
+
+void MenuWindow::repositionIcons() {
+    // Obtener nuevas dimensiones de la ventana
+    int windowWidth = this->width();
+    int windowHeight = this->height();
+
+    // Definir el tamaño de las imágenes
+    int imgWidth = settings->width();
+    int imgHeight = settings->height();
+    int dividerWidth = divider->width();
+
+    int separacion = 120;  // Espaciado entre iconos
+    int margen = 40;       // Margen desde la parte inferior
+
+    // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
+    settings->move((windowWidth / 2) - (imgWidth / 2) - separacion, windowHeight - (imgHeight / 2) - margen);
+    friends->move((windowWidth / 2) + separacion - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
+    divider->move((windowWidth / 2) - (dividerWidth / 2), windowHeight - (imgHeight / 2) - margen);
+}
+
 
 // Función para recolocar y reposicionar todos los elementos
 void MenuWindow::resizeEvent(QResizeEvent *event) {
     repositionOrnaments();
     repositionBars();
     repositionImageButtons();
+    repositionIcons();
 
     QWidget::resizeEvent(event);
 }

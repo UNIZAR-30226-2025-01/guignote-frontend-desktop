@@ -1,0 +1,4 @@
+#ifndef FRIENDSWINDOW_H
+#define FRIENDSWINDOW_H
+
+#endif // FRIENDSWINDOW_H

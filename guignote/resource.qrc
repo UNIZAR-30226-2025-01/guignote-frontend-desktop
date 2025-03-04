@@ -20,5 +20,6 @@
         <file>images/cartasBoton.png</file>
         <file>icons/settings.png</file>
         <file>icons/friends.png</file>
+        <file>icons/divider.png</file>
     </qresource>
 </RCC>

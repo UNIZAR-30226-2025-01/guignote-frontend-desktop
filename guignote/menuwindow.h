@@ -13,7 +13,7 @@
 #include <QWindow>
 #include "imagebutton.h"
 #include "ui_menuwindow.h"
-#include "clickableImage.h"
+#include "icon.h"
 
 class MenuWindow : public QWidget {
     Q_OBJECT
@@ -29,6 +29,7 @@ private:
     void repositionOrnaments();
     void repositionImageButtons();
     void repositionBars();
+    void repositionIcons();
 
     Ui::MenuWindow *ui;
     QSize ornamentSize;
@@ -38,8 +39,9 @@ private:
     QLabel *cornerBottomRight;
     QFrame *bottomBar;
     QFrame *topBar;
-    ClickableImage *settings;
-    ClickableImage *friends;
+    Icon *settings;
+    Icon *friends;
+    Icon *divider;
     ImageButton *boton1v1;
     ImageButton *boton2v2;
 };
