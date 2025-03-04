@@ -18,5 +18,7 @@
         <file>images/card_fronts.png</file>
         <file>images/cartaBoton.png</file>
         <file>images/cartasBoton.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/friends.png</file>
     </qresource>
 </RCC>

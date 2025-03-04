@@ -34,6 +34,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         recoverpasswordwindow.h recoverpasswordwindow.cpp
         menuwindow.h menuwindow.cpp
         imagebutton.h imagebutton.cpp
+        clickableImage.h
+        clickableimage.h clickableimage.cpp
+        icons/friends.png icons/hide_password.png icons/house-door.png icons/padlock.png icons/settings.png
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET guignote APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

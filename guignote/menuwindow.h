@@ -8,8 +8,12 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QMainWindow>
+#include <QPixmap>
+#include <QTransform>
+#include <QWindow>
 #include "imagebutton.h"
 #include "ui_menuwindow.h"
+#include "clickableImage.h"
 
 class MenuWindow : public QWidget {
     Q_OBJECT
@@ -23,6 +27,8 @@ protected:
 
 private:
     void repositionOrnaments();
+    void repositionImageButtons();
+    void repositionBars();
 
     Ui::MenuWindow *ui;
     QSize ornamentSize;
@@ -30,7 +36,10 @@ private:
     QLabel *cornerTopRight;
     QLabel *cornerBottomLeft;
     QLabel *cornerBottomRight;
-    QLabel *topBar;
+    QFrame *bottomBar;
+    QFrame *topBar;
+    ClickableImage *settings;
+    ClickableImage *friends;
     ImageButton *boton1v1;
     ImageButton *boton2v2;
 };

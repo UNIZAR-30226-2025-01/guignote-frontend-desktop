@@ -1,17 +1,17 @@
 #include "menuwindow.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
-#include <QPixmap>
-#include <QTransform>
-#include <QPushButton>
-#include <QMainWindow>
 
 // Constructor de la clase menu
 MenuWindow::MenuWindow(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MenuWindow),  // Inicialización de la UI
     boton1v1(nullptr),
-    boton2v2(nullptr)
+    boton2v2(nullptr),
+    bottomBar(nullptr),
+    topBar(nullptr),
+    settings(nullptr),
+    friends(nullptr)
 {
     ui->setupUi(this);  // Cargar el diseño de menu.ui
 
@@ -33,7 +33,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
-    // ------------- TEMPORAL -------------
+    // ------------- EVENTOS DE CLICK CARTAS -------------
 
     // Conectar los botones a funciones (cuando se hace clic)
     connect(boton1v1, &ImageButton::clicked, this, []() {
@@ -43,6 +43,33 @@ MenuWindow::MenuWindow(QWidget *parent) :
     connect(boton2v2, &ImageButton::clicked, this, []() {
         qDebug() << "Botón 2v2 presionado";
     });
+
+    // ------------- BARS -------------
+
+    bottomBar = new QFrame(this);
+    bottomBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+    topBar = new QFrame(this);
+    topBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+
+    // ------------- SETTINGS Y FRIENDS -------------
+
+    ClickableImage *settings = new ClickableImage(this);
+    ClickableImage *friends = new ClickableImage(this);
+
+    settings->setImage(":/icons/settings.png", 60, 60);
+    friends->setImage(":/icons/friends.png", 60, 60);
+
+    // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
+
+    // Conectar señales de clic a funciones
+    connect(settings, &ClickableImage::clicked, this, []() {
+        qDebug() << "¡Botón de Configuración clickeado!";
+    });
+
+    connect(friends, &ClickableImage::clicked, this, []() {
+        qDebug() << "¡Botón de Amigos clickeado!";
+    });
+
 
     // ------------- ORNAMENTOS ESQUINAS -------------
 
@@ -104,11 +131,12 @@ void MenuWindow::repositionOrnaments() {
     }
 }
 
-void MenuWindow::resizeEvent(QResizeEvent *event) {
-    repositionOrnaments();
+// Función para reposicionar los ImageButtons
+void MenuWindow::repositionImageButtons() {
 
     int w = this->width();
     int h = this->height();
+
     int buttonSpacing = w / 10; // Espaciado proporcional al tamaño de la ventana
 
     // Redimensionar los botones
@@ -124,6 +152,28 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
 
     boton1v1->move(startX, startY);
     boton2v2->move(startX + buttonWidth + buttonSpacing, startY);
+}
+
+// Función para reposicionar las barras
+void MenuWindow::repositionBars() {
+    int w = this->width();
+    int barWidthTop = w / 3;  // 1/3 del ancho de la ventana
+    int barWidthBottom = w / 4;  // 1/3 del ancho de la ventana
+    int barHeight = 80;    // Altura fija de la barra
+    int xPosT = (w - barWidthTop) / 2; // Centrado horizontalmente
+    int xPosB = (w - barWidthBottom) / 2; // Centrado horizontalmente
+    int yPos = this->height() - barHeight; // Pegado abajo con margen de 10px
+
+    topBar->setGeometry(xPosT, 0, barWidthTop, barHeight);
+    bottomBar->setGeometry(xPosB, yPos, barWidthBottom, barHeight);
+    settings->move(xPosB-10,yPos);
+}
+
+// Función para recolocar y reposicionar todos los elementos
+void MenuWindow::resizeEvent(QResizeEvent *event) {
+    repositionOrnaments();
+    repositionBars();
+    repositionImageButtons();
 
     QWidget::resizeEvent(event);
 }
