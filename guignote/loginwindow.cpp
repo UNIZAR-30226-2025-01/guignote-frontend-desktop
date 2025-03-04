@@ -14,6 +14,7 @@
 
 // Inclusión de librerías de Qt necesarias para la interfaz y red
 #include <QVBoxLayout>
+#include <QMessageBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -174,8 +175,17 @@ LoginWindow::LoginWindow(QWidget *parent)
         QString contrasegna = passwordEdit->text();
 
         // Validar que ambos campos contengan datos.
+        // Validar que ambos campos contengan datos.
         if (userOrEmail.isEmpty() || contrasegna.isEmpty()) {
-            qWarning() << "Faltan campos";
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("Error de autenticación");
+            msgBox.setText("Faltan campos.");
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setStandardButtons(QMessageBox::Ok);
+            msgBox.setStyleSheet("QLabel { color: #ffffff; font-size: 14px; } "
+                                 "QPushButton { background-color: #c2c2c3; border: none; border-radius: 5px; padding: 5px; } "
+                                 "QMessageBox { background-color: #171718; }");
+            msgBox.exec();
             return;
         }
 
@@ -198,6 +208,8 @@ LoginWindow::LoginWindow(QWidget *parent)
 
         QNetworkAccessManager *manager = new QNetworkAccessManager(this);
         connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
+             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
             // Procesar la respuesta del servidor.
             if (reply->error() == QNetworkReply::NoError) {
                 QByteArray responseData = reply->readAll();
@@ -218,7 +230,19 @@ LoginWindow::LoginWindow(QWidget *parent)
                         qWarning() << "Respuesta inesperada:" << responseData;
                     }
                 }
-            } else {
+            } else if (statusCode == 404) {
+                // Mostrar mensaje de error estético: usuario no encontrado.
+                QMessageBox msgBox(this);
+                msgBox.setWindowTitle("Error de autenticación");
+                msgBox.setText("Usuario no encontrado.");
+                msgBox.setIcon(QMessageBox::Critical);
+                msgBox.setStandardButtons(QMessageBox::Ok);
+                msgBox.setStyleSheet("QLabel { color: #ffffff; font-size: 14px; } "
+                                     "QPushButton { background-color: #c2c2c3; border: none; border-radius: 5px; padding: 5px; } "
+                                     "QMessageBox { background-color: #171718; }");
+                msgBox.exec();
+            }
+            else {
                 qWarning() << "Error en la petición:" << reply->errorString();
             }
             reply->deleteLater();
