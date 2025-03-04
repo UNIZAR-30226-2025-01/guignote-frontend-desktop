@@ -23,13 +23,13 @@
 #include <QJsonObject>
 
 LoginWindow::LoginWindow(QWidget *parent)
-    : QWidget(parent), passwordHidden(true)
+    : QDialog(parent), passwordHidden(true)  // Cambio: hereda de QDialog
 {
-    // Solo aplicar los flags si no se ha pasado un parent
-    if (!parent) {
-        // Configurar la ventana sin bordes
-        setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
-    }
+    // Se quita el bloque para configurar la ventana sin bordes.
+    // En su lugar, se usa la configuración por defecto de QDialog, que incluye bordes.
+    // Además, hacemos que el diálogo sea modal para bloquear la ventana principal.
+    setModal(true);
+
     // Asegurar que el fondo no es transparente
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet(
@@ -160,18 +160,14 @@ LoginWindow::LoginWindow(QWidget *parent)
 
     // Conexión para el botón de "Iniciar Sesión" con el backend
     connect(loginButton, &QPushButton::clicked, [=]() {
-        // Recogemos los datos de los campos
         QString userOrEmail = usernameEdit->text().trimmed();
         QString contrasegna = passwordEdit->text();
 
-        // En caso de campos vacíos, envíamos un warning de falta de campos
         if (userOrEmail.isEmpty() || contrasegna.isEmpty()) {
             qWarning() << "Faltan campos";
             return;
         }
 
-        // Crear el objeto JSON con los datos.
-        // Según la documentación, se puede enviar "nombre" o "correo", dependiendo del contenido.
         QJsonObject json;
         if (userOrEmail.contains('@')) {
             json["correo"] = userOrEmail;
@@ -180,16 +176,13 @@ LoginWindow::LoginWindow(QWidget *parent)
         }
         json["contrasegna"] = contrasegna;
 
-        // Configuramos el documento JSON
         QJsonDocument doc(json);
         QByteArray data = doc.toJson();
 
-        // Configurar la URL del endpoint (se utiliza la IP proporcionada)
         QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-        // Crear el gestor de red para enviar la petición
         QNetworkAccessManager *manager = new QNetworkAccessManager(this);
         connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
             if (reply->error() == QNetworkReply::NoError) {
@@ -200,8 +193,6 @@ LoginWindow::LoginWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
-                        // Aquí se puede almacenar el token según se requiera.
-                        // Luego se abre la ventana del menú principal.
                         MenuWindow *menuWin = new MenuWindow();
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
@@ -219,19 +210,16 @@ LoginWindow::LoginWindow(QWidget *parent)
             manager->deleteLater();
         });
 
-        // Enviar la petición POST con el JSON generado
         manager->post(request, data);
     });
-
 
     // Botón para volver
     QPushButton *backButton = new QPushButton("Volver", this);
     backButton->setStyleSheet(buttonStyle);
     backButton->setFixedSize(200, 50);
     mainLayout->addWidget(backButton, 0, Qt::AlignCenter);
-    connect(backButton, &QPushButton::clicked, [=]() {
-        emit volverClicked();
-    });
+    connect(backButton, &QPushButton::clicked, this, &QDialog::close);
+
 
     // Layout extra con botón para ir a la ventana de registro
     QHBoxLayout *extraLayout1 = new QHBoxLayout();
@@ -245,7 +233,6 @@ LoginWindow::LoginWindow(QWidget *parent)
         regWin->show();
     });
     connect(regButtonLink, &QPushButton::clicked, this, &LoginWindow::close);
-
 }
 
 LoginWindow::~LoginWindow() {}

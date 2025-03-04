@@ -1,9 +1,9 @@
 #ifndef RECOVERPASSWORDWINDOW_H
 #define RECOVERPASSWORDWINDOW_H
 
-#include <QWidget>
+#include <QDialog>  // Se hereda de QDialog
 
-class RecoverPasswordWindow : public QWidget
+class RecoverPasswordWindow : public QDialog
 {
     Q_OBJECT
 public:

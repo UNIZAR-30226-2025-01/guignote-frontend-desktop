@@ -1,11 +1,12 @@
 #ifndef LOGINWINDOW_H
 #define LOGINWINDOW_H
 
-#include <QWidget>
+#include <QDialog>
 
-class LoginWindow : public QWidget
+class LoginWindow : public QDialog
 {
-    Q_OBJECT
+    Q_OBJECT  // Asegúrate de incluir este macro
+
 public:
     explicit LoginWindow(QWidget *parent = nullptr);
     ~LoginWindow();
@@ -14,7 +15,6 @@ signals:
     void volverClicked(); // Señal para notificar que se pulsó "Volver"
 
 private:
-    // Para gestionar el estado de visibilidad de la contraseña
     bool passwordHidden;
 };
 

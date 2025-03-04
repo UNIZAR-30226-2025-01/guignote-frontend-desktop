@@ -101,47 +101,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Conexión para mostrar la ventana de inicio de sesión
     connect(loginButton, &QPushButton::clicked, [=]() {
-        // Crear el LoginWindow como hijo de 'centralBox'
-        LoginWindow *loginWin = new LoginWindow(centralBox);
-        loginWin->setAttribute(Qt::WA_DeleteOnClose);
-
-        // Calcular la posición para centrar el login dentro de 'centralBox'
-        QRect centralRect = centralBox->rect();
-        int x = centralRect.center().x() - loginWin->width() / 2;
-        int y = centralRect.center().y() - loginWin->height() / 2;
-        loginWin->move(x, y);
-        loginWin->raise();
-        loginWin->show();
-
-        // Conectar la señal "volverClicked" para ocultar el login
-        connect(loginWin, SIGNAL(volverClicked()), loginWin, SLOT(hide()));
+        LoginWindow loginWin;
+        // Ejecuta el diálogo de forma modal, bloqueando la ventana principal
+        loginWin.exec();
     });
 
-    // Conexión para mostrar la ventana de registro
+
     connect(registerButton, &QPushButton::clicked, [=]() {
-        // Guardar el tamaño original de centralBox antes de cambiarlo
-        static QSize originalSize = centralBox->size();
-
-        // Aumentar temporalmente el tamaño de centralBox
-        centralBox->setFixedSize(400, 550);
-
-        RegisterWindow *regWin = new RegisterWindow(centralBox);
-        regWin->setAttribute(Qt::WA_DeleteOnClose);
-
-        // Centrar RegisterWindow dentro de centralBox
-        QRect centralRect = centralBox->rect();
-        int x = centralRect.center().x() - regWin->width() / 2;
-        int y = centralRect.center().y() - regWin->height() / 2;
-        regWin->move(x, y);
-
-        regWin->raise();
-        regWin->show();
-
-        // Restaurar el tamaño de centralBox cuando se oculte RegisterWindow
-        connect(regWin, &RegisterWindow::volverClicked, [=]() {
-            centralBox->setFixedSize(originalSize);
-            regWin->hide();
-        });
+        RegisterWindow regWin;
+        // Ejecuta el diálogo de forma modal, bloqueando la ventana principal
+        regWin.exec();
     });
 
     QVBoxLayout *buttonLayout = new QVBoxLayout();

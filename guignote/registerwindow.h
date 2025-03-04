@@ -1,18 +1,15 @@
 #ifndef REGISTERWINDOW_H
 #define REGISTERWINDOW_H
 
-#include <QWidget>
+#include <QDialog>  // Se hereda de QDialog para popup modal
 
-class RegisterWindow : public QWidget
+class RegisterWindow : public QDialog
 {
     Q_OBJECT
 
 public:
     explicit RegisterWindow(QWidget *parent = nullptr);
     ~RegisterWindow();
-
-signals:
-    void volverClicked(); // Señal para ocultar la ventana cuando toque
 };
 
 #endif // REGISTERWINDOW_H

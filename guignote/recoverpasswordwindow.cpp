@@ -11,10 +11,10 @@
 #include <QDebug>
 
 RecoverPasswordWindow::RecoverPasswordWindow(QWidget *parent)
-    : QWidget(parent)
+    : QDialog(parent)  // Ahora hereda de QDialog
 {
-    // Configurar la ventana sin bordes y tamaño fijo
-    setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    // Se utiliza el marco estándar de QDialog y se hace modal para bloquear la ventana principal.
+    setModal(true);
     setFixedSize(480, 500);
     setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
@@ -90,15 +90,13 @@ RecoverPasswordWindow::RecoverPasswordWindow(QWidget *parent)
     extraLayout->addWidget(loginButtonLink);
     mainLayout->addLayout(extraLayout);
 
-    // Conexión para mostrar la ventana de inicio de sesión
+    // Al pulsar el enlace, se muestra la ventana de inicio de sesión y se cierra este popup
     connect(loginButtonLink, &QPushButton::clicked, [=]() {
         LoginWindow *loginWin = new LoginWindow();
         loginWin->move(this->geometry().center() - loginWin->rect().center());
         loginWin->show();
     });
-    connect(loginButtonLink, &QPushButton::clicked, this, &RecoverPasswordWindow::close);
-
-
-
+    connect(loginButtonLink, &QPushButton::clicked, this, &QDialog::close);
 }
+
 RecoverPasswordWindow::~RecoverPasswordWindow() {}
