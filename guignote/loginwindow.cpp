@@ -14,14 +14,30 @@
 #include <QIcon>
 #include <QAction>
 #include <QDebug>
+#include <QPainter>
+
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 LoginWindow::LoginWindow(QWidget *parent)
     : QWidget(parent), passwordHidden(true)
 {
-    // Configurar la ventana sin bordes
-    setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    // Solo aplicar los flags si no se ha pasado un parent
+    if (!parent) {
+        // Configurar la ventana sin bordes
+        setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+    }
+    // Asegurar que el fondo no es transparente
+    setAttribute(Qt::WA_StyledBackground, true);
+    setStyleSheet(
+        "background-color: #171718;"
+        "border-radius: 30px;"
+        "padding: 20px;"
+        );
     setFixedSize(480, 500);
-    setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
     // Cargar la fuente personalizada
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
@@ -142,23 +158,80 @@ LoginWindow::LoginWindow(QWidget *parent)
     loginButton->setFixedSize(200, 50);
     mainLayout->addWidget(loginButton, 0, Qt::AlignCenter);
 
-    // Conexión para el botón de "Iniciar Sesión" con el menú principal
+    // Conexión para el botón de "Iniciar Sesión" con el backend
     connect(loginButton, &QPushButton::clicked, [=]() {
-        // TODO: Conectar con el backend para validar credenciales
+        // Recogemos los datos de los campos
+        QString userOrEmail = usernameEdit->text().trimmed();
+        QString contrasegna = passwordEdit->text();
 
-        // Conexión con el menú principal
-        MenuWindow *menuWin = new MenuWindow();
-        menuWin->move(this->geometry().center() - menuWin->rect().center());
-        menuWin->show();
-        this->close();
+        // En caso de campos vacíos, envíamos un warning de falta de campos
+        if (userOrEmail.isEmpty() || contrasegna.isEmpty()) {
+            qWarning() << "Faltan campos";
+            return;
+        }
+
+        // Crear el objeto JSON con los datos.
+        // Según la documentación, se puede enviar "nombre" o "correo", dependiendo del contenido.
+        QJsonObject json;
+        if (userOrEmail.contains('@')) {
+            json["correo"] = userOrEmail;
+        } else {
+            json["nombre"] = userOrEmail;
+        }
+        json["contrasegna"] = contrasegna;
+
+        // Configuramos el documento JSON
+        QJsonDocument doc(json);
+        QByteArray data = doc.toJson();
+
+        // Configurar la URL del endpoint (se utiliza la IP proporcionada)
+        QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+        // Crear el gestor de red para enviar la petición
+        QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+        connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
+            if (reply->error() == QNetworkReply::NoError) {
+                QByteArray responseData = reply->readAll();
+                QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+                if (responseDoc.isObject()) {
+                    QJsonObject respObj = responseDoc.object();
+                    if (respObj.contains("token")) {
+                        QString token = respObj["token"].toString();
+                        qDebug() << "Token recibido:" << token;
+                        // Aquí se puede almacenar el token según se requiera.
+                        // Luego se abre la ventana del menú principal.
+                        MenuWindow *menuWin = new MenuWindow();
+                        menuWin->move(this->geometry().center() - menuWin->rect().center());
+                        menuWin->show();
+                        this->close();
+                    } else if (respObj.contains("error")) {
+                        qWarning() << "Error:" << respObj["error"].toString();
+                    } else {
+                        qWarning() << "Respuesta inesperada:" << responseData;
+                    }
+                }
+            } else {
+                qWarning() << "Error en la petición:" << reply->errorString();
+            }
+            reply->deleteLater();
+            manager->deleteLater();
+        });
+
+        // Enviar la petición POST con el JSON generado
+        manager->post(request, data);
     });
+
 
     // Botón para volver
     QPushButton *backButton = new QPushButton("Volver", this);
     backButton->setStyleSheet(buttonStyle);
     backButton->setFixedSize(200, 50);
     mainLayout->addWidget(backButton, 0, Qt::AlignCenter);
-    connect(backButton, &QPushButton::clicked, this, &LoginWindow::close);
+    connect(backButton, &QPushButton::clicked, [=]() {
+        emit volverClicked();
+    });
 
     // Layout extra con botón para ir a la ventana de registro
     QHBoxLayout *extraLayout1 = new QHBoxLayout();
@@ -172,6 +245,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         regWin->show();
     });
     connect(regButtonLink, &QPushButton::clicked, this, &LoginWindow::close);
+
 }
 
 LoginWindow::~LoginWindow() {}

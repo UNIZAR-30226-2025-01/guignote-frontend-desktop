@@ -23,9 +23,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     setWindowTitle("Inicio");
 
-    setMinimumSize(1090, 600);
-    setMaximumSize(1920, 1080);
-    resize(1090, 600);
+    // setMinimumSize(1090, 600);
+    // setMaximumSize(1920, 1080);
+    // resize(1090, 600);
 
     // Crear centralwidget si no existe
     if (!ui->centralwidget) {
@@ -99,18 +99,54 @@ MainWindow::MainWindow(QWidget *parent)
     registerButton->setFixedSize(250, 50);
 
     // Conexión para mostrar la ventana de inicio de sesión
+    // mainwindow.cpp, en el slot del botón "Iniciar Sesión":
     connect(loginButton, &QPushButton::clicked, [=]() {
-        LoginWindow *loginWin = new LoginWindow();
-        loginWin->move(this->geometry().center() - loginWin->rect().center());
+        // Crear el LoginWindow como hijo de 'centralBox'
+        LoginWindow *loginWin = new LoginWindow(centralBox);
+        loginWin->setAttribute(Qt::WA_DeleteOnClose);
+
+        // Calcular la posición para centrar el login dentro de 'centralBox'
+        QRect centralRect = centralBox->rect();  // Coordenadas locales de centralBox
+        int x = centralRect.center().x() - loginWin->width() / 2;
+        int y = centralRect.center().y() - loginWin->height() / 2;
+        loginWin->move(x, y);
+        loginWin->raise();  // <---- FORZAR QUE ESTÉ ENCIMA
         loginWin->show();
+
+        // Conectar la señal "volverClicked" para ocultar el login
+        connect(loginWin, SIGNAL(volverClicked()), loginWin, SLOT(hide()));
     });
 
+
     // Conexión para mostrar la ventana de registro
+    // mainwindow.cpp, en el slot del botón "Crear Cuenta":
     connect(registerButton, &QPushButton::clicked, [=]() {
-        RegisterWindow *regWin = new RegisterWindow();
-        regWin->move(this->geometry().center() - regWin->rect().center());
+        // Guardar el tamaño original de centralBox antes de cambiarlo
+        static QSize originalSize = centralBox->size();
+
+        // Aumentar temporalmente el tamaño de centralBox
+        centralBox->setFixedSize(400, 550);  // 🔹 Ajusta el tamaño según lo necesario
+
+        RegisterWindow *regWin = new RegisterWindow(centralBox);
+        regWin->setAttribute(Qt::WA_DeleteOnClose);
+
+        // Centrar RegisterWindow dentro de centralBox
+        QRect centralRect = centralBox->rect();
+        int x = centralRect.center().x() - regWin->width() / 2;
+        int y = centralRect.center().y() - regWin->height() / 2;
+        regWin->move(x, y);
+
+        regWin->raise();
         regWin->show();
+
+        // 🔹 Restaurar el tamaño de centralBox cuando se oculte RegisterWindow
+        connect(regWin, &RegisterWindow::volverClicked, [=]() {
+            centralBox->setFixedSize(originalSize);  // ✅ Restaurar tamaño original
+            regWin->hide();
+        });
     });
+
+
 
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     buttonLayout->setAlignment(Qt::AlignCenter);

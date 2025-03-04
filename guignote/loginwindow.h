@@ -10,6 +10,9 @@ public:
     explicit LoginWindow(QWidget *parent = nullptr);
     ~LoginWindow();
 
+signals:
+    void volverClicked(); // Señal para notificar que se pulsó "Volver"
+
 private:
     // Para gestionar el estado de visibilidad de la contraseña
     bool passwordHidden;
