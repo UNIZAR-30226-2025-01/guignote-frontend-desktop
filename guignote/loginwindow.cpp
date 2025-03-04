@@ -201,7 +201,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         QByteArray data = doc.toJson();
 
         // Configuración de la petición POST a la URL de autenticación.
-        QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion");
+        QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
