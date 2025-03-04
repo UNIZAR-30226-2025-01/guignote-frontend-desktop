@@ -14,7 +14,7 @@
 #include <QApplication>
 #include <QPainter>
 #include "loginwindow.h"
-#include "registerwindow.h"  // Incluir el header de la ventana de registro
+#include "registerwindow.h"
 
 
 // CONSTRUCTOR DE MAINWINDOW
@@ -32,9 +32,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Asignamos un título a la ventana
     setWindowTitle("Inicio");
 
-    // setMinimumSize(1090, 600);
-    // setMaximumSize(1920, 1080);
-    // resize(1090, 600);
+    setMinimumSize(1090, 600);
+    setMaximumSize(1920, 1080);
+    resize(1090, 600);
 
     /* EN EL CASO DE QMAINWINDOW, TIENE QUE EXISTIR UN WIDGET CENTRAL QUE CONTENGA EL RESTO DE WIDGETS
      * ES OBLIGATORIO DEFINIRLO. Por tanto, si no existe un centralwidget lo creamos, estableciendo a MainWindow
@@ -113,17 +113,14 @@ MainWindow::MainWindow(QWidget *parent)
     loginButton->setFixedSize(250, 50);
     registerButton->setFixedSize(250, 50);
 
-    // Conexión para mostrar la ventana de inicio de sesión
+    // Se pasan 'this' como padre para que los diálogos se muevan junto a la ventana principal
     connect(loginButton, &QPushButton::clicked, [=]() {
-        LoginWindow loginWin;
-        // Ejecuta el diálogo de forma modal, bloqueando la ventana principal
+        LoginWindow loginWin(this);
         loginWin.exec();
     });
 
-
     connect(registerButton, &QPushButton::clicked, [=]() {
-        RegisterWindow regWin;
-        // Ejecuta el diálogo de forma modal, bloqueando la ventana principal
+        RegisterWindow regWin(this);
         regWin.exec();
     });
 
@@ -143,9 +140,7 @@ MainWindow::MainWindow(QWidget *parent)
     // --- Botón de salida con icono ---
     QPushButton *exitIconButton = new QPushButton(ui->centralwidget);
 
-    // Cargar el pixmap original de la puerta
     QPixmap doorPixmap(":/icons/door.png");
-    // Crear el pixmap oscurecido
     QPixmap darkenedDoor = doorPixmap;
     {
         QPainter painter(&darkenedDoor);
@@ -154,7 +149,6 @@ MainWindow::MainWindow(QWidget *parent)
         painter.end();
     }
 
-    // Asignar el icono normal inicialmente
     exitIconButton->setIcon(QIcon(doorPixmap));
     exitIconButton->setIconSize(QSize(50,50));
     exitIconButton->setFlat(true);
@@ -169,14 +163,11 @@ MainWindow::MainWindow(QWidget *parent)
         );
     exitIconButton->setCursor(Qt::PointingHandCursor);
 
-    // Al presionar el botón se oscurece la imagen (aunque no se restablece al soltar)
     connect(exitIconButton, &QPushButton::pressed, [=]() {
         exitIconButton->setIcon(QIcon(darkenedDoor));
     });
 
-    // Al hacer click, antes de mostrar el warning, se mantiene la imagen oscura
     connect(exitIconButton, &QPushButton::clicked, [=]() {
-        // Crear el diálogo de confirmación
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
@@ -220,12 +211,10 @@ MainWindow::MainWindow(QWidget *parent)
             confirmDialog->close();
         });
 
-        // Al cerrarse el diálogo se restaura el icono original
         connect(confirmDialog, &QDialog::finished, [=](int) {
             exitIconButton->setIcon(QIcon(doorPixmap));
         });
 
-        // Centrar el diálogo en la ventana principal
         confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
         confirmDialog->show();
     });
@@ -287,7 +276,6 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomRight->setStyleSheet("background: transparent;");
     cornerBottomRight->raise();
 
-    // Posicionar decoraciones en las esquinas
     repositionOrnaments();
 }
 
@@ -310,5 +298,5 @@ void MainWindow::repositionOrnaments() {
 
 MainWindow::~MainWindow()
 {
-    delete ui;  // Solo eliminar si `ui` fue inicializado
+    delete ui;
 }
