@@ -15,6 +15,7 @@
 #include <QPainter>
 #include "loginwindow.h"
 #include "registerwindow.h"
+#include "settingswindow.h"  // Incluir la cabecera de la nueva ventana de ajustes
 
 
 // CONSTRUCTOR DE MAINWINDOW
@@ -130,16 +131,23 @@ MainWindow::MainWindow(QWidget *parent)
     buttonLayout->addWidget(loginButton, 0, Qt::AlignCenter);
     buttonLayout->addWidget(registerButton, 0, Qt::AlignCenter);
     boxLayout->addLayout(buttonLayout);
-    centralBox->setLayout(boxLayout);
 
-    // Layout principal para centrar la caja negra
-    QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
-    mainLayout->addStretch();
-    mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
+    // --- Botones de preferencias y salida ---
+    // Botón de preferencias (a la izquierda)
+    QPushButton *preferencesButton = new QPushButton(centralBox);
+    preferencesButton->setIcon(QIcon(":/icons/preferences.png"));
+    preferencesButton->setIconSize(QSize(50,50));
+    preferencesButton->setFlat(true);
+    preferencesButton->setStyleSheet("QPushButton { background-color: transparent; border: none; }");
+    preferencesButton->setCursor(Qt::PointingHandCursor);
+    connect(preferencesButton, &QPushButton::clicked, [=]() {
+        SettingsWindow *settingsWin = new SettingsWindow(this);
+        settingsWin->setModal(true);
+        settingsWin->show();
+    });
 
-    // --- Botón de salida con icono ---
-    QPushButton *exitIconButton = new QPushButton(ui->centralwidget);
-
+    // Botón de salida (a la derecha)
+    QPushButton *exitIconButton = new QPushButton(centralBox);
     QPixmap doorPixmap(":/icons/door.png");
     QPixmap darkenedDoor = doorPixmap;
     {
@@ -148,7 +156,6 @@ MainWindow::MainWindow(QWidget *parent)
         painter.fillRect(darkenedDoor.rect(), QColor(120, 120, 120, 100));
         painter.end();
     }
-
     exitIconButton->setIcon(QIcon(doorPixmap));
     exitIconButton->setIconSize(QSize(50,50));
     exitIconButton->setFlat(true);
@@ -162,11 +169,9 @@ MainWindow::MainWindow(QWidget *parent)
         "}"
         );
     exitIconButton->setCursor(Qt::PointingHandCursor);
-
     connect(exitIconButton, &QPushButton::pressed, [=]() {
         exitIconButton->setIcon(QIcon(darkenedDoor));
     });
-
     connect(exitIconButton, &QPushButton::clicked, [=]() {
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -210,7 +215,6 @@ MainWindow::MainWindow(QWidget *parent)
         connect(noButton, &QPushButton::clicked, [=]() {
             confirmDialog->close();
         });
-
         connect(confirmDialog, &QDialog::finished, [=](int) {
             exitIconButton->setIcon(QIcon(doorPixmap));
         });
@@ -219,7 +223,17 @@ MainWindow::MainWindow(QWidget *parent)
         confirmDialog->show();
     });
 
-    boxLayout->addWidget(exitIconButton, 0, Qt::AlignRight | Qt::AlignBottom);
+    // Crear un layout horizontal para ubicar los botones de preferencias (izquierda) y salida (derecha)
+    QHBoxLayout *bottomButtonLayout = new QHBoxLayout();
+    bottomButtonLayout->addWidget(preferencesButton, 0, Qt::AlignLeft);
+    bottomButtonLayout->addStretch();
+    bottomButtonLayout->addWidget(exitIconButton, 0, Qt::AlignRight);
+    boxLayout->addLayout(bottomButtonLayout);
+
+    // Layout principal para centrar la caja negra
+    QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
+    mainLayout->addStretch();
+    mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
     mainLayout->addStretch();
     ui->centralwidget->setLayout(mainLayout);
 
