@@ -34,6 +34,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUrl>
+#include <QPropertyAnimation>
+#include <QSizePolicy>
+#include <QFontMetrics>
 
 LoginWindow::LoginWindow(QWidget *parent)
     : QDialog(parent),
@@ -43,8 +46,14 @@ LoginWindow::LoginWindow(QWidget *parent)
     setModal(true);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
+
+    /*
+     * ------------------------------------------------------------------------------
+     * AJUSTE DEL TAMAÑO DE LA VENTANA
+     * ------------------------------------------------------------------------------
+     */
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
-    setFixedSize(480, 500);
+    setFixedSize(400, 540);
 
     // Cargar la fuente personalizada para el título.
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
@@ -104,6 +113,32 @@ LoginWindow::LoginWindow(QWidget *parent)
         passwordEdit->setEchoMode(passwordHidden ? QLineEdit::Password : QLineEdit::Normal);
         togglePasswordAction->setIcon(QIcon(passwordHidden ? ":/icons/hide_password.png" : ":/icons/show_password.png"));
     });
+
+    /*
+     * ------------------------------------------------------------------------------
+     * NUEVO: Etiqueta para mostrar los errores en rojo debajo de la contraseña.
+     * ------------------------------------------------------------------------------
+     */
+    QLabel *errorLabel = new QLabel(this);
+    errorLabel->setStyleSheet("QLabel { color: #ff4444; font-size: 14px; }");
+    errorLabel->setText("");
+    errorLabel->setVisible(false);
+
+    // Mismo ancho que el QLineEdit, altura fija y sin word wrap (una sola línea).
+    errorLabel->setFixedWidth(250);
+    errorLabel->setFixedHeight(20);
+    errorLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    errorLabel->setAlignment(Qt::AlignCenter);
+
+    // Función auxiliar para no mostrar texto demasiado largo. (ElideRight: "...")
+    auto setErrorTextElided = [=](const QString &text){
+        QFontMetrics fm(errorLabel->font());
+        // Elide en caso de texto demasiado largo
+        QString elided = fm.elidedText(text, Qt::ElideRight, errorLabel->width());
+        errorLabel->setText(elided);
+    };
+
+    mainLayout->addWidget(errorLabel, 0, Qt::AlignCenter);
 
     // Layout horizontal para opciones adicionales: "¿Has olvidado tu contraseña?" y "Recordar contraseña".
     QHBoxLayout *extraLayout = new QHBoxLayout();
@@ -169,6 +204,23 @@ LoginWindow::LoginWindow(QWidget *parent)
     loginButton->setFixedSize(200, 50);
     mainLayout->addWidget(loginButton, 0, Qt::AlignCenter);
 
+    /*
+     * ------------------------------------------------------------------------------
+     * NUEVO: Función para sacudir el BOTÓN
+     * ------------------------------------------------------------------------------
+     */
+    auto shakeWidget = [=](QWidget *widget) {
+        QPropertyAnimation *animation = new QPropertyAnimation(widget, "pos");
+        animation->setDuration(200);
+        animation->setKeyValueAt(0,       widget->pos());
+        animation->setKeyValueAt(0.2,     widget->pos() + QPoint(10, 0));
+        animation->setKeyValueAt(0.4,     widget->pos() + QPoint(-10, 0));
+        animation->setKeyValueAt(0.6,     widget->pos() + QPoint(10, 0));
+        animation->setKeyValueAt(0.8,     widget->pos() + QPoint(-10, 0));
+        animation->setKeyValueAt(1,       widget->pos());
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+    };
+
     // Conexión para realizar la autenticación mediante una petición HTTP POST.
     connect(loginButton, &QPushButton::clicked, [=]() {
         QString userOrEmail = usernameEdit->text().trimmed();
@@ -176,15 +228,10 @@ LoginWindow::LoginWindow(QWidget *parent)
 
         // Validar que ambos campos contengan datos.
         if (userOrEmail.isEmpty() || contrasegna.isEmpty()) {
-            QMessageBox msgBox(this);
-            msgBox.setWindowTitle("Error de autenticación");
-            msgBox.setText("Faltan campos.");
-            msgBox.setIcon(QMessageBox::Critical);
-            msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.setStyleSheet("QLabel { color: #ffffff; font-size: 14px; } "
-                                 "QPushButton { background-color: #c2c2c3; border: none; border-radius: 5px; padding: 5px; } "
-                                 "QMessageBox { background-color: #171718; }");
-            msgBox.exec();
+            // Se muestra el error en el label rojo y se sacude el BOTÓN de iniciar sesión.
+            setErrorTextElided("Faltan campos.");
+            errorLabel->setVisible(true);
+            shakeWidget(loginButton);
             return;
         }
 
@@ -207,7 +254,7 @@ LoginWindow::LoginWindow(QWidget *parent)
 
         QNetworkAccessManager *manager = new QNetworkAccessManager(this);
         connect(manager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
-             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
             // Procesar la respuesta del servidor.
             if (reply->error() == QNetworkReply::NoError) {
@@ -225,24 +272,27 @@ LoginWindow::LoginWindow(QWidget *parent)
                         this->close();
                     } else if (respObj.contains("error")) {
                         qWarning() << "Error:" << respObj["error"].toString();
+                        setErrorTextElided(respObj["error"].toString());
+                        errorLabel->setVisible(true);
+                        shakeWidget(loginButton);
                     } else {
                         qWarning() << "Respuesta inesperada:" << responseData;
+                        setErrorTextElided("Error desconocido en la respuesta.");
+                        errorLabel->setVisible(true);
+                        shakeWidget(loginButton);
                     }
                 }
             } else if (statusCode == 404) {
                 // Mostrar mensaje de error estético: usuario no encontrado.
-                QMessageBox msgBox(this);
-                msgBox.setWindowTitle("Error de autenticación");
-                msgBox.setText("Usuario no encontrado.");
-                msgBox.setIcon(QMessageBox::Critical);
-                msgBox.setStandardButtons(QMessageBox::Ok);
-                msgBox.setStyleSheet("QLabel { color: #ffffff; font-size: 14px; } "
-                                     "QPushButton { background-color: #c2c2c3; border: none; border-radius: 5px; padding: 5px; } "
-                                     "QMessageBox { background-color: #171718; }");
-                msgBox.exec();
+                setErrorTextElided("Usuario no encontrado.");
+                errorLabel->setVisible(true);
+                shakeWidget(loginButton);
             }
             else {
                 qWarning() << "Error en la petición:" << reply->errorString();
+                setErrorTextElided("Error en la petición.");
+                errorLabel->setVisible(true);
+                shakeWidget(loginButton);
             }
             reply->deleteLater();
             manager->deleteLater();
