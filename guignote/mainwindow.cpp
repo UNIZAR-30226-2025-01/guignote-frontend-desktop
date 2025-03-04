@@ -5,6 +5,7 @@
 #include "loginwindow.h"
 #include "registerwindow.h"
 #include "settingswindow.h" // Si la usas
+#include "icon.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -20,6 +21,8 @@
 #include <QApplication>
 #include <QPainter>
 #include <QDebug>
+#include <QColor>
+#include <QImage>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -130,41 +133,25 @@ MainWindow::MainWindow(QWidget *parent)
     boxLayout->addLayout(buttonLayout);
 
     // Botones inferiores: preferencias y salir
-    QPushButton *preferencesButton = new QPushButton(centralBox);
-    preferencesButton->setIcon(QIcon(":/icons/preferences.png"));
-    preferencesButton->setIconSize(QSize(50,50));
-    preferencesButton->setFlat(true);
-    preferencesButton->setStyleSheet("QPushButton { background-color: transparent; border: none; }");
-    preferencesButton->setCursor(Qt::PointingHandCursor);
-    connect(preferencesButton, &QPushButton::clicked, [=]() {
+    Icon *preferencesButton = new Icon(this);
+    preferencesButton->setImage(":/icons/settings.png", 80, 80);
+    connect(preferencesButton, &Icon::clicked, [=]() {
         SettingsWindow *settingsWin = new SettingsWindow(this);
         settingsWin->setModal(true);
         settingsWin->show();
     });
 
-    QPushButton *exitIconButton = new QPushButton(centralBox);
-    QPixmap doorPixmap(":/icons/door.png");
-    QPixmap darkenedDoor = doorPixmap;
-    {
-        QPainter painter(&darkenedDoor);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(darkenedDoor.rect(), QColor(120, 120, 120, 100));
-        painter.end();
-    }
-    exitIconButton->setIcon(QIcon(doorPixmap));
-    exitIconButton->setIconSize(QSize(50,50));
-    exitIconButton->setFlat(true);
-    exitIconButton->setStyleSheet(
-        "QPushButton { background-color: transparent; border: none; }"
-        "QPushButton:pressed { background-color: transparent; }"
-        );
-    exitIconButton->setCursor(Qt::PointingHandCursor);
 
-    // Diálogo de confirmación para salir
-    connect(exitIconButton, &QPushButton::pressed, [=]() {
-        exitIconButton->setIcon(QIcon(darkenedDoor));
+    // ICONO SALIDA
+
+    Icon *exitIconButton = new Icon(this);
+    exitIconButton->setImage(":/icons/door.png", 90, 90);
+
+    connect(exitIconButton, &Icon::clicked, [=]() {
+        exitIconButton->setImage(":/icons/darkeneddoor.png", 90, 90);
     });
-    connect(exitIconButton, &QPushButton::clicked, [=]() {
+
+    connect(exitIconButton, &Icon::clicked, [=]() {
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
@@ -207,7 +194,7 @@ MainWindow::MainWindow(QWidget *parent)
             confirmDialog->close();
         });
         connect(confirmDialog, &QDialog::finished, [=](int) {
-            exitIconButton->setIcon(QIcon(doorPixmap));
+            exitIconButton->setImage(":/icons/door.png", 90, 90);
         });
 
         confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
