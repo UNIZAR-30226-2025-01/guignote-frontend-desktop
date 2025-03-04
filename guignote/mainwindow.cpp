@@ -23,9 +23,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     setWindowTitle("Inicio");
 
-    setMinimumSize(1090, 600);
-    setMaximumSize(1920, 1080);
-    resize(1090, 600);
+    // setMinimumSize(1090, 600);
+    // setMaximumSize(1920, 1080);
+    // resize(1090, 600);
 
     // Crear centralwidget si no existe
     if (!ui->centralwidget) {
