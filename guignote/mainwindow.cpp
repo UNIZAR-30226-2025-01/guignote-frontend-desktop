@@ -16,25 +16,39 @@
 #include "loginwindow.h"
 #include "registerwindow.h"  // Incluir el header de la ventana de registro
 
+
+// CONSTRUCTOR DE MAINWINDOW
+
+/* Llamamos al constructor de la clase padre, creamos una nueva instancia de
+   la interfaz de usuario e inicializamos los punteros de los adornos a vacíos */
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow),
     cornerTopLeft(nullptr), cornerTopRight(nullptr),
     cornerBottomLeft(nullptr), cornerBottomRight(nullptr)
 {
+    // Cargamos los widgets de la interfaz generada
     ui->setupUi(this);
+    // Asignamos un título a la ventana
     setWindowTitle("Inicio");
 
     // setMinimumSize(1090, 600);
     // setMaximumSize(1920, 1080);
     // resize(1090, 600);
 
-    // Crear centralwidget si no existe
+    /* EN EL CASO DE QMAINWINDOW, TIENE QUE EXISTIR UN WIDGET CENTRAL QUE CONTENGA EL RESTO DE WIDGETS
+     * ES OBLIGATORIO DEFINIRLO. Por tanto, si no existe un centralwidget lo creamos, estableciendo a MainWindow
+     * su padre y haciéndolo central */
     if (!ui->centralwidget) {
         QWidget *central = new QWidget(this);
         setCentralWidget(central);
     }
 
-    // Fondo con gradiente
+    /* setStyleSheet es una función de QWidget(del que también hereda MainWindow) la cual permite que le asignemos
+     * un estilo CSS al widget MainWindow */
+
+    /* El poner QWidget al inicio especifica que tendrán el estilo el Widget al que le aplicamos y todos los que
+     * estén dentro de él. Si hubiésemos puesto QLabel SOLO las etiquetas lo recibirían */
     this->setStyleSheet("QWidget {"
                         "background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
                         "fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
