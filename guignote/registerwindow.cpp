@@ -27,7 +27,7 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     setModal(true);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
-    setFixedSize(540, 600);
+    setFixedSize(500, 600);
     setStyleSheet("background-color: #171718; border-radius: 5px; padding: 20px;");
 
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
