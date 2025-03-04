@@ -1,15 +1,11 @@
 #include "registerwindow.h"
-#include "loginwindow.h"
-#include "menuwindow.h"
-
+#include "menuwindow.h" // si vas a abrir MenuWindow tras el registro
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QFontDatabase>
-#include <QIcon>
-#include <QAction>
 #include <QToolButton>
 #include <QDebug>
 #include <QPainter>
@@ -20,9 +16,11 @@
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrl>
 
 RegisterWindow::RegisterWindow(QWidget *parent)
-    : QDialog(parent), backgroundOverlay(nullptr)
+    : QDialog(parent),
+    backgroundOverlay(nullptr)
 {
     setModal(true);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -58,6 +56,8 @@ RegisterWindow::RegisterWindow(QWidget *parent)
         "   font-size: 18px;"
         "   padding: 8px 10px;"
         "}";
+
+    // Campos de registro
     QLineEdit *usernameEdit = new QLineEdit(this);
     usernameEdit->setPlaceholderText("Usuario");
     usernameEdit->setStyleSheet(lineEditStyle);
@@ -80,19 +80,14 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     passwordEdit->addAction(QIcon(":/icons/padlock.png"), QLineEdit::LeadingPosition);
     mainLayout->addWidget(passwordEdit, 0, Qt::AlignCenter);
 
+    // Mostrar/ocultar contraseña
     QAction *togglePasswordAction = passwordEdit->addAction(QIcon(":/icons/hide_password.png"), QLineEdit::TrailingPosition);
     bool passwordHidden = true;
     connect(togglePasswordAction, &QAction::triggered, this, [=]() mutable {
         passwordHidden = !passwordHidden;
         passwordEdit->setEchoMode(passwordHidden ? QLineEdit::Password : QLineEdit::Normal);
-        QIcon icon(passwordHidden ? QIcon(":/icons/hide_password.png") : QIcon(":/icons/show_password.png"));
-        togglePasswordAction->setIcon(icon);
+        togglePasswordAction->setIcon(QIcon(passwordHidden ? ":/icons/hide_password.png" : ":/icons/show_password.png"));
     });
-    QToolButton *toggleButton = passwordEdit->findChild<QToolButton*>();
-    if (toggleButton) {
-        toggleButton->setIconSize(QSize(30, 30));
-        toggleButton->move(toggleButton->x() - 5, toggleButton->y());
-    }
 
     QLineEdit *confirmPasswordEdit = new QLineEdit(this);
     confirmPasswordEdit->setPlaceholderText("Confirmar Contraseña");
@@ -107,27 +102,31 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     connect(toggleConfirmAction, &QAction::triggered, this, [=]() mutable {
         confirmPasswordHidden = !confirmPasswordHidden;
         confirmPasswordEdit->setEchoMode(confirmPasswordHidden ? QLineEdit::Password : QLineEdit::Normal);
-        QIcon icon(confirmPasswordHidden ? QIcon(":/icons/hide_password.png") : QIcon(":/icons/show_password.png"));
-        toggleConfirmAction->setIcon(icon);
+        toggleConfirmAction->setIcon(QIcon(confirmPasswordHidden ? ":/icons/hide_password.png" : ":/icons/show_password.png"));
     });
-    QToolButton *toggleConfirmButton = confirmPasswordEdit->findChild<QToolButton*>();
-    if (toggleConfirmButton) {
-        toggleConfirmButton->setIconSize(QSize(30, 30));
-        toggleConfirmButton->move(toggleConfirmButton->x() - 5, toggleConfirmButton->y());
-    }
 
-    QHBoxLayout *extraLayout = new QHBoxLayout();
+    // Aquí está el botón con el texto “¿Ya tienes cuenta? Inicia sesión”
+    QHBoxLayout *loginLinkLayout = new QHBoxLayout();
     QPushButton *loginButtonLink = new QPushButton("¿Ya tienes cuenta? Inicia sesión", this);
-    loginButtonLink->setStyleSheet("QPushButton { color: #ffffff; text-decoration: underline; font-size: 14px; background: transparent; border: none; }");
-    extraLayout->addWidget(loginButtonLink);
-    mainLayout->addLayout(extraLayout);
-    connect(loginButtonLink, &QPushButton::clicked, [=]() {
-        LoginWindow *loginWin = new LoginWindow(this);
-        loginWin->move(this->geometry().center() - loginWin->rect().center());
-        loginWin->show();
-    });
-    connect(loginButtonLink, &QPushButton::clicked, this, &QDialog::close);
+    loginButtonLink->setStyleSheet(
+        "QPushButton {"
+        "  color: #ffffff;"
+        "  text-decoration: underline;"
+        "  font-size: 14px;"
+        "  background: transparent;"
+        "  border: none;"
+        "}"
+        );
+    loginLinkLayout->addWidget(loginButtonLink);
+    mainLayout->addLayout(loginLinkLayout);
 
+    // Al hacer clic, emitimos una señal
+    connect(loginButtonLink, &QPushButton::clicked, this, [=]() {
+        this->close();            // Cerramos la RegisterWindow
+        emit openLoginRequested(); // Avisamos a MainWindow
+    });
+
+    // Botón para crear la cuenta
     QPushButton *registerButton = new QPushButton("Crear Cuenta", this);
     QString buttonStyle =
         "QPushButton {"
@@ -195,6 +194,7 @@ RegisterWindow::RegisterWindow(QWidget *parent)
         manager->post(request, data);
     });
 
+    // Botón para volver
     QPushButton *backButton = new QPushButton("Volver", this);
     backButton->setStyleSheet(buttonStyle);
     backButton->setFixedSize(200, 50);
@@ -202,7 +202,9 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     connect(backButton, &QPushButton::clicked, this, &QDialog::close);
 }
 
-RegisterWindow::~RegisterWindow() {}
+RegisterWindow::~RegisterWindow()
+{
+}
 
 void RegisterWindow::showEvent(QShowEvent *event)
 {

@@ -1,5 +1,11 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+
+// Otras ventanas
+#include "loginwindow.h"
+#include "registerwindow.h"
+#include "settingswindow.h" // Si la usas
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -13,118 +19,109 @@
 #include <QDialog>
 #include <QApplication>
 #include <QPainter>
-#include "loginwindow.h"
-#include "registerwindow.h"
-#include "settingswindow.h"  // Incluir la cabecera de la nueva ventana de ajustes
-
-
-// CONSTRUCTOR DE MAINWINDOW
-
-/* Llamamos al constructor de la clase padre, creamos una nueva instancia de
-   la interfaz de usuario e inicializamos los punteros de los adornos a vacíos */
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow),
-    cornerTopLeft(nullptr), cornerTopRight(nullptr),
-    cornerBottomLeft(nullptr), cornerBottomRight(nullptr)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
+    , cornerTopLeft(nullptr)
+    , cornerTopRight(nullptr)
+    , cornerBottomLeft(nullptr)
+    , cornerBottomRight(nullptr)
 {
-    // Cargamos los widgets de la interfaz generada
     ui->setupUi(this);
-    // Asignamos un título a la ventana
     setWindowTitle("Inicio");
 
     setMinimumSize(1090, 600);
     setMaximumSize(1920, 1080);
     resize(1090, 600);
 
-    /* EN EL CASO DE QMAINWINDOW, TIENE QUE EXISTIR UN WIDGET CENTRAL QUE CONTENGA EL RESTO DE WIDGETS
-     * ES OBLIGATORIO DEFINIRLO. Por tanto, si no existe un centralwidget lo creamos, estableciendo a MainWindow
-     * su padre y haciéndolo central */
+    // Asegurar widget central
     if (!ui->centralwidget) {
         QWidget *central = new QWidget(this);
         setCentralWidget(central);
     }
 
-    /* setStyleSheet es una función de QWidget(del que también hereda MainWindow) la cual permite que le asignemos
-     * un estilo CSS al widget MainWindow */
+    // Fondo de la ventana
+    this->setStyleSheet(
+        "QWidget {"
+        "  background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
+        "  fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
+        "}"
+        );
 
-    /* El poner QWidget al inicio especifica que tendrán el estilo el Widget al que le aplicamos y todos los que
-     * estén dentro de él. Si hubiésemos puesto QLabel SOLO las etiquetas lo recibirían */
-    this->setStyleSheet("QWidget {"
-                        "background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
-                        "fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
-                        "}");
-
-    // Caja central (con sombra)
+    // Caja central
     QFrame *centralBox = new QFrame(ui->centralwidget);
-    centralBox->setStyleSheet("QFrame {"
-                              "background-color: #171718;"
-                              "border-radius: 5px;"
-                              "padding: 20px;"
-                              "}");
+    centralBox->setStyleSheet(
+        "QFrame {"
+        "  background-color: #171718;"
+        "  border-radius: 5px;"
+        "  padding: 20px;"
+        "}"
+        );
     centralBox->setFixedSize(450, 450);
+
     QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(centralBox);
     shadow->setBlurRadius(10);
     shadow->setColor(QColor(0, 0, 0, 80));
     shadow->setOffset(4, 4);
     centralBox->setGraphicsEffect(shadow);
 
-    // Fuente personalizada
+    // Fuente
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
     if (fontId == -1) {
         qWarning() << "No se pudo cargar la fuente personalizada.";
     }
 
-    // Título y logo dentro de centralBox
+    // Layout interno de centralBox
+    QVBoxLayout *boxLayout = new QVBoxLayout(centralBox);
+    boxLayout->setAlignment(Qt::AlignCenter);
+
+    // Título
     QLabel *titleLabel = new QLabel("SOTA, CABALLO Y REY", centralBox);
-    QFont titleFont = QFont(QFontDatabase::applicationFontFamilies(fontId).at(0), 32);
+    QFont titleFont = QFont(QFontDatabase::applicationFontFamilies(fontId).value(0), 32);
     titleLabel->setFont(titleFont);
     titleLabel->setStyleSheet("color: #ffffff;");
     titleLabel->setAlignment(Qt::AlignCenter);
 
-    QVBoxLayout *boxLayout = new QVBoxLayout(centralBox);
-    boxLayout->setAlignment(Qt::AlignCenter);
+    boxLayout->addWidget(titleLabel);
 
+    // Logo
     QLabel *logoLabel = new QLabel(centralBox);
     QPixmap logoPixmap(":/images/app_logo_white.png");
     logoLabel->setScaledContents(false);
     logoLabel->setFixedSize(150, 150);
     QPixmap scaledLogo = logoPixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     logoLabel->setPixmap(scaledLogo);
-
-    boxLayout->addWidget(titleLabel);
     boxLayout->addWidget(logoLabel, 0, Qt::AlignCenter);
     boxLayout->addSpacing(50);
 
+    // Botones de login y registro
     QPushButton *loginButton = new QPushButton("Iniciar Sesión", centralBox);
     QPushButton *registerButton = new QPushButton("Crear Cuenta", centralBox);
-    QString buttonStyle = "QPushButton {"
-                          "background-color: #c2c2c3;"
-                          "color: #171718;"
-                          "border-radius: 15px;"
-                          "font-size: 20px;"
-                          "font-weight: bold;"
-                          "padding: 12px 25px;"
-                          "}"
-                          "QPushButton:hover {"
-                          "background-color: #9b9b9b;"
-                          "}";
+
+    QString buttonStyle =
+        "QPushButton {"
+        "  background-color: #c2c2c3;"
+        "  color: #171718;"
+        "  border-radius: 15px;"
+        "  font-size: 20px;"
+        "  font-weight: bold;"
+        "  padding: 12px 25px;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #9b9b9b;"
+        "}";
     loginButton->setStyleSheet(buttonStyle);
     registerButton->setStyleSheet(buttonStyle);
     loginButton->setFixedSize(250, 50);
     registerButton->setFixedSize(250, 50);
 
-    // Se pasan 'this' como padre para que los diálogos se muevan junto a la ventana principal
-    connect(loginButton, &QPushButton::clicked, [=]() {
-        LoginWindow loginWin(this);
-        loginWin.exec();
-    });
+    // En lugar de abrir la ventana desde aquí, llamamos slots que la crean
+    connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLoginWindow);
+    connect(registerButton, &QPushButton::clicked, this, &MainWindow::openRegisterWindow);
 
-    connect(registerButton, &QPushButton::clicked, [=]() {
-        RegisterWindow regWin(this);
-        regWin.exec();
-    });
-
+    // Layout para esos dos botones
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     buttonLayout->setAlignment(Qt::AlignCenter);
     buttonLayout->setSpacing(30);
@@ -132,8 +129,7 @@ MainWindow::MainWindow(QWidget *parent)
     buttonLayout->addWidget(registerButton, 0, Qt::AlignCenter);
     boxLayout->addLayout(buttonLayout);
 
-    // --- Botones de preferencias y salida ---
-    // Botón de preferencias (a la izquierda)
+    // Botones inferiores: preferencias y salir
     QPushButton *preferencesButton = new QPushButton(centralBox);
     preferencesButton->setIcon(QIcon(":/icons/preferences.png"));
     preferencesButton->setIconSize(QSize(50,50));
@@ -146,7 +142,6 @@ MainWindow::MainWindow(QWidget *parent)
         settingsWin->show();
     });
 
-    // Botón de salida (a la derecha)
     QPushButton *exitIconButton = new QPushButton(centralBox);
     QPixmap doorPixmap(":/icons/door.png");
     QPixmap darkenedDoor = doorPixmap;
@@ -160,15 +155,12 @@ MainWindow::MainWindow(QWidget *parent)
     exitIconButton->setIconSize(QSize(50,50));
     exitIconButton->setFlat(true);
     exitIconButton->setStyleSheet(
-        "QPushButton {"
-        "   background-color: transparent;"
-        "   border: none;"
-        "}"
-        "QPushButton:pressed {"
-        "   background-color: transparent;"
-        "}"
+        "QPushButton { background-color: transparent; border: none; }"
+        "QPushButton:pressed { background-color: transparent; }"
         );
     exitIconButton->setCursor(Qt::PointingHandCursor);
+
+    // Diálogo de confirmación para salir
     connect(exitIconButton, &QPushButton::pressed, [=]() {
         exitIconButton->setIcon(QIcon(darkenedDoor));
     });
@@ -177,11 +169,13 @@ MainWindow::MainWindow(QWidget *parent)
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
         confirmDialog->setFixedSize(300,150);
-        confirmDialog->setStyleSheet("QDialog {"
-                                     "background-color: #171718;"
-                                     "border-radius: 5px;"
-                                     "padding: 20px;"
-                                     "}");
+        confirmDialog->setStyleSheet(
+            "QDialog {"
+            "  background-color: #171718;"
+            "  border-radius: 5px;"
+            "  padding: 20px;"
+            "}"
+            );
 
         QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
         dialogShadow->setBlurRadius(10);
@@ -191,10 +185,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
         QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
-        confirmLabel->setStyleSheet("QFrame {"
-                                    "background-color: #171718;"
-                                    "border-radius: 5px;"
-                                    "}");
+        confirmLabel->setStyleSheet("QFrame { background-color: #171718; border-radius: 5px; }");
         confirmLabel->setAlignment(Qt::AlignCenter);
         dialogLayout->addWidget(confirmLabel);
 
@@ -223,25 +214,24 @@ MainWindow::MainWindow(QWidget *parent)
         confirmDialog->show();
     });
 
-    // Crear un layout horizontal para ubicar los botones de preferencias (izquierda) y salida (derecha)
     QHBoxLayout *bottomButtonLayout = new QHBoxLayout();
     bottomButtonLayout->addWidget(preferencesButton, 0, Qt::AlignLeft);
     bottomButtonLayout->addStretch();
     bottomButtonLayout->addWidget(exitIconButton, 0, Qt::AlignRight);
     boxLayout->addLayout(bottomButtonLayout);
 
-    // Layout principal para centrar la caja negra
+    // Layout principal de MainWindow
     QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
     mainLayout->addStretch();
     mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
     mainLayout->addStretch();
     ui->centralwidget->setLayout(mainLayout);
 
-    // ---- Decoraciones en las esquinas (fuera de centralBox) ----
+    // Adornos de esquina
     ornamentSize = QSize(300, 299);
     QPixmap ornamentPixmap(":/images/set-golden-border-ornaments/gold_ornaments.png");
 
-    // Esquina superior izquierda
+    // Esquina sup izq
     cornerTopLeft = new QLabel(ui->centralwidget);
     QPixmap topLeftPixmap = ornamentPixmap.scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     cornerTopLeft->setPixmap(topLeftPixmap);
@@ -251,7 +241,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerTopLeft->setStyleSheet("background: transparent;");
     cornerTopLeft->raise();
 
-    // Esquina superior derecha (volteada horizontalmente)
+    // Esquina sup der (invertir X)
     cornerTopRight = new QLabel(ui->centralwidget);
     QTransform transformH;
     transformH.scale(-1, 1);
@@ -264,7 +254,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerTopRight->setStyleSheet("background: transparent;");
     cornerTopRight->raise();
 
-    // Esquina inferior izquierda (volteada verticalmente)
+    // Esquina inf izq (invertir Y)
     cornerBottomLeft = new QLabel(ui->centralwidget);
     QTransform transformV;
     transformV.scale(1, -1);
@@ -277,7 +267,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomLeft->setStyleSheet("background: transparent;");
     cornerBottomLeft->raise();
 
-    // Esquina inferior derecha (volteada horizontal y verticalmente)
+    // Esquina inf der (invertir X e Y)
     cornerBottomRight = new QLabel(ui->centralwidget);
     QTransform transformHV;
     transformHV.scale(-1, -1);
@@ -293,24 +283,69 @@ MainWindow::MainWindow(QWidget *parent)
     repositionOrnaments();
 }
 
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
     repositionOrnaments();
 }
 
-void MainWindow::repositionOrnaments() {
-    if (ui->centralwidget) {
-        int cw = ui->centralwidget->width();
-        int ch = ui->centralwidget->height();
-        cornerTopLeft->move(0, 0);
-        cornerTopRight->move(cw - cornerTopRight->width(), 0);
-        cornerBottomLeft->move(0, ch - cornerBottomLeft->height());
-        cornerBottomRight->move(cw - cornerBottomRight->width(), ch - cornerBottomRight->height());
-    }
+void MainWindow::repositionOrnaments()
+{
+    if (!ui->centralwidget) return;
+    int cw = ui->centralwidget->width();
+    int ch = ui->centralwidget->height();
+
+    cornerTopLeft->move(0, 0);
+    cornerTopRight->move(cw - cornerTopRight->width(), 0);
+    cornerBottomLeft->move(0, ch - cornerBottomLeft->height());
+    cornerBottomRight->move(cw - cornerBottomRight->width(), ch - cornerBottomRight->height());
 }
 
-MainWindow::~MainWindow()
+// Abre la ventana de Login con this como padre
+void MainWindow::openLoginWindow()
 {
-    delete ui;
+    LoginWindow *loginWin = new LoginWindow(this);
+
+    // Conectar la señal “openRegisterRequested” de la ventana de login
+    connect(loginWin, &LoginWindow::openRegisterRequested,
+            this, &MainWindow::handleOpenRegisterRequested);
+
+    loginWin->exec();
+}
+
+// Abre la ventana de Registro con this como padre
+void MainWindow::openRegisterWindow()
+{
+    RegisterWindow *regWin = new RegisterWindow(this);
+
+    // Conectar la señal “openLoginRequested” de la ventana de registro
+    connect(regWin, &RegisterWindow::openLoginRequested,
+            this, &MainWindow::handleOpenLoginRequested);
+
+    regWin->exec();
+}
+
+/**
+ * @brief Respuesta a la señal de RegisterWindow que indica “¿Ya tienes cuenta? Inicia sesión”.
+ */
+void MainWindow::handleOpenLoginRequested()
+{
+    // Cerramos cualquier RegisterWindow que esté abierta
+    // (La propia RegisterWindow ya se cierra sola al emitir la señal, pero por si acaso.)
+    // Después abrimos la de Login:
+    openLoginWindow();
+}
+
+/**
+ * @brief Respuesta a la señal de LoginWindow que indica “¿No tienes cuenta? Crea una”.
+ */
+void MainWindow::handleOpenRegisterRequested()
+{
+    // Cerramos el LoginWindow (si no se ha cerrado solo) y abrimos RegisterWindow
+    openRegisterWindow();
 }
