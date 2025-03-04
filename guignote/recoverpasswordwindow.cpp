@@ -103,7 +103,6 @@ RecoverPasswordWindow::RecoverPasswordWindow(QWidget *parent)
     connect(loginButtonLink, &QPushButton::clicked, this, &QDialog::close);
 }
 
-// Destructor: Se encarga de liberar recursos utilizados por la ventana.
 RecoverPasswordWindow::~RecoverPasswordWindow() {}
 
 // Reimplementación del método showEvent para crear un overlay y centrar el diálogo respecto al padre.
