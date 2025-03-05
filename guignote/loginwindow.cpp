@@ -67,8 +67,8 @@ LoginWindow::LoginWindow(QWidget *parent)
 
     // Creación del layout principal de la ventana.
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(20, 20, 20, 20);
-    mainLayout->setSpacing(15);
+    mainLayout->setContentsMargins(20, 5, 20, 5);
+    mainLayout->setSpacing(2);
     mainLayout->setAlignment(Qt::AlignCenter);
 
     // Título de la ventana de inicio de sesión.
@@ -124,24 +124,23 @@ LoginWindow::LoginWindow(QWidget *parent)
     errorLabel->setText("");
     errorLabel->setVisible(false);
 
-    // Mismo ancho que el QLineEdit, altura fija y sin word wrap (una sola línea).
-    errorLabel->setFixedWidth(250);
-    errorLabel->setFixedHeight(20);
-    errorLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    // Mantenerlo en una sola línea con ancho y alto fijos
     errorLabel->setAlignment(Qt::AlignCenter);
+    errorLabel->setFixedWidth(250);
+    //  errorLabel->setWordWrap(false); // No hace falta, pero asegura que no parta líneas
+    errorLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    errorLabel->setContentsMargins(0, 5, 0, 0);
 
-    // Función auxiliar para no mostrar texto demasiado largo. (ElideRight: "...")
     auto setErrorTextElided = [=](const QString &text){
         QFontMetrics fm(errorLabel->font());
-        // Elide en caso de texto demasiado largo
         QString elided = fm.elidedText(text, Qt::ElideRight, errorLabel->width());
         errorLabel->setText(elided);
+        errorLabel->adjustSize();
     };
-
+    mainLayout->addSpacing(5);
     mainLayout->addWidget(errorLabel, 0, Qt::AlignCenter);
 
-    // Layout horizontal para opciones adicionales: "¿Has olvidado tu contraseña?" y "Recordar contraseña".
-    QHBoxLayout *extraLayout = new QHBoxLayout();
+    // Botón "¿Has olvidado tu contraseña?"
     QPushButton *forgotPasswordButton = new QPushButton("¿Has olvidado tu contraseña?", this);
     forgotPasswordButton->setStyleSheet(
         "QPushButton {"
@@ -152,31 +151,31 @@ LoginWindow::LoginWindow(QWidget *parent)
         "  border: none;"
         "}"
         );
-    extraLayout->addWidget(forgotPasswordButton);
+    mainLayout->addWidget(forgotPasswordButton);
 
+    // CheckBox "Recordar contraseña"
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
     QString checkBoxStyle = R"(
-        QCheckBox {
-            color: #ffffff;
-            font-size: 14px;
-        }
-        QCheckBox::indicator {
-            width: 16px;
-            height: 16px;
-        }
-        QCheckBox::indicator:unchecked {
-            background-color: #c2c2c3;
-            border: 1px solid #545454;
-        }
-        QCheckBox::indicator:checked {
-            background-color: #c2c2c3;
-            border: 1px solid #545454;
-            image: url(":/icons/cross.png");
-        }
-    )";
+    QCheckBox {
+        color: #ffffff;
+        font-size: 14px;
+    }
+    QCheckBox::indicator {
+        width: 16px;
+        height: 16px;
+    }
+    QCheckBox::indicator:unchecked {
+        background-color: #c2c2c3;
+        border: 1px solid #545454;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #c2c2c3;
+        border: 1px solid #545454;
+        image: url(":/icons/cross.png");
+    }
+)";
     rememberCheck->setStyleSheet(checkBoxStyle);
-    extraLayout->addWidget(rememberCheck);
-    mainLayout->addLayout(extraLayout);
+    mainLayout->addWidget(rememberCheck);
 
     // Conexión para mostrar la ventana de recuperación de contraseña.
     connect(forgotPasswordButton, &QPushButton::clicked, this, [=]() {
@@ -284,6 +283,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                 }
             } else if (statusCode == 404) {
                 // Mostrar mensaje de error estético: usuario no encontrado.
+                qDebug() << "Qué error tengo: " << reply->errorString();
                 setErrorTextElided("Usuario no encontrado.");
                 errorLabel->setVisible(true);
                 shakeWidget(loginButton);
