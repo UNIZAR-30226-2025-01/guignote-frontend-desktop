@@ -5,7 +5,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QLabel>
-#include <QLineEdit>  // <-- Asegúrate de incluir esta librería
+#include <QLineEdit>
+#include <QTabWidget>
 
 class friendswindow : public QDialog {
     Q_OBJECT
@@ -16,10 +17,13 @@ public:
 private:
     QPushButton *closeButton;
     QLabel *titleLabel;
-    QLineEdit *searchBar;  // <-- Agregar esta línea para declarar la barra de búsqueda
+    QLineEdit *searchBar;
     QVBoxLayout *mainLayout;
+    QTabWidget *tabWidget;
 
-    void setupUI();  // Declaración de la función que configura la UI
+    void setupUI();  // Configura la UI
+    QWidget* createFriendsTab();   // Crea la pestaña de amigos
+    QWidget* createRequestsTab();  // Crea la pestaña de solicitudes de amistad
 };
 
 #endif // FRIENDSWINDOW_H
