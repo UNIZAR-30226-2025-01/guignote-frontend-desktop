@@ -41,7 +41,7 @@ private:
     QFrame *topBar;
     Icon *settings;
     Icon *friends;
-    Icon *divider;
+    Icon *exit;
     ImageButton *boton1v1;
     ImageButton *boton2v2;
 };

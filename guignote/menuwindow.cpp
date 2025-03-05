@@ -14,7 +14,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     topBar(nullptr),
     settings(nullptr),
     friends(nullptr),
-    divider(nullptr)
+    exit(nullptr)
 {
     ui->setupUi(this);  // Cargar el diseño de menu.ui
 
@@ -58,11 +58,11 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     settings = new Icon(this);
     friends = new Icon(this);
-    divider = new Icon(this);
+    exit = new Icon(this);
 
     settings->setImage(":/icons/settings.png", 60, 60);
     friends->setImage(":/icons/friends.png", 60, 60);
-    divider->setImage(":/icons/divider.png", 60, 60);
+    exit->setImage(":/icons/door.png", 60, 60);
 
     // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
 
@@ -80,6 +80,9 @@ MenuWindow::MenuWindow(QWidget *parent) :
         friendsWin->show();
     });
 
+    connect(exit, &Icon::clicked, this, [this]() {
+        this->close();  // Cierra la ventana
+    });
 
     // ------------- ORNAMENTOS ESQUINAS -------------
 
@@ -186,7 +189,8 @@ void MenuWindow::repositionIcons() {
     // Definir el tamaño de las imágenes
     int imgWidth = settings->width();
     int imgHeight = settings->height();
-    int dividerWidth = divider->width();
+    int exitHeight = exit ->height();
+    int exitWidth = exit->width();
 
     int separacion = windowWidth * 0.066;  // Espaciado entre iconos
     int margen = 40;       // Margen desde la parte inferior
@@ -194,7 +198,7 @@ void MenuWindow::repositionIcons() {
     // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
     settings->move((windowWidth / 2) - (imgWidth / 2) - separacion, windowHeight - (imgHeight / 2) - margen);
     friends->move((windowWidth / 2) + separacion - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
-    divider->move((windowWidth / 2) - (dividerWidth / 2), windowHeight - (imgHeight / 2) - margen);
+    exit->move((windowWidth / 2) - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
 }
 
 
