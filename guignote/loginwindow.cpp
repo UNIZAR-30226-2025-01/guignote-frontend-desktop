@@ -262,7 +262,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                 QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
                 if (responseDoc.isObject()) {
                     QJsonObject respObj = responseDoc.object();
-                    // Si se recibe un token, se procede a abrir la ventana principal (MenuWindow).
+                    // Si se recibe un token, se procede a abrir el menú en el mismo espacio que MainWindow.
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
@@ -271,12 +271,17 @@ LoginWindow::LoginWindow(QWidget *parent)
                         settings.setValue("auth/token", token);
 
                         MenuWindow *menuWin = new MenuWindow();
-                        menuWin->move(this->geometry().center() - menuWin->rect().center());
-                        menuWin->show();
-                        if(this->parentWidget()){
-                            this->parentWidget()->close();
+                        // Si existe una ventana padre (MainWindow), se reemplaza el widget central por el menú.
+                        if (this->parentWidget()) {
+                            QMainWindow *mainWin = qobject_cast<QMainWindow*>(this->parentWidget());
+                            if (mainWin) {
+                                mainWin->setCentralWidget(menuWin);
+                            }
                             this->close();
                         } else {
+                            // Si no hay ventana padre, se muestra el menú en una nueva ventana.
+                            menuWin->move(this->geometry().center() - menuWin->rect().center());
+                            menuWin->show();
                             this->close();
                         }
                     } else if (respObj.contains("error")) {
@@ -311,6 +316,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         // Enviar la petición POST.
         manager->post(request, data);
     });
+
 
     // Botón "Volver" para cerrar la ventana de inicio de sesión.
     QPushButton *backButton = new QPushButton("Volver", this);
