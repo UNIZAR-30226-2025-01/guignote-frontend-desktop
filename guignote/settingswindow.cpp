@@ -13,6 +13,7 @@
 SettingsWindow::SettingsWindow(QWidget *parent)
     : QDialog(parent)
 {
+    QSettings settings("guignote", "Settings");
     // Configuración de la ventana: sin marco, fondo oscuro, esquinas redondeadas.
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
@@ -106,12 +107,34 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     sidebar->setCurrentRow(0);
 
     // Conexión del botón de cerrar para terminar la ventana
-    connect(closeButton, &QPushButton::clicked, this, &SettingsWindow::close);
+    connect(closeButton, &QPushButton::clicked, this, [this]() {
+        saveSettings();  // Guardar configuraciones antes de cerrar
+        this->close();   // Cerrar la ventana
+    });
+
 
     // Conectar los radios a un slot que haga el cambio de modo
     connect(radioWindowed,   &QRadioButton::clicked, this, &SettingsWindow::updateGraphicsMode);
     connect(radioFullscreen, &QRadioButton::clicked, this, &SettingsWindow::updateGraphicsMode);
+
+    loadSettings();
 }
+
+void SettingsWindow::loadSettings() {
+    // Recuperar valores guardados o usar valores por defecto
+    bool isFullscreen = settings.value("fullscreen", false).toBool();
+
+    if (isFullscreen) {
+        radioFullscreen->setChecked(true);
+    } else {
+        radioWindowed->setChecked(true);
+    }
+}
+
+void SettingsWindow::saveSettings() {
+    settings.setValue("fullscreen", radioFullscreen->isChecked());
+}
+
 
 SettingsWindow::~SettingsWindow()
 {

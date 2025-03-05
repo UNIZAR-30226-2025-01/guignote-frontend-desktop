@@ -2,6 +2,7 @@
 #define SETTINGSWINDOW_H
 
 #include <QDialog>
+#include <QSettings>
 
 class QListWidget;
 class QStackedWidget;
@@ -22,7 +23,10 @@ private:
     QRadioButton *radioWindowed;
     QRadioButton *radioFullscreen;
     QPushButton *closeButton;
+    QSettings settings;
     void updateGraphicsMode();
+    void loadSettings();  // Cargar configuraciones guardadas
+    void saveSettings();  // Guardar configuraciones al salir
 
 };
 
