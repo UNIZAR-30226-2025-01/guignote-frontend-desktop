@@ -23,5 +23,6 @@
         <file>icons/divider.png</file>
         <file>icons/preferences.png</file>
         <file>icons/darkeneddoor.png</file>
+        <file>icons/AbsoluteSolver.png</file>
     </qresource>
 </RCC>

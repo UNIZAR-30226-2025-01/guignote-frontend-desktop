@@ -1,6 +1,7 @@
 #include "menuwindow.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
+#include "settingswindow.h"
 
 // Constructor de la clase menu
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -65,8 +66,10 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
 
     // Conectar señales de clic a funciones
-    connect(settings, &Icon::clicked, this, []() {
-        qDebug() << "¡Botón de Configuración clickeado!";
+    connect(settings, &Icon::clicked, [=]() {
+        SettingsWindow *settingsWin = new SettingsWindow(this);
+        settingsWin->setModal(true);
+        settingsWin->show();
     });
 
     connect(friends, &Icon::clicked, this, []() {
@@ -181,7 +184,7 @@ void MenuWindow::repositionIcons() {
     int imgHeight = settings->height();
     int dividerWidth = divider->width();
 
-    int separacion = 120;  // Espaciado entre iconos
+    int separacion = windowWidth * 0.066;  // Espaciado entre iconos
     int margen = 40;       // Margen desde la parte inferior
 
     // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
