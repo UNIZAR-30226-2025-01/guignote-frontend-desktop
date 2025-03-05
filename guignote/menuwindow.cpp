@@ -9,18 +9,27 @@
 
 #include "menuwindow.h"
 #include "ui_menuwindow.h"
-#include <QPixmap>
-#include <QTransform>
-#include <QPushButton>
+#include "imagebutton.h"
+#include "settingswindow.h"
+#include "friendswindow.h"
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::MenuWindow)  // Inicialización de la interfaz generada con Qt Designer
+    ui(new Ui::MenuWindow),  // Inicialización de la UI
+    boton1v1(nullptr),
+    boton2v2(nullptr),
+    bottomBar(nullptr),
+    topBar(nullptr),
+    settings(nullptr),
+    friends(nullptr),
+    divider(nullptr)
 {
     ui->setupUi(this);  // Cargar el diseño definido en menu.ui
 
-    // Configuración del fondo con un gradiente radial y la barra superior
+    // ------------- TAPETE FONDO -------------
+
+    // Configuración del fondo con gradiente y barra superior
     this->setStyleSheet("QWidget {"
                         "background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
                         "fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
@@ -32,18 +41,56 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // ------------- IMÁGENES DE CARTAS -------------
 
-    // Crear QLabel para mostrar la imagen de las cartas de atrás
-    cartasAtras = new QLabel(this);
+    // Crear los botones
+    boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
+    boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
-    // Crear QLabel para mostrar la imagen de las cartas de delante
-    cartasDelante = new QLabel(this);
+    // ------------- EVENTOS DE CLICK CARTAS -------------
 
-    // Creación y configuración de la barra superior
-    topBar = new QLabel(this);
-    topBar->setObjectName("topBar");
-    topBar->setFixedHeight(80);
-    topBar->setStyleSheet("background-color: #171718;");
-    topBar->setGeometry(0, 0, this->width(), 40);
+    // Conectar los botones a funciones (cuando se hace clic)
+    connect(boton1v1, &ImageButton::clicked, this, []() {
+        qDebug() << "Botón 1v1 presionado";
+    });
+
+    connect(boton2v2, &ImageButton::clicked, this, []() {
+        qDebug() << "Botón 2v2 presionado";
+    });
+
+    // ------------- BARS -------------
+
+    bottomBar = new QFrame(this);
+    bottomBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+    topBar = new QFrame(this);
+    topBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+
+    // ------------- SETTINGS Y FRIENDS -------------
+
+    settings = new Icon(this);
+    friends = new Icon(this);
+    divider = new Icon(this);
+
+    settings->setImage(":/icons/settings.png", 60, 60);
+    friends->setImage(":/icons/friends.png", 60, 60);
+    divider->setImage(":/icons/divider.png", 60, 60);
+
+    // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
+
+    // Conectar señales de clic a funciones
+    connect(settings, &Icon::clicked, [=]() {
+        SettingsWindow *settingsWin = new SettingsWindow(this);
+        settingsWin->setModal(true);
+        settingsWin->show();
+    });
+
+    connect(friends, &Icon::clicked, this, [this]() {
+        // Crear y mostrar la ventana de amigos
+        friendswindow *friendsWin = new friendswindow(this);
+        friendsWin->setAttribute(Qt::WA_DeleteOnClose); // Hace que se elimine automáticamente al cerrarse
+        friendsWin->show();
+    });
+
+
+    // ------------- ORNAMENTOS ESQUINAS -------------
 
     // Definir el tamaño de los adornos decorativos
     ornamentSize = QSize(300, 299);
@@ -86,39 +133,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
         corner->raise();
     }
 
-    // Creación de los botones dorados para seleccionar modos de juego
-    button1v1 = new QPushButton("Individual", this);
-    button2v2 = new QPushButton("Parejas", this);
-
-    // Establecer el estilo de los botones con gradientes y bordes dorados
-    button1v1->setStyleSheet("QPushButton {"
-                             "background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, "
-                             "stop:0 #FFD700, stop:0.5 #DAA520, stop:1 #B8860B);"
-                             "border: 3px solid #B8860B;"
-                             "border-radius: 15px;"
-                             "padding: 10px;"
-                             "font-size: 18px;"
-                             "font-weight: bold;"
-                             "color: #3E2723;"
-                             "}"
-                             "QPushButton:hover {"
-                             "background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, "
-                             "stop:0 #FFD700, stop:0.5 #FFC107, stop:1 #FFA500);"
-                             "border: 3px solid #FFD700;"
-                             "}");
-    // Aplicar el mismo estilo al botón de parejas
-    button2v2->setStyleSheet(button1v1->styleSheet());
-
-    // Ajustar la posición de los botones para que se muestren centrados en la zona designada
-    int buttonWidth = 150;
-    int buttonHeight = 50;
-    int centerX1 = this->width() / 2 - buttonWidth - 10;
-    int centerX2 = this->width() / 2 + 10;
-    int centerY = (this->height() - 80) / 2 + 80 - buttonHeight / 2;
-    button1v1->setGeometry(centerX1, centerY, buttonWidth, buttonHeight);
-    button2v2->setGeometry(centerX2, centerY, buttonWidth, buttonHeight);
-
-    // Llamada a la función que reposiciona los adornos decorativos según el tamaño actual de la ventana
     repositionOrnaments();
 }
 
@@ -131,7 +145,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
 void MenuWindow::repositionOrnaments() {
     int w = this->width();
     int h = this->height();
-    int topOffset = 80;  // Desplazamiento para dejar espacio a la barra superior
+
+    int topOffset = 0;
 
     cornerTopLeft->move(0, topOffset);
     cornerTopRight->move(w - cornerTopRight->width(), topOffset);
@@ -145,94 +160,74 @@ void MenuWindow::repositionOrnaments() {
     }
 }
 
-/**
- * @brief Evento de redimensionamiento de la ventana.
- *
- * Se invoca automáticamente cuando el tamaño de la ventana cambia. Se encarga de ajustar la geometría
- * de la barra superior, los botones y las imágenes de las cartas, manteniendo un diseño proporcional.
- *
- * @param event Evento de tipo QResizeEvent.
- */
+// Función para reposicionar los ImageButtons
+void MenuWindow::repositionImageButtons() {
+
+    int w = this->width();
+    int h = this->height();
+
+    int buttonSpacing = w / 10; // Espaciado proporcional al tamaño de la ventana
+
+    // Redimensionar los botones
+    QSize size = boton1v1->updatesize(h);
+    size = boton2v2->updatesize(h);
+    int buttonWidth = size.width();
+    int buttonHeight = size.height();
+
+    // Calcular la posición central
+    int totalWidth = (2 * buttonWidth) + buttonSpacing;
+    int startX = (w - totalWidth) / 2;
+    int startY = (h - buttonHeight) / 2;
+
+    boton1v1->move(startX, startY);
+    boton2v2->move(startX + buttonWidth + buttonSpacing, startY);
+}
+
+// Función para reposicionar las barras
+void MenuWindow::repositionBars() {
+    int w = this->width();
+    int barWidthTop = w / 3;  // 1/3 del ancho de la ventana
+    int barWidthBottom = w / 4;  // 1/3 del ancho de la ventana
+    int barHeight = 80;    // Altura fija de la barra
+    int xPosT = (w - barWidthTop) / 2; // Centrado horizontalmente
+    int xPosB = (w - barWidthBottom) / 2; // Centrado horizontalmente
+    int yPos = this->height() - barHeight; // Pegado abajo con margen de 10px
+
+    topBar->setGeometry(xPosT, 0, barWidthTop, barHeight);
+    bottomBar->setGeometry(xPosB, yPos, barWidthBottom, barHeight);
+}
+
+void MenuWindow::repositionIcons() {
+    // Obtener nuevas dimensiones de la ventana
+    int windowWidth = this->width();
+    int windowHeight = this->height();
+
+    // Definir el tamaño de las imágenes
+    int imgWidth = settings->width();
+    int imgHeight = settings->height();
+    int dividerWidth = divider->width();
+
+    int separacion = windowWidth * 0.066;  // Espaciado entre iconos
+    int margen = 40;       // Margen desde la parte inferior
+
+    // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
+    settings->move((windowWidth / 2) - (imgWidth / 2) - separacion, windowHeight - (imgHeight / 2) - margen);
+    friends->move((windowWidth / 2) + separacion - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
+    divider->move((windowWidth / 2) - (dividerWidth / 2), windowHeight - (imgHeight / 2) - margen);
+}
+
+
+// Función para recolocar y reposicionar todos los elementos
 void MenuWindow::resizeEvent(QResizeEvent *event) {
-    // Ajustar la barra superior al nuevo ancho de la ventana
-    topBar->setGeometry(0, 0, this->width(), 40);
-    // Reposicionar los adornos decorativos
     repositionOrnaments();
-
-    // Definir límites para el tamaño de los botones
-    int minButtonWidth = 150;
-    int minButtonHeight = 50;
-    int maxButtonWidth = 600;
-    int maxButtonHeight = 200;
-
-    // Límites para la ventana, utilizados para interpolar el tamaño de los botones
-    int minWindowWidth = 400;
-    int maxWindowWidth = 1920;
-
-    // Calcular el ancho y alto de los botones de forma proporcional al tamaño de la ventana
-    int buttonWidth = minButtonWidth + (maxButtonWidth - minButtonWidth) *
-                                           ((this->width() - minWindowWidth) / (float)(maxWindowWidth - minWindowWidth));
-    int buttonHeight = minButtonHeight + (maxButtonHeight - minButtonHeight) *
-                                             ((this->height() - minWindowWidth) / (float)(maxWindowWidth - minWindowWidth));
-
-    // Asegurar que el tamaño de los botones se mantenga dentro de los límites establecidos
-    buttonWidth = std::max(minButtonWidth, std::min(buttonWidth, maxButtonWidth));
-    buttonHeight = std::max(minButtonHeight, std::min(buttonHeight, maxButtonHeight));
-
-    // Calcular la separación entre botones de forma dinámica
-    int minSeparation = 10;
-    int maxSeparation = 75;
-    int separacion = minSeparation + (maxSeparation - minSeparation) *
-                                         ((this->width() - minWindowWidth) / (float)(maxWindowWidth - minWindowWidth));
-    separacion = std::max(minSeparation, std::min(separacion, maxSeparation));
-
-    // Reposicionar los botones para que permanezcan centrados
-    int centerX1 = this->width() / 2 - buttonWidth - separacion;
-    int centerX2 = this->width() / 2 + separacion;
-    int centerY = (this->height() - 80) / 2 + 80 - buttonHeight / 2;
-    button1v1->setGeometry(centerX1, centerY, buttonWidth, buttonHeight);
-    button2v2->setGeometry(centerX2, centerY, buttonWidth, buttonHeight);
-
-    // Definir límites para el tamaño de las imágenes de las cartas
-    int minImageWidth = 150;
-    int minImageHeight = 225;
-    int maxImageWidth = 600;
-    int maxImageHeight = 900;
-
-    // Calcular el tamaño proporcional de las imágenes de las cartas
-    int imageWidth = minImageWidth + (maxImageWidth - minImageWidth) *
-                                         ((this->width() - 400) / (float)(1920 - 400));
-    int imageHeight = minImageHeight + (maxImageHeight - minImageHeight) *
-                                           ((this->height() - 400) / (float)(1080 - 400));
-    imageWidth = std::max(minImageWidth, std::min(imageWidth, maxImageWidth));
-    imageHeight = std::max(minImageHeight, std::min(imageHeight, maxImageHeight));
-
-    // Configurar la imagen de las cartas de atrás
-    QPixmap cardPixmapAtras(":/images/card_backs_2.png");
-    cardPixmapAtras = cardPixmapAtras.scaled(imageWidth, imageHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    cartasAtras->setPixmap(cardPixmapAtras);
-    cartasAtras->setAttribute(Qt::WA_TranslucentBackground);
-    cartasAtras->setStyleSheet("background: transparent;");
-    cartasAtras->setFixedSize(cardPixmapAtras.size());
-    int posX = this->width() / 2 - cartasAtras->width() / 2;
-    int posY = 85;
-    cartasAtras->move(posX, posY);
-
-    // Configurar la imagen de las cartas de delante
-    QPixmap cardPixmapDelante(":/images/card_fronts.png");
-    cardPixmapDelante = cardPixmapDelante.scaled(imageWidth, imageHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    cartasDelante->setPixmap(cardPixmapDelante);
-    cartasDelante->setAttribute(Qt::WA_TranslucentBackground);
-    cartasDelante->setStyleSheet("background: transparent;");
-    cartasDelante->setFixedSize(cardPixmapDelante.size());
-    posX = this->width() / 2 - cartasDelante->width() / 2;
-    posY = this->height() - cartasDelante->height() - 5;
-    cartasDelante->move(posX, posY);
+    repositionBars();
+    repositionImageButtons();
+    repositionIcons();
 
     QWidget::resizeEvent(event);
 }
 
-// Destructor de la clase MenuWindow
+// Destructor de la clase menu
 MenuWindow::~MenuWindow() {
     delete ui;  // Liberar recursos de la interfaz
 }

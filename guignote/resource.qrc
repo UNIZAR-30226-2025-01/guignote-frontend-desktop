@@ -16,6 +16,13 @@
         <file>images/card_backs.png</file>
         <file>images/card_backs_2.png</file>
         <file>images/card_fronts.png</file>
+        <file>images/cartaBoton.png</file>
+        <file>images/cartasBoton.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/friends.png</file>
+        <file>icons/divider.png</file>
         <file>icons/preferences.png</file>
+        <file>icons/darkeneddoor.png</file>
+        <file>icons/AbsoluteSolver.png</file>
     </qresource>
 </RCC>

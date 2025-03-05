@@ -152,14 +152,17 @@ void SettingsWindow::updateGraphicsMode()
         return; // Si no hay widget padre, se finaliza la función.
     }
 
+    QWidget *parentWin = parentWidget(); // Obtener el padre sin asumir que es QMainWindow
     QMainWindow *mainWindow = qobject_cast<QMainWindow*>(parentWidget());
     if (!mainWindow) {
         return; // Si el widget padre no es un QMainWindow, no se puede actualizar el modo gráfico.
     }
 
     if (radioFullscreen->isChecked()) {
-        mainWindow->showFullScreen();
+        parentWin->showFullScreen();
     } else {
+        parentWin->showNormal(); // Vuelve al modo ventana
         mainWindow->showNormal();
     }
 }
+

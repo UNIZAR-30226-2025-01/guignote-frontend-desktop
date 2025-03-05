@@ -14,7 +14,15 @@
 #include <QLabel>
 #include <QSize>
 #include <QPushButton>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QMainWindow>
+#include <QPixmap>
+#include <QTransform>
+#include <QWindow>
+#include "imagebutton.h"
 #include "ui_menuwindow.h"
+#include "icon.h"
 
 /**
  * @class MenuWindow
@@ -64,18 +72,23 @@ private:
      * del tamaño actual del widget central.
      */
     void repositionOrnaments();
+    void repositionImageButtons();
+    void repositionBars();
+    void repositionIcons();
 
-    Ui::MenuWindow *ui;           /**< Puntero a la interfaz generada con Qt Designer. */
-    QSize ornamentSize;           /**< Tamaño definido para los adornos decorativos. */
-    QLabel *cornerTopLeft;        /**< Adorno en la esquina superior izquierda. */
-    QLabel *cornerTopRight;       /**< Adorno en la esquina superior derecha. */
-    QLabel *cornerBottomLeft;     /**< Adorno en la esquina inferior izquierda. */
-    QLabel *cornerBottomRight;    /**< Adorno en la esquina inferior derecha. */
-    QLabel *topBar;               /**< Barra superior de la ventana (opcional). */
-    QPushButton *button1v1;       /**< Botón para seleccionar el modo de juego 1 contra 1. */
-    QPushButton *button2v2;       /**< Botón para seleccionar el modo de juego 2 contra 2. */
-    QLabel *cartasAtras;          /**< Etiqueta para mostrar las cartas de la parte trasera. */
-    QLabel *cartasDelante;        /**< Etiqueta para mostrar las cartas de la parte delantera. */
+    Ui::MenuWindow *ui;
+    QSize ornamentSize;
+    QLabel *cornerTopLeft;
+    QLabel *cornerTopRight;
+    QLabel *cornerBottomLeft;
+    QLabel *cornerBottomRight;
+    QFrame *bottomBar;
+    QFrame *topBar;
+    Icon *settings;
+    Icon *friends;
+    Icon *divider;
+    ImageButton *boton1v1;
+    ImageButton *boton2v2;
 };
 
 #endif // MENUWINDOW_H
