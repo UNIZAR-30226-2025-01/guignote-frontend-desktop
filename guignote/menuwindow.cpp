@@ -2,6 +2,7 @@
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
 #include "settingswindow.h"
+#include "friendswindow.h"
 
 // Constructor de la clase menu
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -72,8 +73,11 @@ MenuWindow::MenuWindow(QWidget *parent) :
         settingsWin->show();
     });
 
-    connect(friends, &Icon::clicked, this, []() {
-        qDebug() << "¡Botón de Amigos clickeado!";
+    connect(friends, &Icon::clicked, this, [this]() {
+        // Crear y mostrar la ventana de amigos
+        friendswindow *friendsWin = new friendswindow(this);
+        friendsWin->setAttribute(Qt::WA_DeleteOnClose); // Hace que se elimine automáticamente al cerrarse
+        friendsWin->show();
     });
 
 
