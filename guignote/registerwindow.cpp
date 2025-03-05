@@ -219,7 +219,12 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                         MenuWindow *menuWin = new MenuWindow();
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
-                        this->close();
+                        if(this->parentWidget()){
+                            this->parentWidget()->close();
+                            this->close();
+                        } else {
+                            this->close();
+                        }
                     } else {
                         qWarning() << "Respuesta sin token:" << responseData;
                     }
