@@ -25,6 +25,7 @@
 #include <QIcon>
 #include <QAction>
 #include <QDebug>
+#include <QSettings>
 #include <QPainter>
 #include <QEvent>
 #include <QCloseEvent>
@@ -265,6 +266,10 @@ LoginWindow::LoginWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
+                        // Almacenamos el token de forma persistente
+                        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+                        settings.setValue("auth/token", token);
+
                         MenuWindow *menuWin = new MenuWindow();
                         menuWin->move(this->geometry().center() - menuWin->rect().center());
                         menuWin->show();
