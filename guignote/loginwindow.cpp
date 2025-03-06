@@ -417,3 +417,29 @@ bool LoginWindow::eventFilter(QObject *watched, QEvent *event)
     }
     return QDialog::eventFilter(watched, event);
 }
+
+/**
+ * @brief Sobrescribe el método reject() para limpiar recursos adicionales.
+ *
+ * Este método se encarga de realizar tareas de limpieza específicas antes de cerrar
+ * el diálogo de inicio de sesión. En particular, elimina el filtro de eventos instalado
+ * en el widget padre y programa la eliminación del overlay semitransparente (fondo oscuro)
+ * que se aplicó al widget padre para enfocar la atención en el diálogo.
+ *
+ * Estas acciones aseguran que, al cerrarse el diálogo (por ejemplo, al presionar Escape),
+ * no queden recursos residuales que bloqueen la interacción con la ventana principal.
+ */
+void LoginWindow::reject() {
+    // Verifica que exista un widget padre y remueve el filtro de eventos instalado.
+    if (parentWidget()) {
+        parentWidget()->removeEventFilter(this);
+    }
+    // Si el overlay de fondo está activo, lo elimina de forma segura y lo desasigna.
+    if (backgroundOverlay) {
+        backgroundOverlay->deleteLater();
+        backgroundOverlay = nullptr;
+    }
+    // Llama al método reject() de la clase base para ejecutar el cierre del diálogo.
+    QDialog::reject();
+}
+

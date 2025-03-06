@@ -4,11 +4,21 @@
 #include <QFontDatabase>
 #include <QPainter>
 
+/**
+ * @brief Constructor de ImageButton.
+ * @param imagePath Ruta de la imagen a cargar.
+ * @param text Texto que se mostrará sobre la imagen.
+ * @param parent Widget padre, por defecto es nullptr.
+ *
+ * Inicializa el botón de imagen cargando la imagen normal y generando una versión
+ * oscurecida para los efectos interactivos. Además, configura una fuente personalizada
+ * para el texto, ajusta la transparencia y define el tamaño del widget.
+ */
 ImageButton::ImageButton(const QString &imagePath, const QString &text, QWidget *parent)
     : QLabel(parent), normalPixmap(imagePath) {
     setAttribute(Qt::WA_TranslucentBackground);
 
-    // Cargar la fuente personalizada
+    // Cargar la fuente personalizada.
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
     QFont titleFont;
     if (fontId != -1) {
@@ -18,21 +28,31 @@ ImageButton::ImageButton(const QString &imagePath, const QString &text, QWidget 
         titleFont = QFont("Arial", 32, QFont::Bold);
     }
 
-    // Asegurar que la imagen mantiene su transparencia
+    // Asegurar que la imagen mantiene su transparencia.
     QImage img = normalPixmap.toImage().convertToFormat(QImage::Format_ARGB32);
     normalPixmap = QPixmap::fromImage(img);
+    // Generar la imagen oscurecida para el efecto al pasar el cursor.
     darkenedPixmap = generateDarkenedPixmap(normalPixmap);
     setPixmap(normalPixmap);
     setFixedSize(normalPixmap.size());
 
+    // Crear y configurar la etiqueta de texto.
     textLabel = new QLabel(text, this);
     textLabel->setAlignment(Qt::AlignCenter);
     textLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold; background: transparent;");
     textLabel->setGeometry(0, 0, width(), height());
     textLabel->setFont(titleFont);
-    textLabel->hide();  // Ocultar texto al inicio
+    textLabel->hide();  // Ocultar texto al inicio.
 }
 
+/**
+ * @brief Genera una versión oscurecida del QPixmap proporcionado.
+ * @param source QPixmap original.
+ * @return QPixmap Imagen oscurecida.
+ *
+ * Este método recorre cada píxel de la imagen fuente, reduciendo su brillo al 50%
+ * y manteniendo la transparencia para lograr un efecto de oscurecimiento.
+ */
 QPixmap ImageButton::generateDarkenedPixmap(const QPixmap &source) {
     QImage img = source.toImage().convertToFormat(QImage::Format_ARGB32);
 
@@ -41,12 +61,12 @@ QPixmap ImageButton::generateDarkenedPixmap(const QPixmap &source) {
         for (int x = 0; x < img.width(); ++x) {
             QColor color = QColor::fromRgba(line[x]);
 
-            // Si el píxel no es completamente transparente
+            // Si el píxel no es completamente transparente.
             if (color.alpha() > 0) {
-                int r = qMax(color.red() * 0.5, 0.0);   // Reduce brillo al 50%
+                int r = qMax(color.red() * 0.5, 0.0);   // Reducir brillo al 50%.
                 int g = qMax(color.green() * 0.5, 0.0);
                 int b = qMax(color.blue() * 0.5, 0.0);
-                line[x] = QColor(r, g, b, color.alpha()).rgba(); // Mantiene la transparencia
+                line[x] = QColor(r, g, b, color.alpha()).rgba(); // Mantener la transparencia.
             }
         }
     }
@@ -54,24 +74,50 @@ QPixmap ImageButton::generateDarkenedPixmap(const QPixmap &source) {
     return QPixmap::fromImage(img);
 }
 
+/**
+ * @brief Evento al entrar el cursor en el área del widget.
+ * @param event Evento de entrada del ratón (QEnterEvent).
+ *
+ * Al detectar el evento, se cambia la imagen a la versión oscurecida y se muestra el texto.
+ */
 void ImageButton::enterEvent(QEnterEvent *event) {
     Q_UNUSED(event);
     setPixmap(darkenedPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     textLabel->show();
 }
 
+/**
+ * @brief Evento al salir el cursor del área del widget.
+ * @param event Evento de salida del ratón (QEvent).
+ *
+ * Restaura la imagen a su estado normal y oculta el texto cuando el cursor abandona el widget.
+ */
 void ImageButton::leaveEvent(QEvent *event) {
     Q_UNUSED(event);
     setPixmap(normalPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     textLabel->hide();
 }
 
+/**
+ * @brief Evento de presión del botón del ratón.
+ * @param event Evento de tipo QMouseEvent.
+ *
+ * Detecta un clic con el botón izquierdo del ratón y emite la señal clicked().
+ */
 void ImageButton::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         emit clicked();
     }
 }
 
+/**
+ * @brief Actualiza el tamaño del ImageButton.
+ * @param h Nueva altura base para el escalado.
+ * @return QSize Tamaño actualizado del botón.
+ *
+ * Calcula el nuevo tamaño del botón manteniendo la relación de aspecto de la imagen original.
+ * Se establecen límites mínimos y máximos para la altura y se redimensiona el QPixmap.
+ */
 QSize ImageButton::updatesize(int h) {
     if (normalPixmap.isNull()) return QSize(0, 0);
 
@@ -79,14 +125,14 @@ QSize ImageButton::updatesize(int h) {
     int originalHeight = normalPixmap.height();
     double aspectRatio = static_cast<double>(originalWidth) / originalHeight;
 
-    int newHeight = h / 3;  // Escalar basado en la altura de la ventana
+    int newHeight = h / 3;  // Escalar basado en la altura de la ventana.
     int newWidth = static_cast<int>(newHeight * aspectRatio);
 
-    // Definir valores mínimos y máximos
+    // Definir valores mínimos y máximos.
     const int minHeight = 200;
     const int maxHeight = 800;
 
-    // Ajustar a los límites establecidos
+    // Ajustar a los límites establecidos.
     if (newHeight < minHeight) {
         newHeight = minHeight;
         newWidth = static_cast<int>(newHeight * aspectRatio);
