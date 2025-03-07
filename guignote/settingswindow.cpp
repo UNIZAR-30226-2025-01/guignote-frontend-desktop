@@ -35,6 +35,7 @@ SettingsWindow::SettingsWindow(QWidget *parent)
 {
     // Configuración de la ventana: sin marco, fondo oscuro y esquinas redondeadas.
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    setModal(true);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(800, 600);

@@ -11,6 +11,7 @@
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
 #include "settingswindow.h"
+#include "hovericon.h"
 #include "friendswindow.h"
 
 // Constructor de la clase MenuWindow
@@ -65,8 +66,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // ------------- SETTINGS Y FRIENDS -------------
 
-    settings = new Icon(this);
-    friends = new Icon(this);
+    settings = new HoverIcon("Ajustes", this);
+    friends = new HoverIcon("Amigos", this);
     divider = new Icon(this);
 
     settings->setImage(":/icons/settings.png", 60, 60);
@@ -78,8 +79,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // Conectar señales de clic a funciones
     connect(settings, &Icon::clicked, [=]() {
         SettingsWindow *settingsWin = new SettingsWindow(this);
-        settingsWin->setModal(true);
-        settingsWin->show();
+        settingsWin->exec(); // <-- Llamada bloqueante hasta que se cierre
     });
 
     connect(friends, &Icon::clicked, this, [this]() {
