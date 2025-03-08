@@ -12,6 +12,8 @@
 #include "imagebutton.h"
 #include "settingswindow.h"
 #include "friendswindow.h"
+//#include "myprofilewindow.h"
+//#include "otherprofilewindow.h"
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -62,6 +64,16 @@ MenuWindow::MenuWindow(QWidget *parent) :
     bottomBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
     topBar = new QFrame(this);
     topBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+
+    // ------------- DETECTAR CLICKS EN TOPBAR -------------
+
+    invisibleButton = new QPushButton(this);  // Botón dentro de topBar
+    invisibleButton->setStyleSheet("background: transparent; border: none;");  // Invisible
+    invisibleButton->setCursor(Qt::PointingHandCursor);  // Mantiene el cursor de puntero
+
+    connect(invisibleButton, &QPushButton::clicked, []() {
+        qDebug() << "TopBar clickeado!";
+    });
 
     // ------------- SETTINGS Y FRIENDS -------------
 
@@ -198,6 +210,8 @@ void MenuWindow::repositionBars() {
 
     topBar->setGeometry(xPosT, 0, barWidthTop, barHeight);
     bottomBar->setGeometry(xPosB, yPos, barWidthBottom, barHeight);
+    QPoint topBarPos = topBar->pos(); // Obtener la posición relativa dentro de la ventana
+    invisibleButton->setGeometry(topBarPos.x(), topBarPos.y(), topBar->width(), topBar->height());
 }
 
 void MenuWindow::repositionIcons() {

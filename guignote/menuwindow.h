@@ -20,6 +20,7 @@
 #include <QPixmap>
 #include <QTransform>
 #include <QWindow>
+#include <QEvent>
 #include "imagebutton.h"
 #include "ui_menuwindow.h"
 #include "icon.h"
@@ -87,6 +88,7 @@ private:
     Icon *settings;
     Icon *friends;
     Icon *exit;
+    QPushButton *invisibleButton;
     ImageButton *boton1v1;
     ImageButton *boton2v2;
 };
