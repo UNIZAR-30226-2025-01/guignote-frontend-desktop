@@ -54,6 +54,7 @@ SettingsWindow::SettingsWindow(QWidget *parent)
         );
     sidebar->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     sidebar->addItem("Gráficos");
+    sidebar->addItem("Sonido");
     mainLayout->addWidget(sidebar);
 
     // --- Configuración del área de ajustes (Stacked Widget) ---
@@ -122,6 +123,79 @@ SettingsWindow::SettingsWindow(QWidget *parent)
 
     // Seleccionar por defecto la primera opción del sidebar.
     sidebar->setCurrentRow(0);
+
+    // --- Página "Sonido" ---
+    QWidget *soundPage = new QWidget(this);
+    QVBoxLayout *soundLayout = new QVBoxLayout(soundPage);
+    soundLayout->setContentsMargins(20, 20, 20, 20);
+    soundLayout->setSpacing(10); // Se reduce el espacio entre elementos para "subir" la barra
+
+    // Botón para cerrar la ventana en la página "Sonido"
+    QPushButton *closeButtonSound = new QPushButton(soundPage);
+    closeButtonSound->setIcon(QIcon(":/icons/cross.png"));
+    closeButtonSound->setIconSize(QSize(18, 18));
+    closeButtonSound->setFixedSize(30, 30);
+    closeButtonSound->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; border: none; border-radius: 15px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    // Layout superior para alinear el botón de cierre a la derecha.
+    QHBoxLayout *soundTopLayout = new QHBoxLayout();
+    soundTopLayout->addStretch();
+    soundTopLayout->addWidget(closeButtonSound);
+    soundLayout->addLayout(soundTopLayout);
+
+    // Título de la página "Sonido" (igual que en "Gráficos")
+    QLabel *soundTitle = new QLabel("Ajustes de Sonido", soundPage);
+    soundTitle->setStyleSheet("color: #ffffff; font-size: 28px; font-weight: bold;");
+    soundTitle->setAlignment(Qt::AlignCenter);
+    soundLayout->addWidget(soundTitle);
+
+    // Agregar el control de volumen (barra) justo debajo del título, con márgenes reducidos
+    QSlider *volumeSlider = new QSlider(Qt::Horizontal, soundPage);
+    volumeSlider->setRange(0, 100);      // Rango del volumen de 0 a 100
+    volumeSlider->setValue(50);          // Valor inicial al 50%
+    volumeSlider->setFixedHeight(30);
+
+    // Estilo personalizado para el slider (groove y handle)
+    volumeSlider->setStyleSheet(
+        "QSlider::groove:horizontal {"
+        "  border: 1px solid #575757;"
+        "  height: 8px;"
+        "  background: #222;"
+        "  margin: 0 15px;"
+        "  border-radius: 4px;"
+        "}"
+        "QSlider::handle:horizontal {"
+        "  background: #c2c2c3;"
+        "  border: 1px solid #575757;"
+        "  width: 20px;"
+        "  margin: -5px 0;"
+        "  border-radius: 10px;"
+        "}"
+        );
+    soundLayout->addWidget(volumeSlider);
+
+    // Espacio flexible para completar el layout.
+    soundLayout->addStretch();
+
+    // Añadir la página "Sonido" al stacked widget.
+    stackedWidget->addWidget(soundPage);
+
+    // Conexión para cerrar la ventana desde la página "Sonido"
+    connect(closeButtonSound, &QPushButton::clicked, this, &SettingsWindow::close);
+
+    // --- Conexión para cambiar de página ---
+    // Al cambiar la selección en el sidebar, se muestra la página correspondiente.
+    connect(sidebar, &QListWidget::currentRowChanged, this, [=](int row){
+        if (row == 0) {
+            // Se muestra la página de Gráficos.
+            stackedWidget->setCurrentWidget(graphicsPage);
+        } else if (row == 1) {
+            // Se oculta la página de Gráficos y se muestra la de Sonido.
+            stackedWidget->setCurrentWidget(soundPage);
+        }
+    });
 
     // Conexión: el botón de cierre cierra la ventana de configuración.
     connect(closeButton, &QPushButton::clicked, this, &SettingsWindow::close);
