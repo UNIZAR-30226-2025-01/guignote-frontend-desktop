@@ -1,10 +1,19 @@
+/**
+ * @file menuwindow.cpp
+ * @brief Implementación de la clase MenuWindow.
+ *
+ * La clase MenuWindow define la ventana principal del menú de la aplicación.
+ * Se configuran el fondo, los botones de selección de modos de juego, los adornos decorativos
+ * y se gestionan los redimensionamientos para mantener una disposición coherente de los elementos.
+ */
+
 #include "menuwindow.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
 #include "settingswindow.h"
 #include "friendswindow.h"
 
-// Constructor de la clase menu
+// Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MenuWindow),  // Inicialización de la UI
@@ -16,7 +25,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     friends(nullptr),
     exit(nullptr)
 {
-    ui->setupUi(this);  // Cargar el diseño de menu.ui
+    ui->setupUi(this);  // Cargar el diseño definido en menu.ui
 
     // ------------- TAPETE FONDO -------------
 
@@ -30,7 +39,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
                         "height: 40px;"
                         "}");
 
-    // ------------- IMAGENES CARTAS -------------
+    // ------------- IMÁGENES DE CARTAS -------------
 
     // Crear los botones
     boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
@@ -86,35 +95,38 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // ------------- ORNAMENTOS ESQUINAS -------------
 
-    // Tamaño de los ornamentos
+    // Definir el tamaño de los adornos decorativos
     ornamentSize = QSize(300, 299);
     QPixmap ornamentPixmap(":/images/set-golden-border-ornaments/gold_ornaments.png");
 
-    // Crear y posicionar las esquinas decorativas
+    // Creación de los QLabel que contendrán los adornos en cada esquina
     cornerTopLeft = new QLabel(this);
     cornerTopRight = new QLabel(this);
     cornerBottomLeft = new QLabel(this);
     cornerBottomRight = new QLabel(this);
 
-    // Asignar imágenes transformadas para las esquinas
+    // Asignación de la imagen para la esquina superior izquierda
     cornerTopLeft->setPixmap(ornamentPixmap.scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
+    // Esquina superior derecha: imagen transformada horizontalmente (invertir X)
     QTransform transformH;
     transformH.scale(-1, 1);
     cornerTopRight->setPixmap(ornamentPixmap.transformed(transformH, Qt::SmoothTransformation)
                                   .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
+    // Esquina inferior izquierda: imagen transformada verticalmente (invertir Y)
     QTransform transformV;
     transformV.scale(1, -1);
     cornerBottomLeft->setPixmap(ornamentPixmap.transformed(transformV, Qt::SmoothTransformation)
                                     .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
+    // Esquina inferior derecha: imagen transformada en ambas direcciones (invertir X e Y)
     QTransform transformHV;
     transformHV.scale(-1, -1);
     cornerBottomRight->setPixmap(ornamentPixmap.transformed(transformHV, Qt::SmoothTransformation)
                                      .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-    // Ajustar transparencia y estilos de las esquinas
+    // Configurar propiedades comunes de los adornos: tamaño fijo, transparencia y estilo sin fondo
     QList<QLabel*> corners = {cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight};
     for (QLabel* corner : corners) {
         corner->setFixedSize(ornamentSize);
@@ -127,7 +139,12 @@ MenuWindow::MenuWindow(QWidget *parent) :
     repositionOrnaments();
 }
 
-// Función para reubicar los ornamentos en la pantalla
+/**
+ * @brief Reposiciona los adornos decorativos en las esquinas de la ventana.
+ *
+ * Calcula la posición de cada adorno teniendo en cuenta el tamaño de la ventana y el desplazamiento
+ * requerido por la barra superior.
+ */
 void MenuWindow::repositionOrnaments() {
     int w = this->width();
     int h = this->height();
@@ -138,6 +155,8 @@ void MenuWindow::repositionOrnaments() {
     cornerTopRight->move(w - cornerTopRight->width(), topOffset);
     cornerBottomLeft->move(0, h - cornerBottomLeft->height());
     cornerBottomRight->move(w - cornerBottomRight->width(), h - cornerBottomRight->height());
+
+    // Asegurar que los adornos se muestren en un orden de pila adecuado (más abajo en la jerarquía visual)
     QList<QLabel*> corners = {cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight};
     for (QLabel* corner : corners) {
         corner->lower();
@@ -214,5 +233,5 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
 
 // Destructor de la clase menu
 MenuWindow::~MenuWindow() {
-    delete ui;  // Solo eliminar si ui fue inicializado
+    delete ui;  // Liberar recursos de la interfaz
 }

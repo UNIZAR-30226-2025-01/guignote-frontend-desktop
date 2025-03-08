@@ -1,12 +1,22 @@
+/**
+ * @file mainwindow.cpp
+ * @brief Implementación de la clase MainWindow.
+ *
+ * Esta clase representa la ventana principal de la aplicación. Se encarga de configurar la
+ * interfaz gráfica de la pantalla de inicio, estableciendo el fondo, la disposición de widgets,
+ * efectos visuales y la interacción con otras ventanas como LoginWindow, RegisterWindow y SettingsWindow.
+ */
+
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
-// Otras ventanas
+// Otras ventanas utilizadas en la aplicación
 #include "loginwindow.h"
 #include "registerwindow.h"
-#include "settingswindow.h" // Si la usas
+#include "settingswindow.h" // Opcional, si se utiliza
 #include "icon.h"
 
+// Inclusión de librerías de Qt para gestionar layouts, widgets y efectos visuales
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -24,6 +34,15 @@
 #include <QColor>
 #include <QImage>
 
+/**
+ * @brief Constructor de MainWindow.
+ *
+ * Inicializa la interfaz de usuario, establece el tamaño y fondo de la ventana, y configura
+ * la disposición de widgets y efectos visuales. Además, define la lógica para abrir otras ventanas
+ * (LoginWindow, RegisterWindow y SettingsWindow) y añade elementos decorativos en las esquinas.
+ *
+ * @param parent Widget padre, por defecto nullptr.
+ */
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -32,20 +51,22 @@ MainWindow::MainWindow(QWidget *parent)
     , cornerBottomLeft(nullptr)
     , cornerBottomRight(nullptr)
 {
+    // Inicializa la interfaz generada con Qt Designer
     ui->setupUi(this);
     setWindowTitle("Inicio");
 
+    // Configuración de tamaños mínimo, máximo y tamaño inicial de la ventana
     setMinimumSize(1090, 600);
     setMaximumSize(1920, 1080);
     resize(1090, 600);
 
-    // Asegurar widget central
+    // Asegurar que exista un widget central
     if (!ui->centralwidget) {
         QWidget *central = new QWidget(this);
         setCentralWidget(central);
     }
 
-    // Fondo de la ventana
+    // Aplicar un fondo con gradiente radial a la ventana
     this->setStyleSheet(
         "QWidget {"
         "  background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
@@ -53,7 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
         "}"
         );
 
-    // Caja central
+    // Creación de una caja central (marco) con fondo y bordes redondeados
     QFrame *centralBox = new QFrame(ui->centralwidget);
     centralBox->setStyleSheet(
         "QFrame {"
@@ -64,32 +85,32 @@ MainWindow::MainWindow(QWidget *parent)
         );
     centralBox->setFixedSize(450, 450);
 
+    // Aplicación de un efecto de sombra al marco central
     QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(centralBox);
     shadow->setBlurRadius(10);
     shadow->setColor(QColor(0, 0, 0, 80));
     shadow->setOffset(4, 4);
     centralBox->setGraphicsEffect(shadow);
 
-    // Fuente
+    // Cargar una fuente personalizada para el título, mostrando una advertencia en caso de fallo
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
     if (fontId == -1) {
         qWarning() << "No se pudo cargar la fuente personalizada.";
     }
 
-    // Layout interno de centralBox
+    // Layout interno del marco central, centrado verticalmente
     QVBoxLayout *boxLayout = new QVBoxLayout(centralBox);
     boxLayout->setAlignment(Qt::AlignCenter);
 
-    // Título
+    // Creación y configuración del título de la aplicación
     QLabel *titleLabel = new QLabel("SOTA, CABALLO Y REY", centralBox);
     QFont titleFont = QFont(QFontDatabase::applicationFontFamilies(fontId).value(0), 32);
     titleLabel->setFont(titleFont);
     titleLabel->setStyleSheet("color: #ffffff;");
     titleLabel->setAlignment(Qt::AlignCenter);
-
     boxLayout->addWidget(titleLabel);
 
-    // Logo
+    // Configuración del logo de la aplicación
     QLabel *logoLabel = new QLabel(centralBox);
     QPixmap logoPixmap(":/images/app_logo_white.png");
     logoLabel->setScaledContents(false);
@@ -99,7 +120,7 @@ MainWindow::MainWindow(QWidget *parent)
     boxLayout->addWidget(logoLabel, 0, Qt::AlignCenter);
     boxLayout->addSpacing(50);
 
-    // Botones de login y registro
+    // Creación de los botones "Iniciar Sesión" y "Crear Cuenta" con estilo personalizado
     QPushButton *loginButton = new QPushButton("Iniciar Sesión", centralBox);
     QPushButton *registerButton = new QPushButton("Crear Cuenta", centralBox);
 
@@ -120,11 +141,11 @@ MainWindow::MainWindow(QWidget *parent)
     loginButton->setFixedSize(250, 50);
     registerButton->setFixedSize(250, 50);
 
-    // En lugar de abrir la ventana desde aquí, llamamos slots que la crean
+    // Conexión de los botones con sus respectivos slots para abrir las ventanas de Login y Registro
     connect(loginButton, &QPushButton::clicked, this, &MainWindow::openLoginWindow);
     connect(registerButton, &QPushButton::clicked, this, &MainWindow::openRegisterWindow);
 
-    // Layout para esos dos botones
+    // Layout vertical para agrupar los botones de login y registro
     QVBoxLayout *buttonLayout = new QVBoxLayout();
     buttonLayout->setAlignment(Qt::AlignCenter);
     buttonLayout->setSpacing(30);
@@ -140,7 +161,6 @@ MainWindow::MainWindow(QWidget *parent)
         settingsWin->setModal(true);
         settingsWin->show();
     });
-
 
     // ICONO SALIDA
 
@@ -207,18 +227,18 @@ MainWindow::MainWindow(QWidget *parent)
     bottomButtonLayout->addWidget(exitIconButton, 0, Qt::AlignRight);
     boxLayout->addLayout(bottomButtonLayout);
 
-    // Layout principal de MainWindow
-    QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
-    mainLayout->addStretch();
-    mainLayout->addWidget(centralBox, 0, Qt::AlignCenter);
-    mainLayout->addStretch();
-    ui->centralwidget->setLayout(mainLayout);
+    // Layout principal que contiene el widget central de la interfaz
+    QVBoxLayout *mainLayoutWidget = new QVBoxLayout(ui->centralwidget);
+    mainLayoutWidget->addStretch();
+    mainLayoutWidget->addWidget(centralBox, 0, Qt::AlignCenter);
+    mainLayoutWidget->addStretch();
+    ui->centralwidget->setLayout(mainLayoutWidget);
 
-    // Adornos de esquina
+    // Configuración de los adornos decorativos en las esquinas
     ornamentSize = QSize(300, 299);
     QPixmap ornamentPixmap(":/images/set-golden-border-ornaments/gold_ornaments.png");
 
-    // Esquina sup izq
+    // Esquina superior izquierda
     cornerTopLeft = new QLabel(ui->centralwidget);
     QPixmap topLeftPixmap = ornamentPixmap.scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     cornerTopLeft->setPixmap(topLeftPixmap);
@@ -228,7 +248,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerTopLeft->setStyleSheet("background: transparent;");
     cornerTopLeft->raise();
 
-    // Esquina sup der (invertir X)
+    // Esquina superior derecha (imagen invertida horizontalmente)
     cornerTopRight = new QLabel(ui->centralwidget);
     QTransform transformH;
     transformH.scale(-1, 1);
@@ -241,7 +261,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerTopRight->setStyleSheet("background: transparent;");
     cornerTopRight->raise();
 
-    // Esquina inf izq (invertir Y)
+    // Esquina inferior izquierda (imagen invertida verticalmente)
     cornerBottomLeft = new QLabel(ui->centralwidget);
     QTransform transformV;
     transformV.scale(1, -1);
@@ -254,7 +274,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomLeft->setStyleSheet("background: transparent;");
     cornerBottomLeft->raise();
 
-    // Esquina inf der (invertir X e Y)
+    // Esquina inferior derecha (imagen invertida horizontal y verticalmente)
     cornerBottomRight = new QLabel(ui->centralwidget);
     QTransform transformHV;
     transformHV.scale(-1, -1);
@@ -267,20 +287,40 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomRight->setStyleSheet("background: transparent;");
     cornerBottomRight->raise();
 
+    // Reposicionar los adornos en las esquinas según el tamaño actual del widget central
     repositionOrnaments();
 }
 
+/**
+ * @brief Destructor de MainWindow.
+ *
+ * Libera la memoria utilizada por la interfaz de usuario.
+ */
 MainWindow::~MainWindow()
 {
     delete ui;
 }
 
+/**
+ * @brief Evento de redimensionamiento.
+ *
+ * Se invoca cuando la ventana cambia de tamaño, lo que permite reajustar la posición
+ * de los adornos decorativos.
+ *
+ * @param event Evento de redimensionamiento.
+ */
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
     repositionOrnaments();
 }
 
+/**
+ * @brief Reposiciona los adornos decorativos en las esquinas del widget central.
+ *
+ * Calcula la posición en función del tamaño actual del widget central para mantener
+ * la coherencia visual en la interfaz.
+ */
 void MainWindow::repositionOrnaments()
 {
     if (!ui->centralwidget) return;
@@ -293,46 +333,54 @@ void MainWindow::repositionOrnaments()
     cornerBottomRight->move(cw - cornerBottomRight->width(), ch - cornerBottomRight->height());
 }
 
-// Abre la ventana de Login con this como padre
+/**
+ * @brief Abre la ventana de inicio de sesión.
+ *
+ * Crea una instancia de LoginWindow con la ventana principal como padre,
+ * conecta la señal para solicitar el registro y muestra el diálogo de login de forma modal.
+ */
 void MainWindow::openLoginWindow()
 {
     LoginWindow *loginWin = new LoginWindow(this);
-
-    // Conectar la señal “openRegisterRequested” de la ventana de login
     connect(loginWin, &LoginWindow::openRegisterRequested,
             this, &MainWindow::handleOpenRegisterRequested);
-
     loginWin->exec();
 }
 
-// Abre la ventana de Registro con this como padre
+/**
+ * @brief Abre la ventana de registro.
+ *
+ * Crea una instancia de RegisterWindow con la ventana principal como padre,
+ * conecta la señal para solicitar el inicio de sesión y muestra el diálogo de registro de forma modal.
+ */
 void MainWindow::openRegisterWindow()
 {
     RegisterWindow *regWin = new RegisterWindow(this);
-
-    // Conectar la señal “openLoginRequested” de la ventana de registro
     connect(regWin, &RegisterWindow::openLoginRequested,
             this, &MainWindow::handleOpenLoginRequested);
-
     regWin->exec();
 }
 
 /**
- * @brief Respuesta a la señal de RegisterWindow que indica “¿Ya tienes cuenta? Inicia sesión”.
+ * @brief Maneja la señal de RegisterWindow para solicitar iniciar sesión.
+ *
+ * Responde a la señal emitida cuando el usuario, desde la ventana de registro,
+ * indica que ya posee una cuenta y desea iniciar sesión.
  */
 void MainWindow::handleOpenLoginRequested()
 {
-    // Cerramos cualquier RegisterWindow que esté abierta
-    // (La propia RegisterWindow ya se cierra sola al emitir la señal, pero por si acaso.)
-    // Después abrimos la de Login:
+    // Se cierra cualquier ventana de registro abierta y se abre la de login.
     openLoginWindow();
 }
 
 /**
- * @brief Respuesta a la señal de LoginWindow que indica “¿No tienes cuenta? Crea una”.
+ * @brief Maneja la señal de LoginWindow para solicitar el registro.
+ *
+ * Responde a la señal emitida cuando el usuario, desde la ventana de login,
+ * indica que no tiene cuenta y desea crear una.
  */
 void MainWindow::handleOpenRegisterRequested()
 {
-    // Cerramos el LoginWindow (si no se ha cerrado solo) y abrimos RegisterWindow
+    // Se cierra la ventana de login (si no se ha cerrado sola) y se abre la de registro.
     openRegisterWindow();
 }

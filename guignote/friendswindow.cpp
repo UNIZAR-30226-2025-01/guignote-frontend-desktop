@@ -1,34 +1,50 @@
 #include "friendswindow.h"
 #include <QHBoxLayout>
-#include <QTabWidget>
-#include <QListWidget>
-#include <QPushButton>
 
+/**
+ * @brief Constructor de la ventana de amigos.
+ * @param parent Widget padre, por defecto es nullptr.
+ *
+ * Configura las propiedades generales de la ventana, como el estilo, el tamaño fijo y los flags
+ * de la ventana. Luego, llama a setupUI() para construir la interfaz gráfica.
+ */
 friendswindow::friendswindow(QWidget *parent) : QDialog(parent) {
+    // Configura la ventana sin bordes y con estilo personalizado.
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(800, 600);
 
-    setupUI();  // Llamamos a la función para construir la UI
+    // Construye la interfaz de usuario.
+    setupUI();
 }
 
+/**
+ * @brief Configura la interfaz de usuario de la ventana de amigos.
+ *
+ * Este método crea y organiza todos los elementos gráficos:
+ * - Un layout principal vertical con márgenes y espaciado ajustados.
+ * - Un header (layout horizontal) que contiene el título y el botón de cierre.
+ * - Una barra de búsqueda para filtrar los amigos.
+ *
+ * Finalmente, se asigna el layout principal a la ventana.
+ */
 void friendswindow::setupUI() {
-    // Layout principal
+    // Layout principal vertical de la ventana.
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
-    mainLayout->setSpacing(10);
-    mainLayout->setAlignment(Qt::AlignTop);
+    mainLayout->setSpacing(10);  // Espaciado entre elementos
+    mainLayout->setAlignment(Qt::AlignTop); // Alinea todos los elementos en la parte superior
 
-    // Layout superior para el botón de cierre y el título
+    // Layout horizontal para el encabezado que contiene el título y el botón de cierre.
     QHBoxLayout *headerLayout = new QHBoxLayout();
 
-    // Título alineado a la izquierda
+    // Creación del título y configuración de su estilo.
     titleLabel = new QLabel("Menú de Amigos", this);
-    titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter); // Alinea a la izquierda y centra verticalmente
     titleLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold;");
 
-    // Botón de cierre alineado a la derecha
+    // Creación del botón de cierre y configuración de su estilo.
     closeButton = new QPushButton(this);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
     closeButton->setIconSize(QSize(18, 18));
@@ -37,15 +53,19 @@ void friendswindow::setupUI() {
         "QPushButton { background-color: #c2c2c3; border: none; border-radius: 15px; }"
         "QPushButton:hover { background-color: #9b9b9b; }"
         );
+    // Conecta la acción de clic para cerrar la ventana.
     connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
 
-    // Agregar los elementos al header
+    // Agrega el título, un espacio flexible y el botón de cierre al layout del encabezado.
     headerLayout->addWidget(titleLabel);
-    headerLayout->addStretch();
+    headerLayout->addStretch();  // Empuja el botón de cierre hacia la derecha
     headerLayout->addWidget(closeButton);
     mainLayout->addLayout(headerLayout);
 
-    // Crear la barra de búsqueda
+    // Agrega el layout del encabezado al layout principal.
+    mainLayout->addLayout(headerLayout);
+
+    // Creación y configuración de la barra de búsqueda.
     searchBar = new QLineEdit(this);
     searchBar->setPlaceholderText("Buscar amigos...");
     searchBar->setStyleSheet(
@@ -53,24 +73,11 @@ void friendswindow::setupUI() {
         "QLineEdit:focus { border: 1px solid #888; }"
         );
     searchBar->setFixedHeight(35);
+
+    // Agrega la barra de búsqueda al layout principal, alineándola en la parte superior.
     mainLayout->addWidget(searchBar, 0, Qt::AlignTop);
 
-    // Crear el TabWidget
-    QTabWidget *tabWidget = new QTabWidget(this);
-    tabWidget->setStyleSheet(
-        "QTabWidget::pane { border: 1px solid #555; border-radius: 10px; }"
-        "QTabBar::tab { background: #222; color: white; padding: 10px; border: 1px solid #555; border-top-left-radius: 10px; border-top-right-radius: 10px; }"
-        "QTabBar::tab:selected { background: #333; font-weight: bold; }"
-        );
-
-    // Crear las páginas de las pestañas
-    QWidget *friendsPage = createFriendsTab();
-    QWidget *requestsPage = createRequestsTab();
-
-    tabWidget->addTab(friendsPage, "Amigos");
-    tabWidget->addTab(requestsPage, "Solicitudes");
-
-    mainLayout->addWidget(tabWidget);
+    // Asigna el layout principal a la ventana.
     setLayout(mainLayout);
 }
 

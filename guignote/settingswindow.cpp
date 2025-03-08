@@ -1,3 +1,13 @@
+/**
+ * @file settingswindow.cpp
+ * @brief Implementación de la clase SettingsWindow.
+ *
+ * Esta clase define la ventana de configuración de la aplicación, permitiendo al usuario
+ * modificar opciones de visualización, como cambiar entre el modo ventana y el modo pantalla completa.
+ * La interfaz se compone de un sidebar para la navegación y un área (QStackedWidget) para mostrar la
+ * página de "Gráficos", que incluye opciones configurables mediante botones de radio y un botón de cierre.
+ */
+
 #include "settingswindow.h"
 #include <QListWidget>
 #include <QStackedWidget>
@@ -10,22 +20,31 @@
 #include <QDebug>
 #include <QMainWindow>
 
+/**
+ * @brief Constructor de SettingsWindow.
+ *
+ * Configura la ventana de configuración: sin marco, fondo oscuro, esquinas redondeadas y tamaño fijo.
+ * Se crea un sidebar (QListWidget) para la navegación y un QStackedWidget para mostrar la página de "Gráficos".
+ * En la página de "Gráficos" se incluye un botón de cierre, un título, y un grupo de botones de radio para
+ * seleccionar el modo de visualización (ventana o pantalla completa).
+ *
+ * @param parent Puntero al widget padre, usualmente un QMainWindow.
+ */
 SettingsWindow::SettingsWindow(QWidget *parent)
     : QDialog(parent)
 {
-    QSettings settings("guignote", "Settings");
-    // Configuración de la ventana: sin marco, fondo oscuro, esquinas redondeadas.
+    // Configuración de la ventana: sin marco, fondo oscuro y esquinas redondeadas.
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(800, 600);
 
-    // Layout principal horizontal.
+    // Layout principal horizontal con márgenes y espaciado.
     QHBoxLayout *mainLayout = new QHBoxLayout(this);
     mainLayout->setContentsMargins(15, 15, 15, 15);
     mainLayout->setSpacing(15);
 
-    // --- Barra lateral ---
+    // --- Configuración del Sidebar ---
     sidebar = new QListWidget(this);
     sidebar->setFixedWidth(200);
     sidebar->setStyleSheet(
@@ -34,22 +53,21 @@ SettingsWindow::SettingsWindow(QWidget *parent)
         "QListWidget::item:selected { background-color: #575757; }"
         );
     sidebar->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-
     sidebar->addItem("Gráficos");
+    sidebar->addItem("Sonido");
     mainLayout->addWidget(sidebar);
 
-    // --- Área de ajustes (stacked widget) ---
+    // --- Configuración del área de ajustes (Stacked Widget) ---
     stackedWidget = new QStackedWidget(this);
     mainLayout->addWidget(stackedWidget);
 
-    // Página "Gráficos"
+    // --- Página "Gráficos" ---
     QWidget *graphicsPage = new QWidget(this);
     QVBoxLayout *graphicsLayout = new QVBoxLayout(graphicsPage);
     graphicsLayout->setContentsMargins(20, 20, 20, 20);
     graphicsLayout->setSpacing(20);
 
-    // Botón para cerrar la ventana (esquina superior derecha)
+    // Botón para cerrar la ventana (ubicado en la esquina superior derecha de la página)
     closeButton = new QPushButton(graphicsPage);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
     closeButton->setIconSize(QSize(18, 18));
@@ -58,19 +76,19 @@ SettingsWindow::SettingsWindow(QWidget *parent)
         "QPushButton { background-color: #c2c2c3; border: none; border-radius: 15px; }"
         "QPushButton:hover { background-color: #9b9b9b; }"
         );
-    // Layout superior para alinear el botón de cierre
+    // Layout superior para alinear el botón de cierre a la derecha.
     QHBoxLayout *topLayout = new QHBoxLayout();
     topLayout->addStretch();
     topLayout->addWidget(closeButton);
     graphicsLayout->addLayout(topLayout);
 
-    // Título de la página
+    // Título de la página "Gráficos"
     QLabel *titleLabel = new QLabel("Ajustes Gráficos", graphicsPage);
     titleLabel->setStyleSheet("color: #ffffff; font-size: 28px; font-weight: bold;");
     titleLabel->setAlignment(Qt::AlignCenter);
     graphicsLayout->addWidget(titleLabel);
 
-    // Grupo para modo de visualización
+    // Grupo para configurar el modo de visualización
     QGroupBox *displayGroup = new QGroupBox("Modo de visualización", graphicsPage);
     displayGroup->setStyleSheet(
         "QGroupBox { color: #ffffff; font-size: 18px; border: 1px solid #575757; border-radius: 10px; margin-top: 10px; }"
@@ -80,7 +98,7 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     displayLayout->setSpacing(20);
     displayLayout->setContentsMargins(20, 30, 20, 30);
 
-    // Botones de radio
+    // Botones de radio para seleccionar entre modo "Ventana" y "Pantalla Completa"
     radioWindowed = new QRadioButton("Ventana", displayGroup);
     radioFullscreen = new QRadioButton("Pantalla Completa", displayGroup);
     QString radioStyle =
@@ -97,61 +115,128 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     displayLayout->addWidget(radioFullscreen);
     graphicsLayout->addWidget(displayGroup);
 
-    // Espacio flexible al final
+    // Espacio flexible para completar el layout.
     graphicsLayout->addStretch();
 
-    // Añadir la página "Gráficos" al stackedWidget
+    // Añadir la página "Gráficos" al stacked widget.
     stackedWidget->addWidget(graphicsPage);
 
-    // Seleccionar por defecto la primera opción de la barra lateral (Gráficos)
+    // Seleccionar por defecto la primera opción del sidebar.
     sidebar->setCurrentRow(0);
 
-    // Conexión del botón de cerrar para terminar la ventana
-    connect(closeButton, &QPushButton::clicked, this, [this]() {
-        saveSettings();  // Guardar configuraciones antes de cerrar
-        this->close();   // Cerrar la ventana
+    // --- Página "Sonido" ---
+    QWidget *soundPage = new QWidget(this);
+    QVBoxLayout *soundLayout = new QVBoxLayout(soundPage);
+    soundLayout->setContentsMargins(20, 20, 20, 20);
+    soundLayout->setSpacing(10); // Se reduce el espacio entre elementos para "subir" la barra
+
+    // Botón para cerrar la ventana en la página "Sonido"
+    QPushButton *closeButtonSound = new QPushButton(soundPage);
+    closeButtonSound->setIcon(QIcon(":/icons/cross.png"));
+    closeButtonSound->setIconSize(QSize(18, 18));
+    closeButtonSound->setFixedSize(30, 30);
+    closeButtonSound->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; border: none; border-radius: 15px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    // Layout superior para alinear el botón de cierre a la derecha.
+    QHBoxLayout *soundTopLayout = new QHBoxLayout();
+    soundTopLayout->addStretch();
+    soundTopLayout->addWidget(closeButtonSound);
+    soundLayout->addLayout(soundTopLayout);
+
+    // Título de la página "Sonido" (igual que en "Gráficos")
+    QLabel *soundTitle = new QLabel("Ajustes de Sonido", soundPage);
+    soundTitle->setStyleSheet("color: #ffffff; font-size: 28px; font-weight: bold;");
+    soundTitle->setAlignment(Qt::AlignCenter);
+    soundLayout->addWidget(soundTitle);
+
+    // Agregar el control de volumen (barra) justo debajo del título, con márgenes reducidos
+    QSlider *volumeSlider = new QSlider(Qt::Horizontal, soundPage);
+    volumeSlider->setRange(0, 100);      // Rango del volumen de 0 a 100
+    volumeSlider->setValue(50);          // Valor inicial al 50%
+    volumeSlider->setFixedHeight(30);
+
+    // Estilo personalizado para el slider (groove y handle)
+    volumeSlider->setStyleSheet(
+        "QSlider::groove:horizontal {"
+        "  border: 1px solid #575757;"
+        "  height: 8px;"
+        "  background: #222;"
+        "  margin: 0 15px;"
+        "  border-radius: 4px;"
+        "}"
+        "QSlider::handle:horizontal {"
+        "  background: #c2c2c3;"
+        "  border: 1px solid #575757;"
+        "  width: 20px;"
+        "  margin: -5px 0;"
+        "  border-radius: 10px;"
+        "}"
+        );
+    soundLayout->addWidget(volumeSlider);
+
+    // Espacio flexible para completar el layout.
+    soundLayout->addStretch();
+
+    // Añadir la página "Sonido" al stacked widget.
+    stackedWidget->addWidget(soundPage);
+
+    // Conexión para cerrar la ventana desde la página "Sonido"
+    connect(closeButtonSound, &QPushButton::clicked, this, &SettingsWindow::close);
+
+    // --- Conexión para cambiar de página ---
+    // Al cambiar la selección en el sidebar, se muestra la página correspondiente.
+    connect(sidebar, &QListWidget::currentRowChanged, this, [=](int row){
+        if (row == 0) {
+            // Se muestra la página de Gráficos.
+            stackedWidget->setCurrentWidget(graphicsPage);
+        } else if (row == 1) {
+            // Se oculta la página de Gráficos y se muestra la de Sonido.
+            stackedWidget->setCurrentWidget(soundPage);
+        }
     });
 
+    // Conexión: el botón de cierre cierra la ventana de configuración.
+    connect(closeButton, &QPushButton::clicked, this, &SettingsWindow::close);
 
-    // Conectar los radios a un slot que haga el cambio de modo
+    // Conexión: al pulsar los botones de radio se actualiza el modo gráfico.
     connect(radioWindowed,   &QRadioButton::clicked, this, &SettingsWindow::updateGraphicsMode);
     connect(radioFullscreen, &QRadioButton::clicked, this, &SettingsWindow::updateGraphicsMode);
-
-    loadSettings();
 }
 
-void SettingsWindow::loadSettings() {
-    // Recuperar valores guardados o usar valores por defecto
-    bool isFullscreen = settings.value("fullscreen", false).toBool();
-
-    if (isFullscreen) {
-        radioFullscreen->setChecked(true);
-    } else {
-        radioWindowed->setChecked(true);
-    }
-}
-
-void SettingsWindow::saveSettings() {
-    settings.setValue("fullscreen", radioFullscreen->isChecked());
-}
-
-
+/**
+ * @brief Destructor de SettingsWindow.
+ *
+ * Libera los recursos utilizados por la ventana de configuración. Los widgets hijos son eliminados automáticamente.
+ */
 SettingsWindow::~SettingsWindow()
 {
 }
 
+/**
+ * @brief Actualiza el modo gráfico de la aplicación.
+ *
+ * Este método cambia el modo de visualización del widget padre, que se espera sea un QMainWindow.
+ * Si se selecciona el modo "Pantalla Completa", se llama a showFullScreen(); de lo contrario, se llama a showNormal().
+ */
 void SettingsWindow::updateGraphicsMode()
 {
     if (!parentWidget()) {
-        return; // Evita problemas si no hay padre.
+        return; // Si no hay widget padre, se finaliza la función.
     }
 
     QWidget *parentWin = parentWidget(); // Obtener el padre sin asumir que es QMainWindow
+    QMainWindow *mainWindow = qobject_cast<QMainWindow*>(parentWidget());
+    if (!mainWindow) {
+        return; // Si el widget padre no es un QMainWindow, no se puede actualizar el modo gráfico.
+    }
 
     if (radioFullscreen->isChecked()) {
         parentWin->showFullScreen();
     } else {
         parentWin->showNormal(); // Vuelve al modo ventana
+        mainWindow->showNormal();
     }
 }
 
