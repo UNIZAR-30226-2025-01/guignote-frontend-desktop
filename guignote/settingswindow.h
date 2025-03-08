@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QSettings>
+#include <QSlider>
 
 // Declaraciones adelantadas de clases para evitar incluir sus cabeceras
 class QListWidget;
@@ -39,6 +40,7 @@ private:
     QRadioButton *radioWindowed;    ///< Botón de opción para modo ventana.
     QRadioButton *radioFullscreen;  ///< Botón de opción para modo pantalla completa.
     QPushButton *closeButton;       ///< Botón para cerrar la ventana de configuración.
+    QSlider *volumeSlider;
 
     /**
      * @brief Actualiza el modo gráfico de la aplicación.
@@ -47,6 +49,12 @@ private:
      * según la opción seleccionada.
      */
     void updateGraphicsMode();
+    void saveSettings();  // Guarda los ajustes en QSettings
+    void loadSettings();  // Carga los ajustes desde QSettings
+
+protected:
+    void closeEvent(QCloseEvent *event) override;  // Captura el evento de cierre para guardar los ajustes
+
 };
 
 #endif // SETTINGSWINDOW_H

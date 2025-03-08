@@ -11,7 +11,10 @@ int main(int argc, char *argv[])
     // Verificamos si hay token almacenado en QSettings
     QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
     QString token = settings.value("auth/token", "").toString();
-
+    MenuWindow w;
+    w.show();
+    return a.exec();
+/*
     if (!token.isEmpty()) {
         MenuWindow w;
         w.show();
@@ -21,4 +24,5 @@ int main(int argc, char *argv[])
         w.show();
         return a.exec();
     }
+*/
 }

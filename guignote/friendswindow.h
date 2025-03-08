@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QTabWidget>
+#include <QListWidget>
+
 
 /**
  * @brief Ventana de amigos.
@@ -29,6 +31,8 @@ private:
     QLabel *titleLabel;         ///< Etiqueta que muestra el título de la ventana.
     QLineEdit *searchBar;       ///< Barra de búsqueda para filtrar amigos.
     QVBoxLayout *mainLayout;    ///< Layout principal que organiza los widgets verticalmente.
+    QWidget* createFriendsTab();
+    QWidget* createRequestsTab();
 
     /**
      * @brief Configura la interfaz de usuario.

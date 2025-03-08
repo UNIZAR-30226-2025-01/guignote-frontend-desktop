@@ -18,6 +18,7 @@
 #include <QRadioButton>
 #include <QPushButton>
 #include <QDebug>
+#include <QCloseEvent>
 #include <QMainWindow>
 
 /**
@@ -152,7 +153,7 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     soundLayout->addWidget(soundTitle);
 
     // Agregar el control de volumen (barra) justo debajo del título, con márgenes reducidos
-    QSlider *volumeSlider = new QSlider(Qt::Horizontal, soundPage);
+    volumeSlider = new QSlider(Qt::Horizontal, soundPage);
     volumeSlider->setRange(0, 100);      // Rango del volumen de 0 a 100
     volumeSlider->setValue(50);          // Valor inicial al 50%
     volumeSlider->setFixedHeight(30);
@@ -203,6 +204,9 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     // Conexión: al pulsar los botones de radio se actualiza el modo gráfico.
     connect(radioWindowed,   &QRadioButton::clicked, this, &SettingsWindow::updateGraphicsMode);
     connect(radioFullscreen, &QRadioButton::clicked, this, &SettingsWindow::updateGraphicsMode);
+
+    // Cargamos los settings
+    loadSettings();
 }
 
 /**
@@ -227,16 +231,38 @@ void SettingsWindow::updateGraphicsMode()
     }
 
     QWidget *parentWin = parentWidget(); // Obtener el padre sin asumir que es QMainWindow
-    QMainWindow *mainWindow = qobject_cast<QMainWindow*>(parentWidget());
-    if (!mainWindow) {
-        return; // Si el widget padre no es un QMainWindow, no se puede actualizar el modo gráfico.
-    }
 
     if (radioFullscreen->isChecked()) {
         parentWin->showFullScreen();
     } else {
         parentWin->showNormal(); // Vuelve al modo ventana
-        mainWindow->showNormal();
     }
+}
+
+void SettingsWindow::closeEvent(QCloseEvent *event)
+{
+    saveSettings();  // Guardar los ajustes antes de cerrar la ventana
+    event->accept(); // Aceptar el evento de cierre
+}
+
+
+void SettingsWindow::saveSettings()
+{
+    QSettings settings("guignote", "settings");
+    settings.setValue("graphics/fullscreen", radioFullscreen->isChecked());
+    settings.setValue("sound/volume", volumeSlider->value());
+}
+
+void SettingsWindow::loadSettings()
+{
+    QSettings settings("guignote", "settings");
+    // Cargar modo de visualización
+    bool fullscreen = settings.value("graphics/fullscreen", false).toBool();
+    radioFullscreen->setChecked(fullscreen);
+    radioWindowed->setChecked(!fullscreen);
+    updateGraphicsMode();
+    // Cargar volumen y aplicarlo a la barra de sonido
+    int volume = settings.value("sound/volume", 50).toInt();  // Valor por defecto: 50
+    volumeSlider->setValue(volume);
 }
 
