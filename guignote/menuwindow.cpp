@@ -12,7 +12,7 @@
 #include "imagebutton.h"
 #include "settingswindow.h"
 #include "friendswindow.h"
-//#include "myprofilewindow.h"
+#include "myprofilewindow.h"
 //#include "otherprofilewindow.h"
 
 // Constructor de la clase MenuWindow
@@ -71,8 +71,10 @@ MenuWindow::MenuWindow(QWidget *parent) :
     invisibleButton->setStyleSheet("background: transparent; border: none;");  // Invisible
     invisibleButton->setCursor(Qt::PointingHandCursor);  // Mantiene el cursor de puntero
 
-    connect(invisibleButton, &QPushButton::clicked, []() {
-        qDebug() << "TopBar clickeado!";
+    connect(invisibleButton, &QPushButton::clicked, [=]() {
+        MyProfileWindow *profileWin = new MyProfileWindow(this);
+        profileWin->setModal(true);
+        profileWin->show();
     });
 
     // ------------- SETTINGS Y FRIENDS -------------

@@ -42,6 +42,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         settingswindow.h settingswindow.cpp
         settingswindow.ui
         friendswindow.h friendswindow.cpp
+        myprofilewindow.h myprofilewindow.cpp
 
 
 
