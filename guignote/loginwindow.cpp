@@ -38,6 +38,7 @@
 #include <QPropertyAnimation>
 #include <QSizePolicy>
 #include <QFontMetrics>
+#include <qmainwindow.h>
 
 LoginWindow::LoginWindow(QWidget *parent)
     : QDialog(parent),

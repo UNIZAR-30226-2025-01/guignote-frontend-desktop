@@ -8,11 +8,13 @@
  */
 
 #include "menuwindow.h"
+#include "icon.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
 #include "inventorywindow.h"
 #include "settingswindow.h"
 #include "friendswindow.h"
+#include <qgraphicseffect.h>
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -78,29 +80,84 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
 
-    // Conectar señales de clic a funciones
+    // Ventana de Settings con cuadro modal similar
     connect(settings, &Icon::clicked, [=]() {
-        SettingsWindow *settingsWin = new SettingsWindow(this,this);
+        SettingsWindow *settingsWin = new SettingsWindow(this, this);
         settingsWin->setModal(true);
-        settingsWin->show();
+        settingsWin->exec();
     });
 
+    // Ventana de Amigos creada de forma similar a MainWindow
     connect(friends, &Icon::clicked, this, [this]() {
-        // Crear y mostrar la ventana de amigos
         friendswindow *friendsWin = new friendswindow(this);
-        friendsWin->setAttribute(Qt::WA_DeleteOnClose); // Hace que se elimine automáticamente al cerrarse
-        friendsWin->show();
+        friendsWin->setModal(true);
+        friendsWin->exec();
     });
 
+    // Ventana de Confirmar Salir con fondo oscurecido y bloqueo de interacción
     connect(exit, &Icon::clicked, this, [this]() {
-        this->close();  // Cierra la ventana
+        exit->setImage(":/icons/darkeneddoor.png", 60, 60);
+        QDialog *confirmDialog = new QDialog(this);
+        confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+        confirmDialog->setModal(true);
+        confirmDialog->setFixedSize(300,150);
+        confirmDialog->setStyleSheet(
+            "QDialog {"
+            "  background-color: #171718;"
+            "  border-radius: 5px;"
+            "  padding: 20px;"
+            "}"
+            );
+        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
+        dialogShadow->setBlurRadius(10);
+        dialogShadow->setColor(QColor(0, 0, 0, 80));
+        dialogShadow->setOffset(4, 4);
+        confirmDialog->setGraphicsEffect(dialogShadow);
+        QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
+        QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
+        confirmLabel->setStyleSheet("QFrame { background-color: #171718; border-radius: 5px; }");
+        confirmLabel->setAlignment(Qt::AlignCenter);
+        dialogLayout->addWidget(confirmLabel);
+        QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
+        QString buttonStyle =
+            "QPushButton {"
+            "  background-color: #c2c2c3;"
+            "  color: #171718;"
+            "  border-radius: 15px;"
+            "  font-size: 20px;"
+            "  font-weight: bold;"
+            "  padding: 12px 25px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #9b9b9b;"
+            "}";
+        QPushButton *yesButton = new QPushButton("Sí", confirmDialog);
+        QPushButton *noButton = new QPushButton("No", confirmDialog);
+        yesButton->setStyleSheet(buttonStyle);
+        noButton->setStyleSheet(buttonStyle);
+        yesButton->setFixedSize(100,40);
+        noButton->setFixedSize(100,40);
+        dialogButtonLayout->addWidget(yesButton);
+        dialogButtonLayout->addWidget(noButton);
+        dialogLayout->addLayout(dialogButtonLayout);
+        connect(yesButton, &QPushButton::clicked, [=]() {
+            qApp->quit();
+        });
+        connect(noButton, &QPushButton::clicked, [=]() {
+            confirmDialog->close();
+        });
+        connect(confirmDialog, &QDialog::finished, [=](int) {
+            exit->setImage(":/icons/door.png", 60, 60);
+        });
+        confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        confirmDialog->show();
     });
 
-    // Conectar evento de clic (puedes modificarlo para que haga algo específico)
+    // Ventana de Inventory con cuadro modal similar
     connect(inventory, &Icon::clicked, this, [this]() {
         InventoryWindow *inventoryWin = new InventoryWindow(this);
         inventoryWin->setModal(true);
-        inventoryWin->show();
+        inventoryWin->exec();
     });
 
     // ------------- ORNAMENTOS ESQUINAS -------------
