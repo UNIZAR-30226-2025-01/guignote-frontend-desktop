@@ -5,12 +5,9 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QLabel>
-<<<<<<< HEAD
 #include <QLineEdit>
+#include <QListWidget>
 #include <QTabWidget>
-=======
-#include <QLineEdit>  // Asegúrate de incluir esta librería
->>>>>>> 244881bf257fb2b25504870b34102437d14eaf16
 
 /**
  * @brief Ventana de amigos.
@@ -29,21 +26,11 @@ public:
     explicit friendswindow(QWidget *parent = nullptr);
 
 private:
-<<<<<<< HEAD
-    QPushButton *closeButton;
-    QLabel *titleLabel;
-    QLineEdit *searchBar;
-    QVBoxLayout *mainLayout;
-    QTabWidget *tabWidget;
-
-    void setupUI();  // Configura la UI
-    QWidget* createFriendsTab();   // Crea la pestaña de amigos
-    QWidget* createRequestsTab();  // Crea la pestaña de solicitudes de amistad
-=======
     QPushButton *closeButton;   ///< Botón para cerrar la ventana.
     QLabel *titleLabel;         ///< Etiqueta que muestra el título de la ventana.
     QLineEdit *searchBar;       ///< Barra de búsqueda para filtrar amigos.
     QVBoxLayout *mainLayout;    ///< Layout principal que organiza los widgets verticalmente.
+    QTabWidget *tabWidget;      ///< Widget para manejar pestañas de amigos y solicitudes.
 
     /**
      * @brief Configura la interfaz de usuario.
@@ -53,7 +40,18 @@ private:
      * y la barra de búsqueda.
      */
     void setupUI();
->>>>>>> 244881bf257fb2b25504870b34102437d14eaf16
+
+    /**
+     * @brief Crea la pestaña de amigos.
+     * @return Un puntero a la pestaña de amigos.
+     */
+    QWidget* createFriendsTab();
+
+    /**
+     * @brief Crea la pestaña de solicitudes de amistad.
+     * @return Un puntero a la pestaña de solicitudes de amistad.
+     */
+    QWidget* createRequestsTab();
 };
 
 #endif // FRIENDSWINDOW_H

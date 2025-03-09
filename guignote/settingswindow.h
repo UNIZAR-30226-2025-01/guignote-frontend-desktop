@@ -25,7 +25,7 @@ public:
      * @brief Constructor de SettingsWindow.
      * @param parent Puntero al widget padre, por defecto nullptr.
      */
-    explicit SettingsWindow(QWidget *parent = nullptr);
+    explicit SettingsWindow(QWidget *mainWindow, QWidget *parent = nullptr);
 
     /**
      * @brief Destructor de SettingsWindow.
@@ -33,6 +33,7 @@ public:
     ~SettingsWindow();
 
 private:
+    QWidget *mainWindowRef; // Guardar referencia al mainWindow
     QListWidget *sidebar;           ///< Widget lateral para la navegación.
     QStackedWidget *stackedWidget;  ///< Área que muestra las páginas de configuración.
     QRadioButton *radioWindowed;    ///< Botón de opción para modo ventana.

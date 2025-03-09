@@ -77,7 +77,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // Conectar señales de clic a funciones
     connect(settings, &Icon::clicked, [=]() {
-        SettingsWindow *settingsWin = new SettingsWindow(this);
+        SettingsWindow *settingsWin = new SettingsWindow(this,this);
         settingsWin->setModal(true);
         settingsWin->show();
     });

@@ -30,8 +30,8 @@
  *
  * @param parent Puntero al widget padre, usualmente un QMainWindow.
  */
-SettingsWindow::SettingsWindow(QWidget *parent)
-    : QDialog(parent)
+SettingsWindow::SettingsWindow(QWidget *mainWindow, QWidget *parent)
+    : QDialog(parent), mainWindowRef(mainWindow)
 {
     // Configuración de la ventana: sin marco, fondo oscuro y esquinas redondeadas.
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -222,21 +222,19 @@ SettingsWindow::~SettingsWindow()
  */
 void SettingsWindow::updateGraphicsMode()
 {
-    if (!parentWidget()) {
-        return; // Si no hay widget padre, se finaliza la función.
-    }
-
-    QWidget *parentWin = parentWidget(); // Obtener el padre sin asumir que es QMainWindow
-    QMainWindow *mainWindow = qobject_cast<QMainWindow*>(parentWidget());
-    if (!mainWindow) {
-        return; // Si el widget padre no es un QMainWindow, no se puede actualizar el modo gráfico.
+    if (!mainWindowRef) {
+        qDebug() << "No se encontró la ventana principal.";
+        return;
     }
 
     if (radioFullscreen->isChecked()) {
-        parentWin->showFullScreen();
+        qDebug() << "Cambiando a modo Pantalla Completa.";
+        mainWindowRef->showFullScreen();
     } else {
-        parentWin->showNormal(); // Vuelve al modo ventana
-        mainWindow->showNormal();
+        qDebug() << "Cambiando a modo Ventana.";
+        mainWindowRef->showNormal();
     }
 }
+
+
 
