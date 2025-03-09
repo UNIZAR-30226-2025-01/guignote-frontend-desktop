@@ -10,6 +10,7 @@
 #include "menuwindow.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
+#include "inventorywindow.h"
 #include "settingswindow.h"
 #include "friendswindow.h"
 
@@ -97,7 +98,9 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // Conectar evento de clic (puedes modificarlo para que haga algo específico)
     connect(inventory, &Icon::clicked, this, [this]() {
-        qDebug() << "Icono de cofre clickeado";
+        InventoryWindow *inventoryWin = new InventoryWindow(this);
+        inventoryWin->setModal(true);
+        inventoryWin->show();
     });
 
     // ------------- ORNAMENTOS ESQUINAS -------------

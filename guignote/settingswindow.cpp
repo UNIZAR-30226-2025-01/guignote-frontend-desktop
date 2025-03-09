@@ -236,5 +236,3 @@ void SettingsWindow::updateGraphicsMode()
     }
 }
 
-
-
