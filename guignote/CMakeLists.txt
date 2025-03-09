@@ -42,6 +42,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         settingswindow.h settingswindow.cpp
         settingswindow.ui
         friendswindow.h friendswindow.cpp
+        inventorywindow.h inventorywindow.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET guignote APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

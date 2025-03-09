@@ -68,10 +68,12 @@ MenuWindow::MenuWindow(QWidget *parent) :
     settings = new Icon(this);
     friends = new Icon(this);
     exit = new Icon(this);
+    inventory = new Icon(this);
 
     settings->setImage(":/icons/settings.png", 60, 60);
     friends->setImage(":/icons/friends.png", 60, 60);
     exit->setImage(":/icons/door.png", 60, 60);
+    inventory->setImage(":/icons/chest.png", 60, 60);
 
     // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
 
@@ -91,6 +93,11 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     connect(exit, &Icon::clicked, this, [this]() {
         this->close();  // Cierra la ventana
+    });
+
+    // Conectar evento de clic (puedes modificarlo para que haga algo específico)
+    connect(inventory, &Icon::clicked, this, [this]() {
+        qDebug() << "Icono de cofre clickeado";
     });
 
     // ------------- ORNAMENTOS ESQUINAS -------------
@@ -220,6 +227,16 @@ void MenuWindow::repositionIcons() {
     exit->move((windowWidth / 2) - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
 }
 
+// Función para posicionar los iconos arriba
+void MenuWindow::repositionTopIcons() {
+    int windowWidth = this->width();
+    // Definir el tamaño del icono
+    int imgWidth = inventory->width();
+    int imgHeight = inventory->height();
+    int margen = 12; // Margen desde la parte superior
+    // Posicionar en la parte superior centro
+    inventory->move((windowWidth / 2) - (imgWidth / 2), margen);
+}
 
 // Función para recolocar y reposicionar todos los elementos
 void MenuWindow::resizeEvent(QResizeEvent *event) {
@@ -227,9 +244,10 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     repositionBars();
     repositionImageButtons();
     repositionIcons();
-
+    repositionTopIcons();
     QWidget::resizeEvent(event);
 }
+
 
 // Destructor de la clase menu
 MenuWindow::~MenuWindow() {

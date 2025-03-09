@@ -75,6 +75,7 @@ private:
     void repositionImageButtons();
     void repositionBars();
     void repositionIcons();
+    void repositionTopIcons();
 
     Ui::MenuWindow *ui;
     QSize ornamentSize;
@@ -87,6 +88,7 @@ private:
     Icon *settings;
     Icon *friends;
     Icon *exit;
+    Icon *inventory;
     ImageButton *boton1v1;
     ImageButton *boton2v2;
 };
