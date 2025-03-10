@@ -53,6 +53,7 @@ private:
     // Métodos para crear widgets personalizados en las pestañas
     QWidget* createSearchResultWidget(const QJsonObject &usuario);
     QWidget* createRequestWidget(const QJsonObject &solicitud);
+    QWidget* createFriendWidget(const QJsonObject &amigo);
 
     // Métodos para la conexión con el backend
     QString loadAuthToken();

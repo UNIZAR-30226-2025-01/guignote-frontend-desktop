@@ -86,7 +86,7 @@ QWidget* friendswindow::createFriendsTab() {
     friendsListWidget->setStyleSheet(
         "QListWidget { background-color: #222; color: white; border-radius: 10px; padding: 8px; font-size: 18px; }"
         );
-    friendsListWidget->setSpacing(10);
+    friendsListWidget->setSpacing(50);
     layout->addWidget(friendsListWidget);
     page->setLayout(layout);
     return page;
@@ -101,7 +101,7 @@ QWidget* friendswindow::createRequestsTab() {
     requestsListWidget->setStyleSheet(
         "QListWidget { background-color: #222; border-radius: 10px; padding: 8px; }"
         );
-    requestsListWidget->setSpacing(10);
+    requestsListWidget->setSpacing(50);
     layout->addWidget(requestsListWidget);
     page->setLayout(layout);
     return page;
@@ -163,16 +163,68 @@ QString friendswindow::loadAuthToken() {
     return token;
 }
 
+QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
+    // 1) Creamos un QWidget estilo “tarjeta”
+    QWidget *widget = new QWidget();
+    widget->setMinimumSize(300, 130);
+    // Opcional: si deseas el mismo color de fondo que la pestaña de buscar
+    widget->setStyleSheet("border-radius: 10px;");
+
+    // 2) Layout horizontal principal
+    QHBoxLayout *layout = new QHBoxLayout(widget);
+    layout->setContentsMargins(10, 2, 10, 2);
+    layout->setSpacing(7);
+
+    // 3) Layout vertical para la info (nombre, stats si quieres)
+    QVBoxLayout *infoLayout = new QVBoxLayout();
+
+    // --- Nombre ---
+    QString nombre = "Nombre no disponible";
+    if (amigo.contains("nombre")) {
+        nombre = amigo["nombre"].toString();
+    } else if (amigo.contains("Nombre")) {
+        nombre = amigo["Nombre"].toString();
+    } else if (amigo.contains("username")) {
+        nombre = amigo["username"].toString();
+    }
+
+    QLabel *nameLabel = new QLabel(nombre, widget);
+    nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
+    infoLayout->addWidget(nameLabel);
+
+    // (Opcional) Si tu backend también envía victorias, derrotas, ratio, etc.,
+    // puedes mostrarlo como en createSearchResultWidget. Ejemplo:
+
+    int wins = amigo.contains("victorias") ? amigo["victorias"].toInt() : 0;
+    int losses = amigo.contains("derrotas") ? amigo["derrotas"].toInt() : 0;
+    double ratio = (wins + losses > 0) ? (wins * 100.0 / (wins + losses)) : 0.0;
+
+    QLabel *statsLabel = new QLabel(
+        QString("Victorias: %1   Derrotas: %2   Ratio: %3%")
+            .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
+        widget
+    );
+    statsLabel->setStyleSheet("color: white; font-size: 18px;");
+    infoLayout->addWidget(statsLabel);
+
+
+    layout->addLayout(infoLayout);
+    layout->addStretch();  // Empuja el contenido a la izquierda, si quisieras un botón a la derecha
+
+    widget->setLayout(layout);
+    return widget;
+}
+
+
 // Función para obtener la lista de amigos
 void friendswindow::fetchFriends() {
     QString token = loadAuthToken();
-    if(token.isEmpty()) return;
+    if (token.isEmpty()) return;
 
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/obtener_amigos/"));
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, [this, reply]() {
-        // Comprobar si la petición respondió con un código 401 (no autorizado)
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             // Crear un diálogo modal similar al de confirmación de salir
@@ -244,35 +296,30 @@ void friendswindow::fetchFriends() {
             return;
         }
         QByteArray response = reply->readAll();
-        qDebug() << "fetchFriends response:" << response;
         QJsonDocument doc = QJsonDocument::fromJson(response);
-        if(doc.isObject()) {
+        if (doc.isObject()) {
             QJsonObject obj = doc.object();
-            if(obj.contains("amigos")) {
+            if (obj.contains("amigos")) {
                 friendsListWidget->clear();
                 QJsonArray amigos = obj["amigos"].toArray();
-                for(const QJsonValue &value : amigos) {
+                for (const QJsonValue &value : amigos) {
                     QJsonObject amigo = value.toObject();
 
-                    // Obtener el nombre usando la clave correcta
-                    QString nombre = "Nombre no disponible";
-                    if (amigo.contains("nombre"))
-                        nombre = amigo["nombre"].toString();
-                    else if (amigo.contains("Nombre"))
-                        nombre = amigo["Nombre"].toString();
-                    else if (amigo.contains("username"))
-                        nombre = amigo["username"].toString();
+                    // En vez de texto plano, creamos la “tarjeta”:
+                    QWidget *friendCard = createFriendWidget(amigo);
 
-                    QListWidgetItem *item = new QListWidgetItem(nombre, friendsListWidget);
-                    // Convertir el id (entero) a QString
-                    QString friendId = QString::number(amigo["id"].toInt());
-                    item->setData(Qt::UserRole, friendId);
+                    // Creamos un QListWidgetItem vacío y le asignamos friendCard como widget
+                    QListWidgetItem *item = new QListWidgetItem(friendsListWidget);
+                    item->setSizeHint(friendCard->sizeHint());
+                    friendsListWidget->addItem(item);
+                    friendsListWidget->setItemWidget(item, friendCard);
                 }
             }
         }
         reply->deleteLater();
     });
 }
+
 
 // Función para obtener las solicitudes de amistad y mostrarlas en widgets personalizados.
 void friendswindow::fetchRequests() {
@@ -512,8 +559,6 @@ void friendswindow::searchUsers() {
 }
 
 
-
-
 // Crea un widget personalizado para cada usuario en los resultados de búsqueda
 QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QWidget *widget = new QWidget();
@@ -579,28 +624,49 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
 // Crea un widget personalizado para cada solicitud de amistad
 QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     QWidget *widget = new QWidget();
-    // Establece un tamaño mínimo para el widget de solicitud
-    widget->setMinimumSize(300, 70);
+    widget->setMinimumSize(300, 130);
+    widget->setStyleSheet("border-radius: 10px;");
 
     QHBoxLayout *layout = new QHBoxLayout(widget);
-    layout->setContentsMargins(10,10,10,10);
-    layout->setSpacing(10);
+    layout->setContentsMargins(10, 2, 10, 2);
+    layout->setSpacing(7);
 
-    QLabel *nameLabel = new QLabel(solicitud["solicitante"].toString(), widget);
+    QVBoxLayout *infoLayout = new QVBoxLayout();
+    // Nombre del solicitante
+    QString nombre = solicitud["solicitante"].toString();
+    QLabel *nameLabel = new QLabel(nombre, widget);
     nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
-    layout->addWidget(nameLabel);
+    infoLayout->addWidget(nameLabel);
+
+    layout->addLayout(infoLayout);
     layout->addStretch();
 
+    // Botón "Aceptar" con efecto hover y conexión a acceptRequest
     QPushButton *acceptBtn = new QPushButton("Aceptar", widget);
-    acceptBtn->setStyleSheet("background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
-    // Convertir el id de la solicitud (entero) a QString
+    // Asignar la propiedad "solicitudId" para usarla en la función de aceptación
     QString solicitudId = QString::number(solicitud["id"].toInt());
     acceptBtn->setProperty("solicitudId", solicitudId);
+    acceptBtn->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #3E8E41;"
+        "}"
+        );
     connect(acceptBtn, &QPushButton::clicked, this, &friendswindow::acceptRequest);
     layout->addWidget(acceptBtn);
 
+    // Botón "Rechazar" (se deja con su estilo y conexión actual)
     QPushButton *rejectBtn = new QPushButton("Rechazar", widget);
-    rejectBtn->setStyleSheet("background-color: #E53935; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
+    rejectBtn->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #E53935; color: white; font-size: 18px; padding: 10px; border-radius: 10px;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #CC342F;"
+        "}"
+        );
     rejectBtn->setProperty("solicitudId", solicitudId);
     connect(rejectBtn, &QPushButton::clicked, this, &friendswindow::rejectRequest);
     layout->addWidget(rejectBtn);
@@ -608,6 +674,8 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     widget->setLayout(layout);
     return widget;
 }
+
+
 
 // Envía solicitud de amistad al presionar "Agregar amigo"
 void friendswindow::sendFriendRequest() {
@@ -658,7 +726,7 @@ void friendswindow::acceptRequest() {
     QString solicitudId = senderObj->property("solicitudId").toString();
     if (solicitudId.isEmpty()) return;
     QString token = loadAuthToken();
-    if(token.isEmpty()) return;
+    if (token.isEmpty()) return;
 
     QUrl url("http://188.165.76.134:8000/usuarios/aceptar_solicitud_amistad/");
     QNetworkRequest request(url);
@@ -669,9 +737,123 @@ void friendswindow::acceptRequest() {
     json["solicitud_id"] = solicitudId;
     QJsonDocument doc(json);
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
+
     connect(reply, &QNetworkReply::finished, [this, reply]() {
-        if(reply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(this, "Solicitud aceptada", "Has aceptado la solicitud de amistad.");
+        // Comprobamos si el código de estado es 401 (token caducado)
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (statusCode == 401) {
+            QDialog *expiredDialog = new QDialog(this);
+            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            expiredDialog->setModal(true);
+            expiredDialog->setStyleSheet(
+                "QDialog {"
+                "  background-color: #171718;"
+                "  border-radius: 5px;"
+                "  padding: 20px;"
+                "}"
+                );
+            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
+            dialogShadow->setBlurRadius(10);
+            dialogShadow->setColor(QColor(0, 0, 0, 80));
+            dialogShadow->setOffset(4, 4);
+            expiredDialog->setGraphicsEffect(dialogShadow);
+
+            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
+            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
+            expiredLabel->setWordWrap(true);
+            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
+            expiredLabel->setAlignment(Qt::AlignCenter);
+            dialogLayout->addWidget(expiredLabel);
+
+            QPushButton *okButton = new QPushButton("OK", expiredDialog);
+            okButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #c2c2c3;"
+                "  color: #171718;"
+                "  border-radius: 15px;"
+                "  font-size: 20px;"
+                "  font-weight: bold;"
+                "  padding: 12px 25px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #9b9b9b;"
+                "}"
+                );
+            okButton->setFixedSize(100, 40);
+
+            QHBoxLayout *btnLayout = new QHBoxLayout();
+            btnLayout->addStretch();
+            btnLayout->addWidget(okButton);
+            btnLayout->addStretch();
+            dialogLayout->addLayout(btnLayout);
+
+            connect(okButton, &QPushButton::clicked, [=]() {
+                expiredDialog->close();
+                qApp->quit();
+            });
+
+            expiredDialog->adjustSize();
+            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
+            expiredDialog->show();
+
+            reply->deleteLater();
+            return;
+        }
+
+        if (reply->error() == QNetworkReply::NoError) {
+            // Puedes usar:
+            QDialog *acceptedDialog = new QDialog(this);
+            acceptedDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            acceptedDialog->setModal(true);
+            acceptedDialog->setStyleSheet(
+                "QDialog {"
+                "  background-color: #171718;"
+                "  border-radius: 5px;"
+                "  padding: 20px;"
+                "}"
+                );
+            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(acceptedDialog);
+            dialogShadow->setBlurRadius(10);
+            dialogShadow->setColor(QColor(0, 0, 0, 80));
+            dialogShadow->setOffset(4, 4);
+            acceptedDialog->setGraphicsEffect(dialogShadow);
+
+            QVBoxLayout *dialogLayout = new QVBoxLayout(acceptedDialog);
+            QLabel *messageLabel = new QLabel("Has aceptado la solicitud de amistad.", acceptedDialog);
+            messageLabel->setWordWrap(true);
+            messageLabel->setStyleSheet("color: white; font-size: 16px;");
+            messageLabel->setAlignment(Qt::AlignCenter);
+            dialogLayout->addWidget(messageLabel);
+
+            QHBoxLayout *btnLayout = new QHBoxLayout();
+            QPushButton *okButton = new QPushButton("OK", acceptedDialog);
+            okButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #c2c2c3;"
+                "  color: #171718;"
+                "  border-radius: 15px;"
+                "  font-size: 20px;"
+                "  font-weight: bold;"
+                "  padding: 12px 25px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #9b9b9b;"
+                "}"
+                );
+            okButton->setFixedSize(100, 40);
+            btnLayout->addStretch();
+            btnLayout->addWidget(okButton);
+            btnLayout->addStretch();
+            dialogLayout->addLayout(btnLayout);
+
+            connect(okButton, &QPushButton::clicked, [=]() {
+                acceptedDialog->close();
+            });
+
+            // Ajustamos el tamaño y lo centramos
+            acceptedDialog->adjustSize();
+            acceptedDialog->move(this->geometry().center() - acceptedDialog->rect().center());
+            acceptedDialog->show();
             fetchRequests();
             fetchFriends();
         } else {
@@ -680,6 +862,7 @@ void friendswindow::acceptRequest() {
         reply->deleteLater();
     });
 }
+
 
 // Deniega una solicitud de amistad
 void friendswindow::rejectRequest() {
@@ -701,7 +884,59 @@ void friendswindow::rejectRequest() {
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if(reply->error() == QNetworkReply::NoError) {
-            QMessageBox::information(this, "Solicitud denegada", "Has rechazado la solicitud de amistad.");
+            // Puedes usar:
+            QDialog *acceptedDialog = new QDialog(this);
+            acceptedDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            acceptedDialog->setModal(true);
+            acceptedDialog->setStyleSheet(
+                "QDialog {"
+                "  background-color: #171718;"
+                "  border-radius: 5px;"
+                "  padding: 20px;"
+                "}"
+                );
+            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(acceptedDialog);
+            dialogShadow->setBlurRadius(10);
+            dialogShadow->setColor(QColor(0, 0, 0, 80));
+            dialogShadow->setOffset(4, 4);
+            acceptedDialog->setGraphicsEffect(dialogShadow);
+
+            QVBoxLayout *dialogLayout = new QVBoxLayout(acceptedDialog);
+            QLabel *messageLabel = new QLabel("Solicitud de amistad rechazada", acceptedDialog);
+            messageLabel->setWordWrap(true);
+            messageLabel->setStyleSheet("color: white; font-size: 16px;");
+            messageLabel->setAlignment(Qt::AlignCenter);
+            dialogLayout->addWidget(messageLabel);
+
+            QHBoxLayout *btnLayout = new QHBoxLayout();
+            QPushButton *okButton = new QPushButton("OK", acceptedDialog);
+            okButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #c2c2c3;"
+                "  color: #171718;"
+                "  border-radius: 15px;"
+                "  font-size: 20px;"
+                "  font-weight: bold;"
+                "  padding: 12px 25px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #9b9b9b;"
+                "}"
+                );
+            okButton->setFixedSize(100, 40);
+            btnLayout->addStretch();
+            btnLayout->addWidget(okButton);
+            btnLayout->addStretch();
+            dialogLayout->addLayout(btnLayout);
+
+            connect(okButton, &QPushButton::clicked, [=]() {
+                acceptedDialog->close();
+            });
+
+            // Ajustamos el tamaño y lo centramos
+            acceptedDialog->adjustSize();
+            acceptedDialog->move(this->geometry().center() - acceptedDialog->rect().center());
+            acceptedDialog->show();
             fetchRequests();
         } else {
             QMessageBox::warning(this, "Error", "No se pudo rechazar la solicitud.");
