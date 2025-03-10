@@ -129,7 +129,7 @@ QWidget* friendswindow::createSearchTab() {
     searchResultsListWidget->setStyleSheet(
         "QListWidget { background-color: #222; border-radius: 10px; padding: 8px; }"
         );
-    searchResultsListWidget->setSpacing(10);
+    searchResultsListWidget->setSpacing(50);
     layout->addWidget(searchResultsListWidget);
     page->setLayout(layout);
     return page;
@@ -237,6 +237,16 @@ void friendswindow::searchUsers() {
     QString searchText = searchLineEdit->text().trimmed();
     qDebug() << "searchUsers triggered with text:" << searchText;
 
+    // Actualizamos la variable miembro con la búsqueda actual
+    currentSearchQuery = searchText;
+
+    // Si no hay texto, limpiamos la lista y salimos
+    if (searchText.isEmpty()) {
+        searchResultsListWidget->clear();
+        return;
+    }
+
+    // Limpiamos la lista antes de hacer la petición
     searchResultsListWidget->clear();
 
     QString token = loadAuthToken();
@@ -244,8 +254,7 @@ void friendswindow::searchUsers() {
 
     QUrl url("http://188.165.76.134:8000/usuarios/buscar_usuarios/");
     QUrlQuery query;
-    if (!searchText.isEmpty())
-        query.addQueryItem("nombre", searchText);
+    query.addQueryItem("nombre", searchText);
     query.addQueryItem("incluir_amigos", "false");
     query.addQueryItem("incluir_me", "true");
     query.addQueryItem("incluir_pendientes", "true");
@@ -254,7 +263,16 @@ void friendswindow::searchUsers() {
     QNetworkRequest request(url);
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, [this, reply, queryText = searchText]() {
+        // Si la búsqueda actual ha cambiado desde que se lanzó esta consulta, ignoramos la respuesta.
+        if (currentSearchQuery != queryText) {
+            reply->deleteLater();
+            return;
+        }
+
+        // Limpiamos la lista nuevamente para asegurarnos
+        searchResultsListWidget->clear();
+
         QByteArray response = reply->readAll();
         qDebug() << "searchUsers response:" << response;
         QJsonDocument doc = QJsonDocument::fromJson(response);
@@ -277,15 +295,17 @@ void friendswindow::searchUsers() {
     });
 }
 
+
+
 // Crea un widget personalizado para cada usuario en los resultados de búsqueda
 QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QWidget *widget = new QWidget();
     // Establece un tamaño mínimo para garantizar visibilidad
-    widget->setMinimumSize(300, 80);
+    widget->setMinimumSize(300, 130);
 
     QHBoxLayout *layout = new QHBoxLayout(widget);
-    layout->setContentsMargins(10,10,10,10);
-    layout->setSpacing(10);
+    layout->setContentsMargins(10,2,10,2);
+    layout->setSpacing(7);
 
     QVBoxLayout *infoLayout = new QVBoxLayout();
 

@@ -39,6 +39,8 @@ private:
     QPushButton *searchButton;
     QListWidget *searchResultsListWidget;
 
+    QString currentSearchQuery;
+
     // Gestor de red para realizar peticiones HTTP
     QNetworkAccessManager *networkManager;
 
