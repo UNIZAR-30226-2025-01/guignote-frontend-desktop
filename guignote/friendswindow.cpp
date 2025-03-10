@@ -675,9 +675,6 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     return widget;
 }
 
-
-
-// Envía solicitud de amistad al presionar "Agregar amigo"
 void friendswindow::sendFriendRequest() {
     QPushButton *button = qobject_cast<QPushButton*>(sender());
     if (!button) {
@@ -690,7 +687,7 @@ void friendswindow::sendFriendRequest() {
         return;
     }
     QString token = loadAuthToken();
-    if(token.isEmpty()) {
+    if (token.isEmpty()) {
         qDebug() << "sendFriendRequest: token vacío.";
         return;
     }
@@ -706,18 +703,121 @@ void friendswindow::sendFriendRequest() {
     QJsonDocument doc(json);
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
     connect(reply, &QNetworkReply::finished, [this, reply, button, userId]() {
-        if(reply->error() == QNetworkReply::NoError) {
+        if (reply->error() == QNetworkReply::NoError) {
             qDebug() << "Solicitud enviada correctamente para userId:" << userId;
             button->setText("Solicitud enviada!");
             button->setEnabled(false);
-            QMessageBox::information(this, "Solicitud enviada", "Se ha enviado la solicitud de amistad.");
+            // En lugar de QMessageBox::information, creamos un diálogo personalizado:
+            QDialog *sentDialog = new QDialog(this);
+            sentDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            sentDialog->setModal(true);
+            sentDialog->setStyleSheet(
+                "QDialog {"
+                "  background-color: #171718;"
+                "  border-radius: 5px;"
+                "  padding: 20px;"
+                "}"
+                );
+            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(sentDialog);
+            dialogShadow->setBlurRadius(10);
+            dialogShadow->setColor(QColor(0, 0, 0, 80));
+            dialogShadow->setOffset(4, 4);
+            sentDialog->setGraphicsEffect(dialogShadow);
+
+            QVBoxLayout *dialogLayout = new QVBoxLayout(sentDialog);
+            QLabel *messageLabel = new QLabel("Se ha enviado la solicitud de amistad.", sentDialog);
+            messageLabel->setWordWrap(true);
+            messageLabel->setStyleSheet("color: white; font-size: 16px;");
+            messageLabel->setAlignment(Qt::AlignCenter);
+            dialogLayout->addWidget(messageLabel);
+
+            QHBoxLayout *btnLayout = new QHBoxLayout();
+            QPushButton *okButton = new QPushButton("OK", sentDialog);
+            okButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #c2c2c3;"
+                "  color: #171718;"
+                "  border-radius: 15px;"
+                "  font-size: 20px;"
+                "  font-weight: bold;"
+                "  padding: 12px 25px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #9b9b9b;"
+                "}"
+                );
+            okButton->setFixedSize(100, 40);
+            btnLayout->addStretch();
+            btnLayout->addWidget(okButton);
+            btnLayout->addStretch();
+            dialogLayout->addLayout(btnLayout);
+
+            connect(okButton, &QPushButton::clicked, [=]() {
+                sentDialog->close();
+            });
+
+            sentDialog->adjustSize();
+            sentDialog->move(this->geometry().center() - sentDialog->rect().center());
+            sentDialog->show();
         } else {
             qDebug() << "Error al enviar la solicitud para userId:" << userId << " Error:" << reply->errorString();
-            QMessageBox::warning(this, "Error", "No se pudo enviar la solicitud.");
+            // Aquí se crea el diálogo de error con el mismo formato:
+            QDialog *errorDialog = new QDialog(this);
+            errorDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            errorDialog->setModal(true);
+            errorDialog->setStyleSheet(
+                "QDialog {"
+                "  background-color: #171718;"
+                "  border-radius: 5px;"
+                "  padding: 20px;"
+                "}"
+                );
+            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(errorDialog);
+            dialogShadow->setBlurRadius(10);
+            dialogShadow->setColor(QColor(0, 0, 0, 80));
+            dialogShadow->setOffset(4, 4);
+            errorDialog->setGraphicsEffect(dialogShadow);
+
+            QVBoxLayout *dialogLayout = new QVBoxLayout(errorDialog);
+            QLabel *messageLabel = new QLabel("No se pudo enviar la solicitud de amistad.", errorDialog);
+            messageLabel->setWordWrap(true);
+            messageLabel->setStyleSheet("color: white; font-size: 16px;");
+            messageLabel->setAlignment(Qt::AlignCenter);
+            dialogLayout->addWidget(messageLabel);
+
+            QHBoxLayout *btnLayout = new QHBoxLayout();
+            QPushButton *okButton = new QPushButton("OK", errorDialog);
+            okButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #c2c2c3;"
+                "  color: #171718;"
+                "  border-radius: 15px;"
+                "  font-size: 20px;"
+                "  font-weight: bold;"
+                "  padding: 12px 25px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #9b9b9b;"
+                "}"
+                );
+            okButton->setFixedSize(100, 40);
+            btnLayout->addStretch();
+            btnLayout->addWidget(okButton);
+            btnLayout->addStretch();
+            dialogLayout->addLayout(btnLayout);
+
+            connect(okButton, &QPushButton::clicked, [=]() {
+                errorDialog->close();
+            });
+
+            errorDialog->adjustSize();
+            errorDialog->move(this->geometry().center() - errorDialog->rect().center());
+            errorDialog->show();
         }
         reply->deleteLater();
     });
 }
+
 
 // Acepta una solicitud de amistad
 void friendswindow::acceptRequest() {
