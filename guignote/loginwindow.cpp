@@ -267,10 +267,19 @@ LoginWindow::LoginWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
-                        // Almacenamos el token de forma persistente
                         QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
                         settings.setValue("auth/token", token);
                         settings.setValue("auth/remember", rememberCheck->isChecked());
+
+                        // Si se ha marcado "Recordar contraseña", guardamos también el usuario y la contraseña.
+                        if (rememberCheck->isChecked()) {
+                            settings.setValue("auth/user", userOrEmail);
+                            settings.setValue("auth/pass", contrasegna);
+                        } else {
+                            // Opcional: Si no se quiere recordar, asegurarse de borrar posibles credenciales previas.
+                            settings.remove("auth/user");
+                            settings.remove("auth/pass");
+                        }
                         MenuWindow *menuWin = new MenuWindow();
                         // Si existe una ventana padre (MainWindow), se reemplaza el widget central por el menú.
                         if (this->parentWidget()) {

@@ -210,7 +210,7 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                 QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
                 if (responseDoc.isObject()) {
                     QJsonObject respObj = responseDoc.object();
-                    // Si se recibe un token, se asume que el registro fue exitoso y se abre MenuWindow.
+                    // Si se recibe un token, se asume que el registro fue exitoso y se abre MainWindow.
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
