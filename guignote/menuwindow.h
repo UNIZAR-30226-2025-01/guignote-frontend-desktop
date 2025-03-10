@@ -91,6 +91,7 @@ private:
     QPushButton *invisibleButton;
     ImageButton *boton1v1;
     ImageButton *boton2v2;
+    QLabel *usrLabel;
 };
 
 #endif // MENUWINDOW_H

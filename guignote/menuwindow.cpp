@@ -25,7 +25,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
     topBar(nullptr),
     settings(nullptr),
     friends(nullptr),
-    exit(nullptr)
+    exit(nullptr),
+    usrLabel(nullptr)
 {
     ui->setupUi(this);  // Cargar el diseño definido en menu.ui
 
@@ -76,6 +77,25 @@ MenuWindow::MenuWindow(QWidget *parent) :
         profileWin->setModal(true);
         profileWin->show();
     });
+
+    // ------------- NOMBRE DE USUARIO Y RANGO EN TOPBAR -------------
+
+    usrLabel = new QLabel(this);  // ✅ Use the global class member
+
+    QString usr = "Usuario";
+    int ELO = 0;
+    QString rank = "Rango";
+
+    // Create the styled text
+    QString UsrELORank = QString(
+                             "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2) </span>"
+                             "<span style='font-size: 20px; font-weight: normal; color: white;'>%3</span>"
+                             ).arg(usr).arg(ELO).arg(rank);
+
+    usrLabel->setText(UsrELORank);
+    usrLabel->setAlignment(Qt::AlignCenter);
+    usrLabel->setTextFormat(Qt::RichText);
+    usrLabel->setStyleSheet("color: white; background: transparent;");
 
     // ------------- SETTINGS Y FRIENDS -------------
 
@@ -214,6 +234,20 @@ void MenuWindow::repositionBars() {
     bottomBar->setGeometry(xPosB, yPos, barWidthBottom, barHeight);
     QPoint topBarPos = topBar->pos(); // Obtener la posición relativa dentro de la ventana
     invisibleButton->setGeometry(topBarPos.x(), topBarPos.y(), topBar->width(), topBar->height());
+
+    // ✅ Position `usrLabel` in front of `topBar` but behind `invisibleButton`
+    int usrLabelHeight = 30;
+    int usrLabelWidth = qMin(200, barWidthTop - 20);
+
+    int xUsr = xPosT + (barWidthTop - usrLabelWidth) / 2;  // Center horizontally
+    int yUsr = topBarPos.y() + (barHeight - usrLabelHeight) / 2;  // Center vertically inside topBar
+
+    usrLabel->setGeometry(xUsr, yUsr, usrLabelWidth, usrLabelHeight);
+
+    // 🔹 Set stacking order
+    topBar->lower();            // Send topBar to back
+    usrLabel->raise();          // Bring usrLabel in front of topBar
+    invisibleButton->raise();   // Bring invisibleButton in front of usrLabel
 }
 
 void MenuWindow::repositionIcons() {

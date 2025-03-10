@@ -87,14 +87,15 @@ void MyProfileWindow::setupUI() {
 
     // ------------- MOSTRAR USUARIO Y RANGO -------------
 
+    QString usr = "Usuario";
     int ELO = 0;
     QString rank = "Rango";
 
     // Crear el texto con diferentes estilos
     QString UsrELORank = QString(
-                             "<span style='font-size: 24px; font-weight: bold; color: white;'>Usuario (%1)</span><br>"
-                             "<span style='font-size: 20px; font-weight: normal; color: white;'>%2</span>"
-                             ).arg(ELO).arg(rank);
+                             "<span style='font-size: 24px; font-weight: bold; color: white;'>%1(%2)</span><br>"
+                             "<span style='font-size: 20px; font-weight: normal; color: white;'>%3</span>"
+                             ).arg(usr).arg(ELO).arg(rank);
 
     // 🔹 Agregar el texto "Usuario" y "Rango" con diferentes estilos 🔹
     QLabel *userLabel = new QLabel(UsrELORank, this);
