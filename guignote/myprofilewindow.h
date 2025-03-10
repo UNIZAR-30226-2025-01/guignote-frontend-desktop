@@ -8,8 +8,7 @@
 #include <QLineEdit>
 #include <QTabWidget>
 #include <QListWidget>
-
-
+#include "icon.h"
 /**
  * @brief Ventana de amigos.
  *
@@ -30,6 +29,7 @@ private:
     QPushButton *closeButton;   ///< Botón para cerrar la ventana.
     QLabel *titleLabel;         ///< Etiqueta que muestra el título de la ventana.
     QVBoxLayout *mainLayout;    ///< Layout principal que organiza los widgets verticalmente.
+    Icon *fotoPerfil;
 
     /**
      * @brief Configura la interfaz de usuario.
@@ -39,5 +39,6 @@ private:
      * y la barra de búsqueda.
      */
     void setupUI();
+    QPixmap createCircularImage(const QString &imagePath, int size);
 };
 #endif // MYPROFILEWINDOW_H

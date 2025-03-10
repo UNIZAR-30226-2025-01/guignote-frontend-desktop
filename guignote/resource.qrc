@@ -24,5 +24,6 @@
         <file>icons/preferences.png</file>
         <file>icons/darkeneddoor.png</file>
         <file>icons/AbsoluteSolver.png</file>
+        <file>icons/profile.png</file>
     </qresource>
 </RCC>
