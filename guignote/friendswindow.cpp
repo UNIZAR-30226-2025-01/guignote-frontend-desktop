@@ -110,6 +110,7 @@ QWidget* friendswindow::createRequestsTab() {
 QWidget* friendswindow::createSearchTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
+    // Ajustamos los márgenes del layout a valores iguales arriba y abajo
 
     QHBoxLayout *searchLayout = new QHBoxLayout();
     searchLineEdit = new QLineEdit(page);
@@ -131,6 +132,7 @@ QWidget* friendswindow::createSearchTab() {
         );
     searchResultsListWidget->setSpacing(50);
     layout->addWidget(searchResultsListWidget);
+    layout->setContentsMargins(20,0,20,12);
     page->setLayout(layout);
     return page;
 }
