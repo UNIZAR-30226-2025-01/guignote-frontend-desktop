@@ -270,7 +270,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                         // Almacenamos el token de forma persistente
                         QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
                         settings.setValue("auth/token", token);
-
+                        settings.setValue("auth/remember", rememberCheck->isChecked());
                         MenuWindow *menuWin = new MenuWindow();
                         // Si existe una ventana padre (MainWindow), se reemplaza el widget central por el menú.
                         if (this->parentWidget()) {

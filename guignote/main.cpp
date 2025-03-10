@@ -8,6 +8,14 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    QObject::connect(qApp, &QCoreApplication::aboutToQuit, [](){
+        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+        if (!settings.value("auth/remember", true).toBool()) {
+            settings.remove("auth/token");
+        }
+    });
+
+
     // Verificamos si hay token almacenado en QSettings
     QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
     QString token = settings.value("auth/token", "").toString();
