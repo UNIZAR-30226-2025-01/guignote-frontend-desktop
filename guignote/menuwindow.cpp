@@ -15,6 +15,7 @@
 #include "settingswindow.h"
 #include "friendswindow.h"
 #include <qgraphicseffect.h>
+#include <QTimer>
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -149,9 +150,20 @@ MenuWindow::MenuWindow(QWidget *parent) :
         connect(confirmDialog, &QDialog::finished, [=](int) {
             exit->setImage(":/icons/door.png", 60, 60);
         });
+        // Posicionar inicialmente en el centro del padre
         confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
         confirmDialog->show();
+
+        // QTimer para mantener el diálogo centrado mientras se muestra
+        QTimer *centerTimer = new QTimer(confirmDialog);
+        centerTimer->setInterval(50); // cada 50 ms
+        connect(centerTimer, &QTimer::timeout, [this, confirmDialog]() {
+            confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        });
+        centerTimer->start();
     });
+
+
 
     // Ventana de Inventory con cuadro modal similar
     connect(inventory, &Icon::clicked, this, [this]() {
