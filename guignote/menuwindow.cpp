@@ -116,7 +116,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
         confirmDialog->setGraphicsEffect(dialogShadow);
         QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
         QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
-        confirmLabel->setStyleSheet("QFrame { background-color: #171718; border-radius: 5px; }");
+        confirmLabel->setStyleSheet("QFrame { background-color: #171718; color: white; border-radius: 5px; }");
         confirmLabel->setAlignment(Qt::AlignCenter);
         dialogLayout->addWidget(confirmLabel);
         QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
