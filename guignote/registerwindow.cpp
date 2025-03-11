@@ -9,6 +9,7 @@
  */
 
 #include "registerwindow.h"
+#include "mainwindow.h"
 #include "menuwindow.h" // Si se va a abrir MenuWindow tras el registro
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -209,16 +210,16 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                 QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
                 if (responseDoc.isObject()) {
                     QJsonObject respObj = responseDoc.object();
-                    // Si se recibe un token, se asume que el registro fue exitoso y se abre MenuWindow.
+                    // Si se recibe un token, se asume que el registro fue exitoso y se abre MainWindow.
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
                         // Almacenamos el token de forma persistente
                         QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
                         settings.setValue("auth/token", token);
-                        MenuWindow *menuWin = new MenuWindow();
-                        menuWin->move(this->geometry().center() - menuWin->rect().center());
-                        menuWin->show();
+                        MainWindow *mainWin = new MainWindow();
+                        mainWin->move(this->geometry().center() - mainWin->rect().center());
+                        mainWin->show();
                         if(this->parentWidget()){
                             this->parentWidget()->close();
                             this->close();

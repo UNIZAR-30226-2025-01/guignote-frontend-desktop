@@ -157,7 +157,7 @@ MainWindow::MainWindow(QWidget *parent)
     Icon *preferencesButton = new Icon(this);
     preferencesButton->setImage(":/icons/settings.png", 80, 80);
     connect(preferencesButton, &Icon::clicked, [=]() {
-        SettingsWindow *settingsWin = new SettingsWindow(this);
+        SettingsWindow *settingsWin = new SettingsWindow(this,this);
         settingsWin->setModal(true);
         settingsWin->show();
     });

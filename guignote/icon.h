@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QWidget>
 #include <QMouseEvent>
+#include <QPixmap>
 
 /**
  * @brief Widget interactivo para mostrar un icono.
@@ -53,6 +54,14 @@ protected:
      * En ese caso, emite la señal clicked().
      */
     void mousePressEvent(QMouseEvent *event) override;
+
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
+
+private:
+    QPixmap originalPixmap;
+    int baseWidth{0};
+    int baseHeight{0};
 };
 
 #endif // ICON_H

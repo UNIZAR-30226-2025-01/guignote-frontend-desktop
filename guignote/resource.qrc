@@ -24,5 +24,10 @@
         <file>icons/preferences.png</file>
         <file>icons/darkeneddoor.png</file>
         <file>icons/AbsoluteSolver.png</file>
+        <file>icons/chest.png</file>
+        <file>bgm/menu_jazz_lofi.mp3</file>
+        <file>icons/darkenedsettings.png</file>
+        <file>icons/darkenedfriends.png</file>
+        <file>icons/darkenedchest.png</file>
     </qresource>
 </RCC>

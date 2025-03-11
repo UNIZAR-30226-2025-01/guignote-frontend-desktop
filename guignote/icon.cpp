@@ -30,6 +30,11 @@ void Icon::setImage(const QString &imagePath, int width, int height) {
         return;
     }
 
+    // Guardamos la información para reescalados posteriores
+    originalPixmap = pixmap;
+    baseWidth = width;
+    baseHeight = height;
+
     setPixmap(pixmap.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     setFixedSize(width, height);
 }
@@ -45,4 +50,28 @@ void Icon::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         emit clicked();
     }
+}
+
+// 3) Amplía el icono al entrar el ratón
+void Icon::enterEvent(QEnterEvent *event) {
+    // Aumentamos un 10% el tamaño, por ejemplo
+    int newW = static_cast<int>(baseWidth * 1.1);
+    int newH = static_cast<int>(baseHeight * 1.1);
+
+    setPixmap(originalPixmap.scaled(newW, newH,
+                                    Qt::KeepAspectRatio,
+                                    Qt::SmoothTransformation));
+    setFixedSize(newW, newH);
+
+    QLabel::enterEvent(event); // Llamada al padre
+}
+
+// 4) Vuelve al tamaño original cuando el ratón sale
+void Icon::leaveEvent(QEvent *event) {
+    setPixmap(originalPixmap.scaled(baseWidth, baseHeight,
+                                    Qt::KeepAspectRatio,
+                                    Qt::SmoothTransformation));
+    setFixedSize(baseWidth, baseHeight);
+
+    QLabel::leaveEvent(event);
 }
