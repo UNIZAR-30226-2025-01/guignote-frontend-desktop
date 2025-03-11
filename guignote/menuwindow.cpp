@@ -31,18 +31,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
 {
     ui->setupUi(this);  // Cargar el diseño definido en menu.ui
 
-    // ------------- TAPETE FONDO -------------
-
-    // Configuración del fondo con gradiente y barra superior
-    this->setStyleSheet("QWidget {"
-                        "background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
-                        "fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
-                        "}"
-                        "QWidget#topBar {"
-                        "background-color: #171718;"
-                        "height: 40px;"
-                        "}");
-
     // ------------- IMÁGENES DE CARTAS -------------
 
     // Crear los botones
@@ -83,9 +71,10 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // ------------- BARS -------------
 
     bottomBar = new QFrame(this);
-    bottomBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
     topBar = new QFrame(this);
-    topBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+
+    topBar->setObjectName("topBar");
+    bottomBar->setObjectName("bottomBar");
 
     // ------------- SETTINGS Y FRIENDS -------------
 
@@ -234,6 +223,29 @@ MenuWindow::MenuWindow(QWidget *parent) :
         corner->setStyleSheet("background: transparent;");
         corner->raise();
     }
+
+    this->setStyleSheet(R"(
+    /* Fondo de la ventana con gradiente verde */
+    QWidget {
+        background: qradialgradient(cx:0.5, cy:0.5, radius:1,
+                                    fx:0.5, fy:0.5,
+                                    stop:0 #1f5a1f,
+                                    stop:1 #0a2a08);
+    }
+
+    /* Barras top y bottom con gradiente vertical gris–negro */
+    QFrame#topBar, QFrame#bottomBar {
+        background: qlineargradient(
+            spread: pad,
+            x1: 0, y1: 0,
+            x2: 0, y2: 1,
+            stop: 0 #3a3a3a, /* Gris medio */
+            stop: 1 #000000 /* Negro */
+        );
+        border-radius: 8px;
+        border: 2px solid #000000; /* Borde negro sólido de 2px */
+    }
+)");
 
     repositionOrnaments();
 }
