@@ -25,5 +25,6 @@
         <file>icons/darkeneddoor.png</file>
         <file>icons/AbsoluteSolver.png</file>
         <file>icons/chest.png</file>
+        <file>bgm/menu_jazz_lofi.mp3</file>
     </qresource>
 </RCC>

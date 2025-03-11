@@ -5,6 +5,9 @@
 #include <QSize>
 #include <QLabel>
 #include <QFrame>
+#include <QMediaPlayer>
+#include <QtMultimedia>
+#include <QAudioOutput>
 #include <QResizeEvent>
 
 class ImageButton;
@@ -24,6 +27,9 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
+    QMediaPlayer *backgroundPlayer;
+    QAudioOutput *audioOutput;
+
     Ui::MenuWindow *ui;
 
     // Botones de modos de juego

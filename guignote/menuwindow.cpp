@@ -49,6 +49,26 @@ MenuWindow::MenuWindow(QWidget *parent) :
     boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
+    // En el constructor de MenuWindow (menuwindow.cpp):
+    backgroundPlayer = new QMediaPlayer(this);
+    audioOutput = new QAudioOutput(this);
+
+    // Enlazas el reproductor con la salida de audio
+    backgroundPlayer->setAudioOutput(audioOutput);
+
+    // Ahora ajustas el volumen a través de QAudioOutput:
+    audioOutput->setVolume(0.5); // Rango de 0.0 a 1.0
+
+    // Asignas el archivo de música (por ejemplo, un recurso)
+    backgroundPlayer->setSource(QUrl("qrc:/bgm/menu_jazz_lofi.mp3"));
+
+
+    // Establecer el número de repeticiones (en Qt 6 en adelante):
+    backgroundPlayer->setLoops(QMediaPlayer::Infinite);
+
+    // Reproducir
+    backgroundPlayer->play();
+
     // ------------- EVENTOS DE CLICK CARTAS -------------
 
     // Conectar los botones a funciones (cuando se hace clic)
