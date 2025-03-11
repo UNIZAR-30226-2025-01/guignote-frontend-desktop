@@ -18,6 +18,8 @@ class friendswindow : public QDialog {
 public:
     explicit friendswindow(QWidget *parent = nullptr);
 
+public slots:
+    void removeFriend(const QString &friendId);
 
 private:
     // Layout principal y componentes del encabezado
