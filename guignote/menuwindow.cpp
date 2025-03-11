@@ -34,11 +34,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
 {
     ui->setupUi(this);  // Cargar el diseño definido en menu.ui
 
-    // ------------- IMÁGENES DE CARTAS -------------
-
-    // Crear los botones
-    boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
-    boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
+    // ------------- MUSICA -------------
 
     // En el constructor de MenuWindow (menuwindow.cpp):
     backgroundPlayer = new QMediaPlayer(this);
@@ -59,6 +55,12 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // Reproducir
     backgroundPlayer->play();
+
+    // ------------- IMÁGENES DE CARTAS -------------
+
+    // Crear los botones
+    boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
+    boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
     // ------------- EVENTOS DE CLICK CARTAS -------------
 
@@ -111,7 +113,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     usrLabel->setTextFormat(Qt::RichText);
     usrLabel->setStyleSheet("color: white; background: transparent;");
 
-    // ------------- SETTINGS Y FRIENDS -------------
+    // ------------- ICONS -------------
 
     settings = new Icon(this);
     friends = new Icon(this);
@@ -123,7 +125,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     exit->setImage(":/icons/door.png", 60, 60);
     inventory->setImage(":/icons/chest.png", 60, 60);
 
-    // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
+    // ------------- EVENTOS DE CLICK EN ICONS -------------
 
     // Ventana de Settings con cuadro modal similar
     connect(settings, &Icon::clicked, [=]() {
@@ -215,8 +217,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
         });
         centerTimer->start();
     });
-
-
 
     // Ventana de Inventory con cuadro modal similar
     connect(inventory, &Icon::clicked, this, [this]() {
@@ -349,7 +349,7 @@ void MenuWindow::repositionImageButtons() {
 void MenuWindow::repositionBars() {
     int w = this->width();
     int barWidthTop = w / 3;  // 1/3 del ancho de la ventana
-    int barWidthBottom = w / 4;  // 1/3 del ancho de la ventana
+    int barWidthBottom = w * 0.3;  // 30% del ancho de la ventana
     int barHeight = 80;    // Altura fija de la barra
     int xPosT = (w - barWidthTop) / 2; // Centrado horizontalmente
     int xPosB = (w - barWidthBottom) / 2; // Centrado horizontalmente
@@ -386,24 +386,15 @@ void MenuWindow::repositionIcons() {
     int exitHeight = exit ->height();
     int exitWidth = exit->width();
 
-    int separacion = windowWidth * 0.066;  // Espaciado entre iconos
+    int separacion1 = windowWidth * 0.1;  // Espaciado entre iconos
+    int separacion2 = windowWidth * 0.033;
     int margen = 40;       // Margen desde la parte inferior
 
     // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
-    settings->move((windowWidth / 2) - (imgWidth / 2) - separacion, windowHeight - (imgHeight / 2) - margen);
-    friends->move((windowWidth / 2) + separacion - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
-    exit->move((windowWidth / 2) - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
-}
-
-// Función para posicionar los iconos arriba
-void MenuWindow::repositionTopIcons() {
-    int windowWidth = this->width();
-    // Definir el tamaño del icono
-    int imgWidth = inventory->width();
-    int imgHeight = inventory->height();
-    int margen = 8; // Margen desde la parte superior
-    // Posicionar en la parte superior centro
-    inventory->move((windowWidth / 2) - (imgWidth / 2), margen);
+    settings->move((windowWidth / 2) - (imgWidth / 2) - separacion1, windowHeight - (imgHeight / 2) - margen);
+    friends->move((windowWidth / 2) + separacion1 - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
+    exit->move((windowWidth / 2) - separacion2 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
+    inventory->move((windowWidth / 2) + separacion2 - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
 }
 
 // Función para recolocar y reposicionar todos los elementos
@@ -412,7 +403,6 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     repositionBars();
     repositionImageButtons();
     repositionIcons();
-    repositionTopIcons();
     QWidget::resizeEvent(event);
 }
 
