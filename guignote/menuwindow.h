@@ -66,6 +66,7 @@ private:
     void repositionImageButtons();
     void repositionBars();
     void repositionIcons();
+    void getSettings();
 };
 
 #endif // MENUWINDOW_H

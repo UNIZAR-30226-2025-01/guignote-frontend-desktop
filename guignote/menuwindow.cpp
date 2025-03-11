@@ -295,6 +295,10 @@ MenuWindow::MenuWindow(QWidget *parent) :
 )");
 
     repositionOrnaments();
+
+    // ------------- CARGAMOS SETTINGS   -------------
+
+    getSettings();
 }
 
 /**
@@ -398,12 +402,18 @@ void MenuWindow::repositionIcons() {
 
 // Función para recolocar y reposicionar todos los elementos
 void MenuWindow::resizeEvent(QResizeEvent *event) {
+    if (this->width() <= 0 || this->height() <= 0) {
+        qWarning() << "Evitar redimensionamiento con tamaño inválido:" << this->width() << "x" << this->height();
+        return;
+    }
+
     repositionOrnaments();
     repositionBars();
     repositionImageButtons();
     repositionIcons();
     QWidget::resizeEvent(event);
 }
+
 
 void MenuWindow::setVolume(int volumePercentage)
 {
@@ -418,4 +428,34 @@ void MenuWindow::setVolume(int volumePercentage)
 // Destructor de la clase menu
 MenuWindow::~MenuWindow() {
     delete ui;  // Liberar recursos de la interfaz
+}
+
+void MenuWindow::getSettings()
+{
+    QSettings settings("guignote", "settings");
+    bool fullscreen = settings.value("graphics/fullscreen", false).toBool();
+    int volume = settings.value("sound/volume", 50).toInt();
+
+    qDebug() << "Cargando configuración - Fullscreen:" << fullscreen << ", Volumen:" << volume;
+
+    // Actualizar el estado de pantalla según la configuración más reciente
+    if (fullscreen) {
+        if (!this->isFullScreen()) {
+            this->showFullScreen();
+        }
+    } else {
+        if (!this->isMaximized()) {
+            this->showNormal();
+        }
+    }
+
+    // Aplicar volumen solo si audioOutput está inicializado
+    if (audioOutput) {
+        audioOutput->setVolume(static_cast<double>(volume) / 100.0);
+    } else {
+        qWarning() << "Error: audioOutput no está inicializado.";
+    }
+
+    // Forzar actualización de la UI para reflejar cambios inmediatamente
+    this->update();
 }
