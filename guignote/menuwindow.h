@@ -10,6 +10,7 @@
 #include <QAudioOutput>
 #include <QResizeEvent>
 #include <QEvent>
+#include <QPushButton>
 
 class ImageButton;
 class Icon;
