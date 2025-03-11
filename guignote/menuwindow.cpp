@@ -13,7 +13,7 @@
 #include "settingswindow.h"
 #include "friendswindow.h"
 #include "myprofilewindow.h"
-//#include "otherprofilewindow.h"
+#include "userprofilewindow.h"
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -73,7 +73,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     invisibleButton->setCursor(Qt::PointingHandCursor);  // Mantiene el cursor de puntero
 
     connect(invisibleButton, &QPushButton::clicked, [=]() {
-        MyProfileWindow *profileWin = new MyProfileWindow(this);
+        UserProfileWindow *profileWin = new UserProfileWindow(this);
         profileWin->setModal(true);
         profileWin->show();
     });

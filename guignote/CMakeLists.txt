@@ -44,6 +44,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         friendswindow.h friendswindow.cpp
         myprofilewindow.h myprofilewindow.cpp
         icons/profile.png
+        userprofilewindow.h userprofilewindow.cpp
 
 
 
