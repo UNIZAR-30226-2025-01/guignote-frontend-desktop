@@ -73,7 +73,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     invisibleButton->setCursor(Qt::PointingHandCursor);  // Mantiene el cursor de puntero
 
     connect(invisibleButton, &QPushButton::clicked, [=]() {
-        UserProfileWindow *profileWin = new UserProfileWindow(this);
+        MyProfileWindow *profileWin = new MyProfileWindow(this);
         profileWin->setModal(true);
         profileWin->show();
     });

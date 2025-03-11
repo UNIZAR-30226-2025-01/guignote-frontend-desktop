@@ -130,6 +130,30 @@ void MyProfileWindow::setupUI() {
     // Agregar el layout de la imagen al layout principal
     mainLayout->addLayout(imageLayout);
 
+    // ------------- BOTÓN INFERIOR IZQUIERDO -------------
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+
+    QPushButton *LogOutButton = new QPushButton("Botón Rojo", this);
+    LogOutButton->setStyleSheet(
+        "QPushButton { background-color: red; color: white; font-size: 18px; padding: 10px; border-radius: 5px; "
+        "border: 2px solid #8B0000; }"
+        "QPushButton:hover { background-color: #cc0000; }"
+        "QPushButton:pressed { background-color: #8B0000; }"
+        );
+    LogOutButton->setFixedSize(200, 50);
+
+    buttonLayout->addStretch();
+    buttonLayout->addWidget(LogOutButton, 0, Qt::AlignRight);
+
+    mainLayout->addLayout(buttonLayout);
+
+    // ------------- CONECTAR BOTÓN INFERIOR IZQUIERDO -------------
+
+    connect(LogOutButton, &QPushButton::clicked, this, []() {
+        qDebug() << "Botón Log Out presionado";
+    });
+
     // Asigna el layout principal a la ventana.
     setLayout(mainLayout);
 }
