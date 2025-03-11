@@ -30,5 +30,6 @@
         <file>icons/darkenedsettings.png</file>
         <file>icons/darkenedfriends.png</file>
         <file>icons/darkenedchest.png</file>
+        <file>icons/remove.png</file>
     </qresource>
 </RCC>

@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include "icon.h"
 #include <QUrlQuery>
 #include <QFile>
 #include <QStandardPaths>
@@ -163,59 +164,6 @@ QString friendswindow::loadAuthToken() {
     return token;
 }
 
-QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
-    // 1) Creamos un QWidget estilo “tarjeta”
-    QWidget *widget = new QWidget();
-    widget->setMinimumSize(300, 130);
-    // Opcional: si deseas el mismo color de fondo que la pestaña de buscar
-    widget->setStyleSheet("border-radius: 10px;");
-
-    // 2) Layout horizontal principal
-    QHBoxLayout *layout = new QHBoxLayout(widget);
-    layout->setContentsMargins(10, 2, 10, 2);
-    layout->setSpacing(7);
-
-    // 3) Layout vertical para la info (nombre, stats si quieres)
-    QVBoxLayout *infoLayout = new QVBoxLayout();
-
-    // --- Nombre ---
-    QString nombre = "Nombre no disponible";
-    if (amigo.contains("nombre")) {
-        nombre = amigo["nombre"].toString();
-    } else if (amigo.contains("Nombre")) {
-        nombre = amigo["Nombre"].toString();
-    } else if (amigo.contains("username")) {
-        nombre = amigo["username"].toString();
-    }
-
-    QLabel *nameLabel = new QLabel(nombre, widget);
-    nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
-    infoLayout->addWidget(nameLabel);
-
-    // (Opcional) Si tu backend también envía victorias, derrotas, ratio, etc.,
-    // puedes mostrarlo como en createSearchResultWidget. Ejemplo:
-
-    int wins = amigo.contains("victorias") ? amigo["victorias"].toInt() : 0;
-    int losses = amigo.contains("derrotas") ? amigo["derrotas"].toInt() : 0;
-    double ratio = (wins + losses > 0) ? (wins * 100.0 / (wins + losses)) : 0.0;
-
-    QLabel *statsLabel = new QLabel(
-        QString("Victorias: %1   Derrotas: %2   Ratio: %3%")
-            .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
-        widget
-    );
-    statsLabel->setStyleSheet("color: white; font-size: 18px;");
-    infoLayout->addWidget(statsLabel);
-
-
-    layout->addLayout(infoLayout);
-    layout->addStretch();  // Empuja el contenido a la izquierda, si quisieras un botón a la derecha
-
-    widget->setLayout(layout);
-    return widget;
-}
-
-
 // Función para obtener la lista de amigos
 void friendswindow::fetchFriends() {
     QString token = loadAuthToken();
@@ -304,7 +252,6 @@ void friendswindow::fetchFriends() {
                 QJsonArray amigos = obj["amigos"].toArray();
                 for (const QJsonValue &value : amigos) {
                     QJsonObject amigo = value.toObject();
-
                     // En vez de texto plano, creamos la “tarjeta”:
                     QWidget *friendCard = createFriendWidget(amigo);
 
@@ -320,6 +267,151 @@ void friendswindow::fetchFriends() {
     });
 }
 
+QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
+    // 1) Creamos un QWidget estilo “tarjeta”
+    QWidget *widget = new QWidget();
+    widget->setMinimumSize(300, 130);
+    // Opcional: si deseas el mismo color de fondo que la pestaña de buscar
+    widget->setStyleSheet("border-radius: 10px;");
+
+    // 2) Layout horizontal principal
+    QHBoxLayout *layout = new QHBoxLayout(widget);
+    layout->setContentsMargins(10, 2, 10, 2);
+    layout->setSpacing(7);
+
+    // 3) Layout vertical para la info (nombre, stats si quieres)
+    QVBoxLayout *infoLayout = new QVBoxLayout();
+
+    // --- Nombre ---
+    QString nombre = "Nombre no disponible";
+    if (amigo.contains("nombre")) {
+        nombre = amigo["nombre"].toString();
+    } else if (amigo.contains("Nombre")) {
+        nombre = amigo["Nombre"].toString();
+    } else if (amigo.contains("username")) {
+        nombre = amigo["username"].toString();
+    }
+    qDebug() << "El nombre del usuario es " << nombre;
+    QLabel *nameLabel = new QLabel(nombre, widget);
+    nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
+    infoLayout->addWidget(nameLabel);
+
+    // (Opcional) Si tu backend también envía victorias, derrotas, ratio, etc.,
+    // puedes mostrarlo como en createSearchResultWidget. Ejemplo:
+
+    int wins = amigo.contains("victorias") ? amigo["victorias"].toInt() : 0;
+    int losses = amigo.contains("derrotas") ? amigo["derrotas"].toInt() : 0;
+    double ratio = (wins + losses > 0) ? (wins * 100.0 / (wins + losses)) : 0.0;
+
+    QLabel *statsLabel = new QLabel(
+        QString("Victorias: %1   Derrotas: %2   Ratio: %3%")
+            .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
+        widget
+        );
+    statsLabel->setStyleSheet("color: white; font-size: 18px;");
+    infoLayout->addWidget(statsLabel);
+
+
+    layout->addLayout(infoLayout);
+    layout->addStretch();  // Empuja el contenido a la izquierda, si quisieras un botón a la derecha
+
+    // Extraer el ID del amigo (según el backend, "id" es el identificador)
+    QString friendId;
+    if (amigo.contains("id"))
+        friendId = QString::number(amigo["id"].toInt());
+    else if (friendId.contains("ID"))
+        friendId = QString::number(amigo["ID"].toInt());
+    else
+        friendId = "";
+    qDebug() << "El ID del amigo de esta entrada es: " << friendId;
+
+    // Agregamos el icono de eliminación a la derecha:
+    Icon *removeIcon = new Icon(widget);
+    removeIcon->setImage(":/icons/remove.png", 110, 110);
+    removeIcon->setToolTip("Eliminar amigo");
+    // Conectar el clic para llamar al slot removeFriend pasando friendId
+    connect(removeIcon, &Icon::clicked, [this, friendId]() {
+        removeFriend(friendId);
+    });
+    layout->addWidget(removeIcon);
+
+    widget->setLayout(layout);
+    return widget;
+}
+
+void friendswindow::removeFriend(const QString &friendId) {
+    QString token = loadAuthToken();
+    if (token.isEmpty()) {
+        qDebug() << "removeFriend: token vacío.";
+        return;
+    }
+
+    QUrl url("http://188.165.76.134:8000/usuarios/eliminar_amigo/");
+    QUrlQuery query;
+    query.addQueryItem("amigo_id", friendId);
+    url.setQuery(query);
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Auth", token.toUtf8());
+
+    // Enviar la solicitud DELETE sin cuerpo
+    QNetworkReply *reply = networkManager->sendCustomRequest(request, "DELETE");
+
+
+
+
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (statusCode == 401) {
+            // Token caducado: mostrar diálogo de expiración y salir.
+            QDialog *expiredDialog = new QDialog(this);
+            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+            expiredDialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
+            dialogShadow->setBlurRadius(10);
+            dialogShadow->setColor(QColor(0, 0, 0, 80));
+            dialogShadow->setOffset(4, 4);
+            expiredDialog->setGraphicsEffect(dialogShadow);
+
+            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
+            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
+            expiredLabel->setWordWrap(true);
+            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
+            expiredLabel->setAlignment(Qt::AlignCenter);
+            dialogLayout->addWidget(expiredLabel);
+
+            QPushButton *okButton = new QPushButton("OK", expiredDialog);
+            okButton->setFixedSize(100, 40);
+            // Puedes aplicar estilo a okButton de forma similar a otros botones.
+            QHBoxLayout *btnLayout = new QHBoxLayout();
+            btnLayout->addStretch();
+            btnLayout->addWidget(okButton);
+            btnLayout->addStretch();
+            dialogLayout->addLayout(btnLayout);
+
+            connect(okButton, &QPushButton::clicked, [=]() {
+                expiredDialog->close();
+                qApp->quit();
+            });
+
+            expiredDialog->adjustSize();
+            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
+            expiredDialog->show();
+        } else if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "Amigo eliminado correctamente.";
+            // Actualiza la lista de amigos para que ya no se muestre el amigo eliminado.
+            fetchFriends();
+        } else if (statusCode == 400){
+            qDebug() << "Faltan campos";
+        } else if (statusCode == 404) {
+            qDebug() << "Amigo no encontrado";
+        } else if (statusCode == 405) {
+            qDebug() << "Método no permitido";
+        }
+        reply->deleteLater();
+    });
+}
 
 // Función para obtener las solicitudes de amistad y mostrarlas en widgets personalizados.
 void friendswindow::fetchRequests() {
