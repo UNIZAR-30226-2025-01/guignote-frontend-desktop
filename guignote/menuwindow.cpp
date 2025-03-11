@@ -92,15 +92,24 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // Ventana de Settings con cuadro modal similar
     connect(settings, &Icon::clicked, [=]() {
+
+        settings->setImage(":/icons/darkenedsettings.png", 60, 60);
         SettingsWindow *settingsWin = new SettingsWindow(this, this);
         settingsWin->setModal(true);
+        connect(settingsWin, &QDialog::finished, [this](int){
+            settings->setImage(":/icons/settings.png", 60, 60);
+        });
         settingsWin->exec();
     });
 
     // Ventana de Amigos creada de forma similar a MainWindow
     connect(friends, &Icon::clicked, this, [this]() {
+        friends->setImage(":/icons/darkenedfriends.png", 60, 60);
         friendswindow *friendsWin = new friendswindow(this);
         friendsWin->setModal(true);
+        connect(friendsWin, &QDialog::finished, [this](int){
+            friends->setImage(":/icons/friends.png", 60, 60);
+        });
         friendsWin->exec();
     });
 
@@ -176,8 +185,12 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     // Ventana de Inventory con cuadro modal similar
     connect(inventory, &Icon::clicked, this, [this]() {
+        inventory->setImage(":/icons/darkenedchest.png", 60, 60);
         InventoryWindow *inventoryWin = new InventoryWindow(this);
         inventoryWin->setModal(true);
+        connect(inventoryWin, &QDialog::finished, [this](int){
+            inventory->setImage(":/icons/chest.png", 60, 60);
+        });
         inventoryWin->exec();
     });
 
@@ -337,7 +350,7 @@ void MenuWindow::repositionTopIcons() {
     // Definir el tamaño del icono
     int imgWidth = inventory->width();
     int imgHeight = inventory->height();
-    int margen = 12; // Margen desde la parte superior
+    int margen = 8; // Margen desde la parte superior
     // Posicionar en la parte superior centro
     inventory->move((windowWidth / 2) - (imgWidth / 2), margen);
 }
