@@ -2,46 +2,67 @@
 #define FRIENDSWINDOW_H
 
 #include <QDialog>
-#include <QPushButton>
 #include <QVBoxLayout>
-#include <QLabel>
-#include <QLineEdit>
+#include <QHBoxLayout>
 #include <QTabWidget>
 #include <QListWidget>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QLabel>
+#include <QNetworkAccessManager>
+#include <QCloseEvent>
+#include <QJsonObject>
 
-
-/**
- * @brief Ventana de amigos.
- *
- * La clase friendswindow representa la interfaz de usuario para la ventana de amigos.
- * Permite visualizar y gestionar la lista de amigos, así como buscar entre ellos.
- */
 class friendswindow : public QDialog {
     Q_OBJECT
-
 public:
-    /**
-     * @brief Constructor de la ventana de amigos.
-     * @param parent Widget padre, por defecto es nullptr.
-     */
     explicit friendswindow(QWidget *parent = nullptr);
 
+
 private:
-    QPushButton *closeButton;   ///< Botón para cerrar la ventana.
-    QLabel *titleLabel;         ///< Etiqueta que muestra el título de la ventana.
-    QLineEdit *searchBar;       ///< Barra de búsqueda para filtrar amigos.
-    QVBoxLayout *mainLayout;    ///< Layout principal que organiza los widgets verticalmente.
+    // Layout principal y componentes del encabezado
+    QVBoxLayout *mainLayout;
+    QLabel *titleLabel;
+    QPushButton *closeButton;
+    QTabWidget *tabWidget;
+
+    // Pestaña "Amigos"
+    QListWidget *friendsListWidget;
+
+    // Pestaña "Solicitudes"
+    QListWidget *requestsListWidget;
+    QPushButton *acceptButton;
+    QPushButton *rejectButton;
+
+    // Pestaña "Buscar"
+    QLineEdit *searchLineEdit;
+    QPushButton *searchButton;
+    QListWidget *searchResultsListWidget;
+
+    QString currentSearchQuery;
+
+    // Gestor de red para realizar peticiones HTTP
+    QNetworkAccessManager *networkManager;
+
+    // Métodos para configurar la interfaz
+    void setupUI();
     QWidget* createFriendsTab();
     QWidget* createRequestsTab();
+    QWidget* createSearchTab();
 
-    /**
-     * @brief Configura la interfaz de usuario.
-     *
-     * Este método se encarga de crear y posicionar todos los elementos gráficos
-     * de la ventana de amigos, definiendo el layout, los botones, la etiqueta del título
-     * y la barra de búsqueda.
-     */
-    void setupUI();
+    // Métodos para crear widgets personalizados en las pestañas
+    QWidget* createSearchResultWidget(const QJsonObject &usuario);
+    QWidget* createRequestWidget(const QJsonObject &solicitud);
+    QWidget* createFriendWidget(const QJsonObject &amigo);
+
+    // Métodos para la conexión con el backend
+    QString loadAuthToken();
+    void fetchFriends();
+    void fetchRequests();
+    void searchUsers();
+    void sendFriendRequest();
+    void acceptRequest();
+    void rejectRequest();
 };
 
 #endif // FRIENDSWINDOW_H

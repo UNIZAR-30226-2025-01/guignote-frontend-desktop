@@ -12,6 +12,7 @@
 #include <QListWidget>
 #include <QStackedWidget>
 #include <QVBoxLayout>
+#include "menuwindow.h"
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QGroupBox>
@@ -31,8 +32,8 @@
  *
  * @param parent Puntero al widget padre, usualmente un QMainWindow.
  */
-SettingsWindow::SettingsWindow(QWidget *parent)
-    : QDialog(parent)
+SettingsWindow::SettingsWindow(QWidget *mainWindow, QWidget *parent)
+    : QDialog(parent), mainWindowRef(mainWindow)
 {
     // Configuración de la ventana: sin marco, fondo oscuro y esquinas redondeadas.
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -179,6 +180,19 @@ SettingsWindow::SettingsWindow(QWidget *parent)
 
     // Espacio flexible para completar el layout.
     soundLayout->addStretch();
+    // 1) Convierte mainWindowRef a tu clase MenuWindow
+    MenuWindow *menuWin = qobject_cast<MenuWindow*>(mainWindowRef);
+    if (menuWin) {
+        // 2) Conectar la señal "valueChanged(int)" del slider con el slot "setVolume(int)" de menuWin
+        connect(volumeSlider, &QSlider::valueChanged,
+                menuWin,       &MenuWindow::setVolume);
+    } else {
+        qWarning() << "mainWindowRef no es un MenuWindow. No se conectará el slider de volumen.";
+    }
+    if (menuWin && menuWin->audioOutput) {
+        int initialVol = static_cast<int>(menuWin->audioOutput->volume() * 100);
+        volumeSlider->setValue(initialVol);
+    }
 
     // Añadir la página "Sonido" al stacked widget.
     stackedWidget->addWidget(soundPage);
@@ -233,7 +247,8 @@ void SettingsWindow::updateGraphicsMode()
     QWidget *parentWin = parentWidget(); // Obtener el padre sin asumir que es QMainWindow
 
     if (radioFullscreen->isChecked()) {
-        parentWin->showFullScreen();
+        qDebug() << "Cambiando a modo Pantalla Completa.";
+        mainWindowRef->showFullScreen();
     } else {
         parentWin->showNormal(); // Vuelve al modo ventana
     }

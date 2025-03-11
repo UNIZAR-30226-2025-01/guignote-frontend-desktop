@@ -9,9 +9,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
-
+# Actualizamos la búsqueda para incluir Multimedia.
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network Multimedia)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -22,7 +22,6 @@ set(PROJECT_SOURCES
         menuwindow.cpp
         menuwindow.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
 )
-
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(guignote
@@ -42,6 +41,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         settingswindow.h settingswindow.cpp
         settingswindow.ui
         friendswindow.h friendswindow.cpp
+        inventorywindow.h inventorywindow.cpp
         myprofilewindow.h myprofilewindow.cpp
         icons/profile.png
         userprofilewindow.h userprofilewindow.cpp
@@ -51,17 +51,11 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
 
 
     )
-# Define target properties for Android with Qt 6 as:
-#    set_property(TARGET guignote APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
-# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
         add_library(guignote SHARED
             ${PROJECT_SOURCES}
         )
-# Define properties for Android with Qt 5 after find_package() calls as:
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
         add_executable(guignote
             ${PROJECT_SOURCES}
@@ -69,12 +63,9 @@ else()
     endif()
 endif()
 
-target_link_libraries(guignote PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Network)
+# Enlazamos las bibliotecas, incluyendo Multimedia.
+target_link_libraries(guignote PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Multimedia)
 
-
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
   set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.guignote)
 endif()

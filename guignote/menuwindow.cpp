@@ -8,12 +8,16 @@
  */
 
 #include "menuwindow.h"
+#include "icon.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
+#include "inventorywindow.h"
 #include "settingswindow.h"
 #include "friendswindow.h"
 #include "myprofilewindow.h"
 #include "userprofilewindow.h"
+#include <qgraphicseffect.h>
+#include <QTimer>
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
@@ -30,23 +34,31 @@ MenuWindow::MenuWindow(QWidget *parent) :
 {
     ui->setupUi(this);  // Cargar el diseño definido en menu.ui
 
-    // ------------- TAPETE FONDO -------------
-
-    // Configuración del fondo con gradiente y barra superior
-    this->setStyleSheet("QWidget {"
-                        "background: qradialgradient(cx:0.5, cy:0.5, radius:1, "
-                        "fx:0.5, fy:0.5, stop:0 #1f5a1f, stop:1 #0a2a08);"
-                        "}"
-                        "QWidget#topBar {"
-                        "background-color: #171718;"
-                        "height: 40px;"
-                        "}");
-
     // ------------- IMÁGENES DE CARTAS -------------
 
     // Crear los botones
     boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
+
+    // En el constructor de MenuWindow (menuwindow.cpp):
+    backgroundPlayer = new QMediaPlayer(this);
+    audioOutput = new QAudioOutput(this);
+
+    // Enlazas el reproductor con la salida de audio
+    backgroundPlayer->setAudioOutput(audioOutput);
+
+    // Ahora ajustas el volumen a través de QAudioOutput:
+    audioOutput->setVolume(0.5); // Rango de 0.0 a 1.0
+
+    // Asignas el archivo de música (por ejemplo, un recurso)
+    backgroundPlayer->setSource(QUrl("qrc:/bgm/menu_jazz_lofi.mp3"));
+
+
+    // Establecer el número de repeticiones (en Qt 6 en adelante):
+    backgroundPlayer->setLoops(QMediaPlayer::Infinite);
+
+    // Reproducir
+    backgroundPlayer->play();
 
     // ------------- EVENTOS DE CLICK CARTAS -------------
 
@@ -62,9 +74,11 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // ------------- BARS -------------
 
     bottomBar = new QFrame(this);
-    bottomBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
     topBar = new QFrame(this);
-    topBar->setStyleSheet("background-color: #171718; border-radius: 10px;");
+
+    topBar->setObjectName("topBar");
+    bottomBar->setObjectName("bottomBar");
+
 
     // ------------- DETECTAR CLICKS EN TOPBAR -------------
 
@@ -102,29 +116,117 @@ MenuWindow::MenuWindow(QWidget *parent) :
     settings = new Icon(this);
     friends = new Icon(this);
     exit = new Icon(this);
+    inventory = new Icon(this);
 
     settings->setImage(":/icons/settings.png", 60, 60);
     friends->setImage(":/icons/friends.png", 60, 60);
     exit->setImage(":/icons/door.png", 60, 60);
+    inventory->setImage(":/icons/chest.png", 60, 60);
 
     // ------------- EVENTOS DE CLICK SETTINGS Y FRIENDS -------------
 
-    // Conectar señales de clic a funciones
+    // Ventana de Settings con cuadro modal similar
     connect(settings, &Icon::clicked, [=]() {
-        SettingsWindow *settingsWin = new SettingsWindow(this);
+
+        settings->setImage(":/icons/darkenedsettings.png", 60, 60);
+        SettingsWindow *settingsWin = new SettingsWindow(this, this);
         settingsWin->setModal(true);
-        settingsWin->show();
+        connect(settingsWin, &QDialog::finished, [this](int){
+            settings->setImage(":/icons/settings.png", 60, 60);
+        });
+        settingsWin->exec();
     });
 
+    // Ventana de Amigos creada de forma similar a MainWindow
     connect(friends, &Icon::clicked, this, [this]() {
-        // Crear y mostrar la ventana de amigos
+        friends->setImage(":/icons/darkenedfriends.png", 60, 60);
         friendswindow *friendsWin = new friendswindow(this);
-        friendsWin->setAttribute(Qt::WA_DeleteOnClose); // Hace que se elimine automáticamente al cerrarse
-        friendsWin->show();
+        friendsWin->setModal(true);
+        connect(friendsWin, &QDialog::finished, [this](int){
+            friends->setImage(":/icons/friends.png", 60, 60);
+        });
+        friendsWin->exec();
     });
 
+    // Ventana de Confirmar Salir con fondo oscurecido y bloqueo de interacción
     connect(exit, &Icon::clicked, this, [this]() {
-        this->close();  // Cierra la ventana
+        exit->setImage(":/icons/darkeneddoor.png", 60, 60);
+        QDialog *confirmDialog = new QDialog(this);
+        confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+        confirmDialog->setModal(true);
+        confirmDialog->setFixedSize(300,150);
+        confirmDialog->setStyleSheet(
+            "QDialog {"
+            "  background-color: #171718;"
+            "  border-radius: 5px;"
+            "  padding: 20px;"
+            "}"
+            );
+        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
+        dialogShadow->setBlurRadius(10);
+        dialogShadow->setColor(QColor(0, 0, 0, 80));
+        dialogShadow->setOffset(4, 4);
+        confirmDialog->setGraphicsEffect(dialogShadow);
+        QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
+        QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
+        confirmLabel->setStyleSheet("QFrame { background-color: #171718; color: white; border-radius: 5px; }");
+        confirmLabel->setAlignment(Qt::AlignCenter);
+        dialogLayout->addWidget(confirmLabel);
+        QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
+        QString buttonStyle =
+            "QPushButton {"
+            "  background-color: #c2c2c3;"
+            "  color: #171718;"
+            "  border-radius: 15px;"
+            "  font-size: 20px;"
+            "  font-weight: bold;"
+            "  padding: 12px 25px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #9b9b9b;"
+            "}";
+        QPushButton *yesButton = new QPushButton("Sí", confirmDialog);
+        QPushButton *noButton = new QPushButton("No", confirmDialog);
+        yesButton->setStyleSheet(buttonStyle);
+        noButton->setStyleSheet(buttonStyle);
+        yesButton->setFixedSize(100,40);
+        noButton->setFixedSize(100,40);
+        dialogButtonLayout->addWidget(yesButton);
+        dialogButtonLayout->addWidget(noButton);
+        dialogLayout->addLayout(dialogButtonLayout);
+        connect(yesButton, &QPushButton::clicked, [=]() {
+            qApp->quit();
+        });
+        connect(noButton, &QPushButton::clicked, [=]() {
+            confirmDialog->close();
+        });
+        connect(confirmDialog, &QDialog::finished, [=](int) {
+            exit->setImage(":/icons/door.png", 60, 60);
+        });
+        // Posicionar inicialmente en el centro del padre
+        confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        confirmDialog->show();
+
+        // QTimer para mantener el diálogo centrado mientras se muestra
+        QTimer *centerTimer = new QTimer(confirmDialog);
+        centerTimer->setInterval(50); // cada 50 ms
+        connect(centerTimer, &QTimer::timeout, [this, confirmDialog]() {
+            confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        });
+        centerTimer->start();
+    });
+
+
+
+    // Ventana de Inventory con cuadro modal similar
+    connect(inventory, &Icon::clicked, this, [this]() {
+        inventory->setImage(":/icons/darkenedchest.png", 60, 60);
+        InventoryWindow *inventoryWin = new InventoryWindow(this);
+        inventoryWin->setModal(true);
+        connect(inventoryWin, &QDialog::finished, [this](int){
+            inventory->setImage(":/icons/chest.png", 60, 60);
+        });
+        inventoryWin->exec();
     });
 
     // ------------- ORNAMENTOS ESQUINAS -------------
@@ -169,6 +271,29 @@ MenuWindow::MenuWindow(QWidget *parent) :
         corner->setStyleSheet("background: transparent;");
         corner->raise();
     }
+
+    this->setStyleSheet(R"(
+    /* Fondo de la ventana con gradiente verde */
+    QWidget {
+        background: qradialgradient(cx:0.5, cy:0.5, radius:1,
+                                    fx:0.5, fy:0.5,
+                                    stop:0 #1f5a1f,
+                                    stop:1 #0a2a08);
+    }
+
+    /* Barras top y bottom con gradiente vertical gris–negro */
+    QFrame#topBar, QFrame#bottomBar {
+        background: qlineargradient(
+            spread: pad,
+            x1: 0, y1: 0,
+            x2: 0, y2: 1,
+            stop: 0 #3a3a3a, /* Gris medio */
+            stop: 1 #000000 /* Negro */
+        );
+        border-radius: 8px;
+        border: 2px solid #000000; /* Borde negro sólido de 2px */
+    }
+)");
 
     repositionOrnaments();
 }
@@ -270,6 +395,16 @@ void MenuWindow::repositionIcons() {
     exit->move((windowWidth / 2) - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
 }
 
+// Función para posicionar los iconos arriba
+void MenuWindow::repositionTopIcons() {
+    int windowWidth = this->width();
+    // Definir el tamaño del icono
+    int imgWidth = inventory->width();
+    int imgHeight = inventory->height();
+    int margen = 8; // Margen desde la parte superior
+    // Posicionar en la parte superior centro
+    inventory->move((windowWidth / 2) - (imgWidth / 2), margen);
+}
 
 // Función para recolocar y reposicionar todos los elementos
 void MenuWindow::resizeEvent(QResizeEvent *event) {
@@ -277,9 +412,19 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     repositionBars();
     repositionImageButtons();
     repositionIcons();
-
+    repositionTopIcons();
     QWidget::resizeEvent(event);
 }
+
+void MenuWindow::setVolume(int volumePercentage)
+{
+    // En Qt6 se controla el volumen con QAudioOutput
+    // volume va de 0 a 100, pero QAudioOutput espera un valor [0.0, 1.0]
+    if (audioOutput) {
+        audioOutput->setVolume(volumePercentage / 100.0);
+    }
+}
+
 
 // Destructor de la clase menu
 MenuWindow::~MenuWindow() {
