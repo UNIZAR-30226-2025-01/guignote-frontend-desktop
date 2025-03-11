@@ -365,6 +365,15 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
 }
 
+void MenuWindow::setVolume(int volumePercentage)
+{
+    // En Qt6 se controla el volumen con QAudioOutput
+    // volume va de 0 a 100, pero QAudioOutput espera un valor [0.0, 1.0]
+    if (audioOutput) {
+        audioOutput->setVolume(volumePercentage / 100.0);
+    }
+}
+
 
 // Destructor de la clase menu
 MenuWindow::~MenuWindow() {

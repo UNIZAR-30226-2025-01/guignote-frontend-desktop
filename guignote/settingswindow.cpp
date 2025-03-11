@@ -12,6 +12,7 @@
 #include <QListWidget>
 #include <QStackedWidget>
 #include <QVBoxLayout>
+#include "menuwindow.h"
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QGroupBox>
@@ -178,6 +179,19 @@ SettingsWindow::SettingsWindow(QWidget *mainWindow, QWidget *parent)
 
     // Espacio flexible para completar el layout.
     soundLayout->addStretch();
+    // 1) Convierte mainWindowRef a tu clase MenuWindow
+    MenuWindow *menuWin = qobject_cast<MenuWindow*>(mainWindowRef);
+    if (menuWin) {
+        // 2) Conectar la señal "valueChanged(int)" del slider con el slot "setVolume(int)" de menuWin
+        connect(volumeSlider, &QSlider::valueChanged,
+                menuWin,       &MenuWindow::setVolume);
+    } else {
+        qWarning() << "mainWindowRef no es un MenuWindow. No se conectará el slider de volumen.";
+    }
+    if (menuWin && menuWin->audioOutput) {
+        int initialVol = static_cast<int>(menuWin->audioOutput->volume() * 100);
+        volumeSlider->setValue(initialVol);
+    }
 
     // Añadir la página "Sonido" al stacked widget.
     stackedWidget->addWidget(soundPage);

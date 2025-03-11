@@ -21,14 +21,18 @@ class MenuWindow : public QWidget {
     Q_OBJECT
 public:
     explicit MenuWindow(QWidget *parent = nullptr);
+    QMediaPlayer *backgroundPlayer;
+    QAudioOutput *audioOutput;
     ~MenuWindow();
+
+public slots:
+    void setVolume(int volumePercentage);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
 
+
 private:
-    QMediaPlayer *backgroundPlayer;
-    QAudioOutput *audioOutput;
 
     Ui::MenuWindow *ui;
 
