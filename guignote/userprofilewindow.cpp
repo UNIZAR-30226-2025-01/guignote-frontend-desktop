@@ -61,6 +61,7 @@ void UserProfileWindow::setupUI() {
     QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
     fotoPerfil = new Icon();
+    fotoPerfil->setHoverEnabled(false);
     fotoPerfil->setPixmap(circularImage);
     fotoPerfil->setFixedSize(pfpSize, pfpSize);
 

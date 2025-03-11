@@ -142,8 +142,13 @@ QSize ImageButton::updatesize(int h) {
         newWidth = static_cast<int>(newHeight * aspectRatio);
     }
 
+    // Ajustar el tamaño del ImageButton
     setFixedSize(newWidth, newHeight);
     setPixmap(normalPixmap.scaled(newWidth, newHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
+    // ✅ Ajustar la posición y tamaño de textLabel para que siga centrado
+    textLabel->setGeometry(0, 0, newWidth, newHeight);
+
     return QSize(newWidth, newHeight);
 }
+

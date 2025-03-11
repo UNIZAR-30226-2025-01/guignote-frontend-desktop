@@ -120,16 +120,15 @@ MenuWindow::MenuWindow(QWidget *parent) :
     exit = new Icon(this);
     inventory = new Icon(this);
 
-    settings->setImage(":/icons/settings.png", 60, 60);
+    settings->setImage(":/icons/settings.png", 50, 50);
     friends->setImage(":/icons/friends.png", 60, 60);
     exit->setImage(":/icons/door.png", 60, 60);
-    inventory->setImage(":/icons/chest.png", 60, 60);
+    inventory->setImage(":/icons/chest.png", 50, 50);
 
     // ------------- EVENTOS DE CLICK EN ICONS -------------
 
     // Ventana de Settings con cuadro modal similar
     connect(settings, &Icon::clicked, [=]() {
-
         settings->setImage(":/icons/darkenedsettings.png", 60, 60);
         SettingsWindow *settingsWin = new SettingsWindow(this, this);
         settingsWin->setModal(true);
@@ -392,7 +391,7 @@ void MenuWindow::repositionIcons() {
 
     // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
     settings->move((windowWidth / 2) - (imgWidth / 2) - separacion1, windowHeight - (imgHeight / 2) - margen);
-    friends->move((windowWidth / 2) + separacion1 - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
+    friends->move((windowWidth / 2) + separacion1 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
     exit->move((windowWidth / 2) - separacion2 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
     inventory->move((windowWidth / 2) + separacion2 - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
 }

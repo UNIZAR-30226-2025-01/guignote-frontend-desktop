@@ -10,6 +10,7 @@
  */
 Icon::Icon(QWidget *parent) : QLabel(parent) {
     setAttribute(Qt::WA_TranslucentBackground);
+    hoverEnabled = true;
     setScaledContents(true); // Permite que la imagen se ajuste al tamaño del QLabel
 }
 
@@ -54,6 +55,7 @@ void Icon::mousePressEvent(QMouseEvent *event) {
 
 // 3) Amplía el icono al entrar el ratón
 void Icon::enterEvent(QEnterEvent *event) {
+    if (!hoverEnabled) return;
     // Aumentamos un 10% el tamaño, por ejemplo
     int newW = static_cast<int>(baseWidth * 1.1);
     int newH = static_cast<int>(baseHeight * 1.1);
@@ -68,10 +70,19 @@ void Icon::enterEvent(QEnterEvent *event) {
 
 // 4) Vuelve al tamaño original cuando el ratón sale
 void Icon::leaveEvent(QEvent *event) {
+    if (!hoverEnabled) return;
     setPixmap(originalPixmap.scaled(baseWidth, baseHeight,
                                     Qt::KeepAspectRatio,
                                     Qt::SmoothTransformation));
     setFixedSize(baseWidth, baseHeight);
 
     QLabel::leaveEvent(event);
+}
+
+/**
+ * @brief Bloquea la detección de hover para este objeto Icon.
+ * @param enabled Si es false, el hover estará deshabilitado.
+ */
+void Icon::setHoverEnabled(bool enabled) {
+    hoverEnabled = enabled;
 }

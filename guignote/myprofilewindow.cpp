@@ -75,6 +75,7 @@ void MyProfileWindow::setupUI() {
 
     // Crear el widget Icon y establecer la imagen
     fotoPerfil = new Icon();
+    fotoPerfil->setHoverEnabled(false);
     fotoPerfil->setPixmap(circularImage);
     fotoPerfil->setFixedSize(pfpSize, pfpSize); // Tamaño fijo para la imagen
 
@@ -134,7 +135,7 @@ void MyProfileWindow::setupUI() {
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
 
-    QPushButton *LogOutButton = new QPushButton("Botón Rojo", this);
+    QPushButton *LogOutButton = new QPushButton("Log Out", this);
     LogOutButton->setStyleSheet(
         "QPushButton { background-color: red; color: white; font-size: 18px; padding: 10px; border-radius: 5px; "
         "border: 2px solid #8B0000; }"

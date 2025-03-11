@@ -258,6 +258,7 @@ void SettingsWindow::closeEvent(QCloseEvent *event)
 {
     saveSettings();  // Guardar los ajustes antes de cerrar la ventana
     event->accept(); // Aceptar el evento de cierre
+    emit finished(0);
 }
 
 

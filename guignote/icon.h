@@ -24,6 +24,7 @@ public:
      * Inicializa el widget y configura las propiedades necesarias para mostrar el icono.
      */
     explicit Icon(QWidget *parent = nullptr);
+    void setHoverEnabled(bool enabled);
 
     /**
      * @brief Carga y establece una imagen en el icono.
@@ -60,6 +61,7 @@ protected:
 
 private:
     QPixmap originalPixmap;
+    bool hoverEnabled;
     int baseWidth{0};
     int baseHeight{0};
 };
