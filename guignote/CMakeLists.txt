@@ -45,6 +45,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         myprofilewindow.h myprofilewindow.cpp
         icons/profile.png
         userprofilewindow.h userprofilewindow.cpp
+        loadingwindow.h loadingwindow.cpp
 
 
 

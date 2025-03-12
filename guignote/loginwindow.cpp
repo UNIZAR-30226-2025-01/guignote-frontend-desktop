@@ -9,6 +9,7 @@
  */
 
 #include "loginwindow.h"
+#include "loadingwindow.h"
 #include "menuwindow.h"
 #include "recoverpasswordwindow.h"
 
@@ -280,18 +281,18 @@ LoginWindow::LoginWindow(QWidget *parent)
                             settings.remove("auth/user");
                             settings.remove("auth/pass");
                         }
-                        MenuWindow *menuWin = new MenuWindow();
+                        LoadingWindow *loadWin = new LoadingWindow();
                         // Si existe una ventana padre (MainWindow), se reemplaza el widget central por el menú.
                         if (this->parentWidget()) {
                             QMainWindow *mainWin = qobject_cast<QMainWindow*>(this->parentWidget());
                             if (mainWin) {
-                                mainWin->setCentralWidget(menuWin);
+                                mainWin->setCentralWidget(loadWin);
                             }
                             this->close();
                         } else {
                             // Si no hay ventana padre, se muestra el menú en una nueva ventana.
-                            menuWin->move(this->geometry().center() - menuWin->rect().center());
-                            menuWin->show();
+                            loadWin->move(this->geometry().center() - loadWin->rect().center());
+                            loadWin->show();
                             this->close();
                         }
                     } else if (respObj.contains("error")) {
