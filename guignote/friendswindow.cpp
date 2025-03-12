@@ -20,6 +20,51 @@
 #include <QLineEdit>
 #include <QDebug>
 
+// Función auxiliar para crear un diálogo modal con mensaje personalizado.
+// Si exitApp es verdadero, al cerrar se finaliza la aplicación.
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
+    QDialog *dialog = new QDialog(parent);
+    dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    dialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(dialog);
+    shadow->setBlurRadius(10);
+    shadow->setColor(QColor(0, 0, 0, 80));
+    shadow->setOffset(4, 4);
+    dialog->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QLabel *label = new QLabel(message, dialog);
+    label->setWordWrap(true);
+    label->setStyleSheet("color: white; font-size: 16px;");
+    label->setAlignment(Qt::AlignCenter);
+    layout->addWidget(label);
+
+    QPushButton *okButton = new QPushButton("OK", dialog);
+    okButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px;"
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    okButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(okButton);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    QObject::connect(okButton, &QPushButton::clicked, [dialog, exitApp]() {
+        dialog->close();
+        if (exitApp)
+            qApp->quit();
+    });
+
+    dialog->adjustSize();
+    dialog->move(parent->geometry().center() - dialog->rect().center());
+    return dialog;
+}
+
 // Constructor
 friendswindow::friendswindow(QWidget *parent) : QDialog(parent) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -28,7 +73,6 @@ friendswindow::friendswindow(QWidget *parent) : QDialog(parent) {
     setFixedSize(900, 650);
 
     networkManager = new QNetworkAccessManager(this);
-
     setupUI();
 
     // Cargar información inicial
@@ -43,11 +87,12 @@ void friendswindow::setupUI() {
     mainLayout->setSpacing(15);
     mainLayout->setAlignment(Qt::AlignTop);
 
-    // Encabezado: título y botón de cierre
+    // Encabezado: Título y botón de cierre.
     QHBoxLayout *headerLayout = new QHBoxLayout();
     titleLabel = new QLabel("Menú de Amigos", this);
     titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     titleLabel->setStyleSheet("color: white; font-size: 28px; font-weight: bold;");
+
     closeButton = new QPushButton(this);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
     closeButton->setIconSize(QSize(22, 22));
@@ -57,6 +102,7 @@ void friendswindow::setupUI() {
         "QPushButton:hover { background-color: #9b9b9b; }"
         );
     connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
+
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
     headerLayout->addWidget(closeButton);
@@ -65,11 +111,11 @@ void friendswindow::setupUI() {
     // QTabWidget con las pestañas: Amigos, Solicitudes y Buscar.
     tabWidget = new QTabWidget(this);
     tabWidget->setStyleSheet(
-        "QTabBar::tab { background-color: #222; color: white; padding: 12px; font-size: 16px; border-top-left-radius: 10px; border-top-right-radius: 10px; }"
+        "QTabBar::tab { background-color: #222; color: white; padding: 12px; font-size: 16px;"
+        "border-top-left-radius: 10px; border-top-right-radius: 10px; }"
         "QTabBar::tab:selected { background-color: #4CAF50; }"
         "QTabWidget::pane { border: 1px solid #555; border-radius: 10px; }"
         );
-
     tabWidget->addTab(createFriendsTab(), "Amigos");
     tabWidget->addTab(createRequestsTab(), "Solicitudes");
     tabWidget->addTab(createSearchTab(), "Buscar");
@@ -78,7 +124,7 @@ void friendswindow::setupUI() {
     setLayout(mainLayout);
 }
 
-// Pestaña Amigos: lista simple de amigos.
+// Pestaña Amigos: muestra la lista de amigos.
 QWidget* friendswindow::createFriendsTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
@@ -93,7 +139,7 @@ QWidget* friendswindow::createFriendsTab() {
     return page;
 }
 
-// Pestaña Solicitudes: lista de solicitudes con widgets personalizados.
+// Pestaña Solicitudes: muestra la lista de solicitudes.
 QWidget* friendswindow::createRequestsTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
@@ -108,11 +154,10 @@ QWidget* friendswindow::createRequestsTab() {
     return page;
 }
 
-// Pestaña Buscar: campo de búsqueda y listado de resultados con estadísticas y botón de agregar.
+// Pestaña Buscar: campo de búsqueda y lista de resultados.
 QWidget* friendswindow::createSearchTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
-    // Ajustamos los márgenes del layout a valores iguales arriba y abajo
 
     QHBoxLayout *searchLayout = new QHBoxLayout();
     searchLineEdit = new QLineEdit(page);
@@ -122,8 +167,6 @@ QWidget* friendswindow::createSearchTab() {
         "QLineEdit:focus { border: 1px solid #888; }"
         );
     searchLineEdit->setMinimumHeight(45);
-
-    // Actualizar búsqueda automáticamente al cambiar el texto.
     connect(searchLineEdit, &QLineEdit::textChanged, this, &friendswindow::searchUsers);
     searchLayout->addWidget(searchLineEdit);
     layout->addLayout(searchLayout);
@@ -134,7 +177,7 @@ QWidget* friendswindow::createSearchTab() {
         );
     searchResultsListWidget->setSpacing(50);
     layout->addWidget(searchResultsListWidget);
-    layout->setContentsMargins(20,0,20,12);
+    layout->setContentsMargins(20, 0, 20, 12);
     page->setLayout(layout);
     return page;
 }
@@ -145,7 +188,7 @@ QString friendswindow::loadAuthToken() {
     + "/Grace Hopper/Sota, Caballo y Rey.conf";
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QMessageBox::warning(this, "Error", "No se pudo cargar el archivo de configuración.");
+        createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
         return "";
     }
     QString token;
@@ -157,14 +200,13 @@ QString friendswindow::loadAuthToken() {
         }
     }
     configFile.close();
-
     if (token.isEmpty()) {
-        QMessageBox::warning(this, "Error", "No se encontró el token en el archivo de configuración.");
+        createDialog(this, "No se encontró el token en el archivo de configuración.")->show();
     }
     return token;
 }
 
-// Función para obtener la lista de amigos
+// Obtiene la lista de amigos desde el servidor.
 void friendswindow::fetchFriends() {
     QString token = loadAuthToken();
     if (token.isEmpty()) return;
@@ -175,71 +217,7 @@ void friendswindow::fetchFriends() {
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
-            // Crear un diálogo modal similar al de confirmación de salir
-            QDialog *expiredDialog = new QDialog(this);
-            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            // En lugar de un tamaño fijo, usamos adjustSize más adelante
-            // expiredDialog->setFixedSize(300, 150);  <-- Se comenta
-
-            expiredDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            expiredDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
-            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
-
-            // Activamos wordWrap para que salte de línea si no cabe
-            expiredLabel->setWordWrap(true);
-            // Ajustamos un estilo con fuente un poco más pequeña, por si hace falta
-            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
-            expiredLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(expiredLabel);
-
-            QPushButton *okButton = new QPushButton("OK", expiredDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                expiredDialog->close();
-                qApp->quit();
-            });
-
-            // Dejamos que se ajuste automáticamente al contenido
-            expiredDialog->adjustSize();
-
-            // Posicionar el diálogo centrado en la ventana actual
-            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
-            expiredDialog->show();
-
-
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
             reply->deleteLater();
             return;
         }
@@ -252,10 +230,7 @@ void friendswindow::fetchFriends() {
                 QJsonArray amigos = obj["amigos"].toArray();
                 for (const QJsonValue &value : amigos) {
                     QJsonObject amigo = value.toObject();
-                    // En vez de texto plano, creamos la “tarjeta”:
                     QWidget *friendCard = createFriendWidget(amigo);
-
-                    // Creamos un QListWidgetItem vacío y le asignamos friendCard como widget
                     QListWidgetItem *item = new QListWidgetItem(friendsListWidget);
                     item->setSizeHint(friendCard->sizeHint());
                     friendsListWidget->addItem(item);
@@ -267,42 +242,32 @@ void friendswindow::fetchFriends() {
     });
 }
 
+// Crea un "friend card" a partir de un objeto JSON.
 QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
-    // 1) Creamos un QWidget estilo “tarjeta”
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
-    // Opcional: si deseas el mismo color de fondo que la pestaña de buscar
     widget->setStyleSheet("border-radius: 10px;");
 
-    // 2) Layout horizontal principal
     QHBoxLayout *layout = new QHBoxLayout(widget);
     layout->setContentsMargins(10, 2, 10, 2);
     layout->setSpacing(7);
 
-    // 3) Layout vertical para la info (nombre, stats si quieres)
     QVBoxLayout *infoLayout = new QVBoxLayout();
-
-    // --- Nombre ---
     QString nombre = "Nombre no disponible";
-    if (amigo.contains("nombre")) {
+    if (amigo.contains("nombre"))
         nombre = amigo["nombre"].toString();
-    } else if (amigo.contains("Nombre")) {
+    else if (amigo.contains("Nombre"))
         nombre = amigo["Nombre"].toString();
-    } else if (amigo.contains("username")) {
+    else if (amigo.contains("username"))
         nombre = amigo["username"].toString();
-    }
-    qDebug() << "El nombre del usuario es " << nombre;
+    qDebug() << "El nombre del usuario es" << nombre;
     QLabel *nameLabel = new QLabel(nombre, widget);
     nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
     infoLayout->addWidget(nameLabel);
 
-    // (Opcional) Si tu backend también envía victorias, derrotas, ratio, etc.,
-    // puedes mostrarlo como en createSearchResultWidget. Ejemplo:
-
     int wins = amigo.contains("victorias") ? amigo["victorias"].toInt() : 0;
     int losses = amigo.contains("derrotas") ? amigo["derrotas"].toInt() : 0;
     double ratio = (wins + losses > 0) ? (wins * 100.0 / (wins + losses)) : 0.0;
-
     QLabel *statsLabel = new QLabel(
         QString("Victorias: %1   Derrotas: %2   Ratio: %3%")
             .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
@@ -311,25 +276,20 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     statsLabel->setStyleSheet("color: white; font-size: 18px;");
     infoLayout->addWidget(statsLabel);
 
-
     layout->addLayout(infoLayout);
-    layout->addStretch();  // Empuja el contenido a la izquierda, si quisieras un botón a la derecha
+    layout->addStretch();
 
-    // Extraer el ID del amigo (según el backend, "id" es el identificador)
+    // Extraer el id del amigo
     QString friendId;
     if (amigo.contains("id"))
         friendId = QString::number(amigo["id"].toInt());
-    else if (friendId.contains("ID"))
+    else if (amigo.contains("ID"))
         friendId = QString::number(amigo["ID"].toInt());
-    else
-        friendId = "";
-    qDebug() << "El ID del amigo de esta entrada es: " << friendId;
+    qDebug() << "El ID del amigo es:" << friendId;
 
-    // Agregamos el icono de eliminación a la derecha:
     Icon *removeIcon = new Icon(widget);
     removeIcon->setImage(":/icons/remove.png", 110, 110);
     removeIcon->setToolTip("Eliminar amigo");
-    // Conectar el clic para llamar al slot removeFriend pasando friendId
     connect(removeIcon, &Icon::clicked, [this, friendId]() {
         removeFriend(friendId);
     });
@@ -339,6 +299,7 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     return widget;
 }
 
+// Envía una solicitud para eliminar a un amigo.
 void friendswindow::removeFriend(const QString &friendId) {
     QString token = loadAuthToken();
     if (token.isEmpty()) {
@@ -355,157 +316,50 @@ void friendswindow::removeFriend(const QString &friendId) {
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setRawHeader("Auth", token.toUtf8());
 
-    // Enviar la solicitud DELETE sin cuerpo
     QNetworkReply *reply = networkManager->sendCustomRequest(request, "DELETE");
-
-
-
-
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
-            // Token caducado: mostrar diálogo de expiración y salir.
-            QDialog *expiredDialog = new QDialog(this);
-            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            expiredDialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            expiredDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
-            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
-            expiredLabel->setWordWrap(true);
-            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
-            expiredLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(expiredLabel);
-
-            QPushButton *okButton = new QPushButton("OK", expiredDialog);
-            okButton->setFixedSize(100, 40);
-            // Puedes aplicar estilo a okButton de forma similar a otros botones.
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                expiredDialog->close();
-                qApp->quit();
-            });
-
-            expiredDialog->adjustSize();
-            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
-            expiredDialog->show();
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
+            reply->deleteLater();
+            return;
         } else if (reply->error() == QNetworkReply::NoError) {
             qDebug() << "Amigo eliminado correctamente.";
-            // Actualiza la lista de amigos para que ya no se muestre el amigo eliminado.
             fetchFriends();
-        } else if (statusCode == 400){
-            qDebug() << "Faltan campos";
-        } else if (statusCode == 404) {
-            qDebug() << "Amigo no encontrado";
-        } else if (statusCode == 405) {
-            qDebug() << "Método no permitido";
+        } else {
+            qDebug() << "Error en removeFriend, código:" << statusCode;
         }
         reply->deleteLater();
     });
 }
 
-// Función para obtener las solicitudes de amistad y mostrarlas en widgets personalizados.
+// Obtiene las solicitudes de amistad desde el servidor.
 void friendswindow::fetchRequests() {
     QString token = loadAuthToken();
-    if(token.isEmpty()) return;
+    if (token.isEmpty()) return;
 
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/listar_solicitudes_amistad/"));
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, [this, reply]() {
-        // Comprobar si la petición respondió con un código 401 (no autorizado)
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
-            // Crear un diálogo modal similar al de confirmación de salir
-            QDialog *expiredDialog = new QDialog(this);
-            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            // En lugar de un tamaño fijo, usamos adjustSize más adelante
-            // expiredDialog->setFixedSize(300, 150);  <-- Se comenta
-
-            expiredDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            expiredDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
-            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
-
-            // Activamos wordWrap para que salte de línea si no cabe
-            expiredLabel->setWordWrap(true);
-            // Ajustamos un estilo con fuente un poco más pequeña, por si hace falta
-            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
-            expiredLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(expiredLabel);
-
-            QPushButton *okButton = new QPushButton("OK", expiredDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                expiredDialog->close();
-                qApp->quit();
-            });
-
-            // Dejamos que se ajuste automáticamente al contenido
-            expiredDialog->adjustSize();
-
-            // Posicionar el diálogo centrado en la ventana actual
-            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
-            expiredDialog->show();
-
-
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
             reply->deleteLater();
             return;
         }
         QByteArray response = reply->readAll();
         qDebug() << "fetchRequests response:" << response;
         QJsonDocument doc = QJsonDocument::fromJson(response);
-        if(doc.isObject()) {
+        if (doc.isObject()) {
             QJsonObject obj = doc.object();
-            if(obj.contains("solicitudes")) {
+            if (obj.contains("solicitudes")) {
                 requestsListWidget->clear();
                 QJsonArray solicitudes = obj["solicitudes"].toArray();
-                for(const QJsonValue &value : solicitudes) {
+                for (const QJsonValue &value : solicitudes) {
                     QJsonObject solicitud = value.toObject();
                     QListWidgetItem *item = new QListWidgetItem(requestsListWidget);
                     QWidget *widget = createRequestWidget(solicitud);
-                    // Asigna el sizeHint según el widget creado
                     item->setSizeHint(widget->sizeHint());
                     requestsListWidget->addItem(item);
                     requestsListWidget->setItemWidget(item, widget);
@@ -516,20 +370,17 @@ void friendswindow::fetchRequests() {
     });
 }
 
+// Busca usuarios según el texto ingresado en el campo de búsqueda.
 void friendswindow::searchUsers() {
     QString searchText = searchLineEdit->text().trimmed();
     qDebug() << "searchUsers triggered with text:" << searchText;
-
-    // Actualizamos la variable miembro con la búsqueda actual
     currentSearchQuery = searchText;
 
-    // Si no hay texto, limpiamos la lista y salimos
     if (searchText.isEmpty()) {
         searchResultsListWidget->clear();
         return;
     }
 
-    // Limpiamos la lista antes de hacer la petición
     searchResultsListWidget->clear();
 
     QString token = loadAuthToken();
@@ -547,87 +398,17 @@ void friendswindow::searchUsers() {
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, [this, reply, queryText = searchText]() {
-        // Comprobar si la petición respondió con un código 401 (no autorizado)
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
-            // Crear un diálogo modal similar al de confirmación de salir
-            QDialog *expiredDialog = new QDialog(this);
-            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            // En lugar de un tamaño fijo, usamos adjustSize más adelante
-            // expiredDialog->setFixedSize(300, 150);  <-- Se comenta
-
-            expiredDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            expiredDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
-            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
-
-            // Activamos wordWrap para que salte de línea si no cabe
-            expiredLabel->setWordWrap(true);
-            // Ajustamos un estilo con fuente un poco más pequeña, por si hace falta
-            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
-            expiredLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(expiredLabel);
-
-            QPushButton *okButton = new QPushButton("OK", expiredDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                expiredDialog->close();
-                qApp->quit();
-            });
-
-            // Dejamos que se ajuste automáticamente al contenido
-            expiredDialog->adjustSize();
-
-            // Posicionar el diálogo centrado en la ventana actual
-            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
-            expiredDialog->show();
-
-
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
             reply->deleteLater();
             return;
         }
-
-        // Si la búsqueda actual ha cambiado desde que se lanzó esta consulta, ignoramos la respuesta.
         if (currentSearchQuery != queryText) {
             reply->deleteLater();
             return;
         }
-
-        // Limpiamos la lista nuevamente para asegurarnos
         searchResultsListWidget->clear();
-
         QByteArray response = reply->readAll();
         qDebug() << "searchUsers response:" << response;
         QJsonDocument doc = QJsonDocument::fromJson(response);
@@ -650,19 +431,15 @@ void friendswindow::searchUsers() {
     });
 }
 
-
-// Crea un widget personalizado para cada usuario en los resultados de búsqueda
+// Crea un widget para mostrar un resultado de búsqueda de usuario.
 QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QWidget *widget = new QWidget();
-    // Establece un tamaño mínimo para garantizar visibilidad
     widget->setMinimumSize(300, 130);
-
     QHBoxLayout *layout = new QHBoxLayout(widget);
-    layout->setContentsMargins(10,2,10,2);
+    layout->setContentsMargins(10, 2, 10, 2);
     layout->setSpacing(7);
 
     QVBoxLayout *infoLayout = new QVBoxLayout();
-
     QString nombre;
     if (usuario.contains("nombre"))
         nombre = usuario["nombre"].toString();
@@ -672,7 +449,6 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
         nombre = usuario["username"].toString();
     else
         nombre = "Nombre no disponible";
-
     QLabel *nameLabel = new QLabel(nombre, widget);
     nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
     infoLayout->addWidget(nameLabel);
@@ -682,9 +458,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     double ratio = (wins + losses > 0) ? (wins * 100.0 / (wins + losses)) : 0.0;
     QLabel *statsLabel = new QLabel(
         QString("Victorias: %1   Derrotas: %2   Ratio: %3%")
-            .arg(wins)
-            .arg(losses)
-            .arg(ratio, 0, 'f', 2),
+            .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
         widget
         );
     statsLabel->setStyleSheet("color: white; font-size: 18px;");
@@ -695,8 +469,6 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
 
     QPushButton *addButton = new QPushButton("Agregar amigo", widget);
     addButton->setStyleSheet("background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
-
-    // Convertir el id (entero) a QString
     QString userId;
     if (usuario.contains("id"))
         userId = QString::number(usuario["id"].toInt());
@@ -713,7 +485,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     return widget;
 }
 
-// Crea un widget personalizado para cada solicitud de amistad
+// Crea un widget para mostrar cada solicitud de amistad.
 QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
@@ -724,7 +496,6 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     layout->setSpacing(7);
 
     QVBoxLayout *infoLayout = new QVBoxLayout();
-    // Nombre del solicitante
     QString nombre = solicitud["solicitante"].toString();
     QLabel *nameLabel = new QLabel(nombre, widget);
     nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
@@ -733,31 +504,20 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     layout->addLayout(infoLayout);
     layout->addStretch();
 
-    // Botón "Aceptar" con efecto hover y conexión a acceptRequest
     QPushButton *acceptBtn = new QPushButton("Aceptar", widget);
-    // Asignar la propiedad "solicitudId" para usarla en la función de aceptación
     QString solicitudId = QString::number(solicitud["id"].toInt());
     acceptBtn->setProperty("solicitudId", solicitudId);
     acceptBtn->setStyleSheet(
-        "QPushButton {"
-        "  background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #3E8E41;"
-        "}"
+        "QPushButton { background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px; }"
+        "QPushButton:hover { background-color: #3E8E41; }"
         );
     connect(acceptBtn, &QPushButton::clicked, this, &friendswindow::acceptRequest);
     layout->addWidget(acceptBtn);
 
-    // Botón "Rechazar" (se deja con su estilo y conexión actual)
     QPushButton *rejectBtn = new QPushButton("Rechazar", widget);
     rejectBtn->setStyleSheet(
-        "QPushButton {"
-        "  background-color: #E53935; color: white; font-size: 18px; padding: 10px; border-radius: 10px;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #CC342F;"
-        "}"
+        "QPushButton { background-color: #E53935; color: white; font-size: 18px; padding: 10px; border-radius: 10px; }"
+        "QPushButton:hover { background-color: #CC342F; }"
         );
     rejectBtn->setProperty("solicitudId", solicitudId);
     connect(rejectBtn, &QPushButton::clicked, this, &friendswindow::rejectRequest);
@@ -767,6 +527,7 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     return widget;
 }
 
+// Envía una solicitud de amistad a un usuario.
 void friendswindow::sendFriendRequest() {
     QPushButton *button = qobject_cast<QPushButton*>(sender());
     if (!button) {
@@ -799,119 +560,16 @@ void friendswindow::sendFriendRequest() {
             qDebug() << "Solicitud enviada correctamente para userId:" << userId;
             button->setText("Solicitud enviada!");
             button->setEnabled(false);
-            // En lugar de QMessageBox::information, creamos un diálogo personalizado:
-            QDialog *sentDialog = new QDialog(this);
-            sentDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            sentDialog->setModal(true);
-            sentDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(sentDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            sentDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(sentDialog);
-            QLabel *messageLabel = new QLabel("Se ha enviado la solicitud de amistad.", sentDialog);
-            messageLabel->setWordWrap(true);
-            messageLabel->setStyleSheet("color: white; font-size: 16px;");
-            messageLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(messageLabel);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            QPushButton *okButton = new QPushButton("OK", sentDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                sentDialog->close();
-            });
-
-            sentDialog->adjustSize();
-            sentDialog->move(this->geometry().center() - sentDialog->rect().center());
-            sentDialog->show();
+            createDialog(this, "Se ha enviado la solicitud de amistad.")->show();
         } else {
             qDebug() << "Error al enviar la solicitud para userId:" << userId << " Error:" << reply->errorString();
-            // Aquí se crea el diálogo de error con el mismo formato:
-            QDialog *errorDialog = new QDialog(this);
-            errorDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            errorDialog->setModal(true);
-            errorDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(errorDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            errorDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(errorDialog);
-            QLabel *messageLabel = new QLabel("No se pudo enviar la solicitud de amistad.", errorDialog);
-            messageLabel->setWordWrap(true);
-            messageLabel->setStyleSheet("color: white; font-size: 16px;");
-            messageLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(messageLabel);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            QPushButton *okButton = new QPushButton("OK", errorDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                errorDialog->close();
-            });
-
-            errorDialog->adjustSize();
-            errorDialog->move(this->geometry().center() - errorDialog->rect().center());
-            errorDialog->show();
+            createDialog(this, "No se pudo enviar la solicitud de amistad.")->show();
         }
         reply->deleteLater();
     });
 }
 
-
-// Acepta una solicitud de amistad
+// Acepta una solicitud de amistad.
 void friendswindow::acceptRequest() {
     QObject *senderObj = sender();
     if (!senderObj) return;
@@ -929,123 +587,15 @@ void friendswindow::acceptRequest() {
     json["solicitud_id"] = solicitudId;
     QJsonDocument doc(json);
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
-
     connect(reply, &QNetworkReply::finished, [this, reply]() {
-        // Comprobamos si el código de estado es 401 (token caducado)
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
-            QDialog *expiredDialog = new QDialog(this);
-            expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            expiredDialog->setModal(true);
-            expiredDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            expiredDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
-            QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
-            expiredLabel->setWordWrap(true);
-            expiredLabel->setStyleSheet("color: white; font-size: 16px;");
-            expiredLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(expiredLabel);
-
-            QPushButton *okButton = new QPushButton("OK", expiredDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                expiredDialog->close();
-                qApp->quit();
-            });
-
-            expiredDialog->adjustSize();
-            expiredDialog->move(this->geometry().center() - expiredDialog->rect().center());
-            expiredDialog->show();
-
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
             reply->deleteLater();
             return;
         }
-
         if (reply->error() == QNetworkReply::NoError) {
-            // Puedes usar:
-            QDialog *acceptedDialog = new QDialog(this);
-            acceptedDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            acceptedDialog->setModal(true);
-            acceptedDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(acceptedDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            acceptedDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(acceptedDialog);
-            QLabel *messageLabel = new QLabel("Has aceptado la solicitud de amistad.", acceptedDialog);
-            messageLabel->setWordWrap(true);
-            messageLabel->setStyleSheet("color: white; font-size: 16px;");
-            messageLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(messageLabel);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            QPushButton *okButton = new QPushButton("OK", acceptedDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                acceptedDialog->close();
-            });
-
-            // Ajustamos el tamaño y lo centramos
-            acceptedDialog->adjustSize();
-            acceptedDialog->move(this->geometry().center() - acceptedDialog->rect().center());
-            acceptedDialog->show();
+            createDialog(this, "Has aceptado la solicitud de amistad.")->show();
             fetchRequests();
             fetchFriends();
         } else {
@@ -1055,8 +605,7 @@ void friendswindow::acceptRequest() {
     });
 }
 
-
-// Deniega una solicitud de amistad
+// Rechaza una solicitud de amistad.
 void friendswindow::rejectRequest() {
     QObject *senderObj = sender();
     if (!senderObj) return;
@@ -1076,59 +625,7 @@ void friendswindow::rejectRequest() {
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         if(reply->error() == QNetworkReply::NoError) {
-            // Puedes usar:
-            QDialog *acceptedDialog = new QDialog(this);
-            acceptedDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-            acceptedDialog->setModal(true);
-            acceptedDialog->setStyleSheet(
-                "QDialog {"
-                "  background-color: #171718;"
-                "  border-radius: 5px;"
-                "  padding: 20px;"
-                "}"
-                );
-            QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(acceptedDialog);
-            dialogShadow->setBlurRadius(10);
-            dialogShadow->setColor(QColor(0, 0, 0, 80));
-            dialogShadow->setOffset(4, 4);
-            acceptedDialog->setGraphicsEffect(dialogShadow);
-
-            QVBoxLayout *dialogLayout = new QVBoxLayout(acceptedDialog);
-            QLabel *messageLabel = new QLabel("Solicitud de amistad rechazada", acceptedDialog);
-            messageLabel->setWordWrap(true);
-            messageLabel->setStyleSheet("color: white; font-size: 16px;");
-            messageLabel->setAlignment(Qt::AlignCenter);
-            dialogLayout->addWidget(messageLabel);
-
-            QHBoxLayout *btnLayout = new QHBoxLayout();
-            QPushButton *okButton = new QPushButton("OK", acceptedDialog);
-            okButton->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #c2c2c3;"
-                "  color: #171718;"
-                "  border-radius: 15px;"
-                "  font-size: 20px;"
-                "  font-weight: bold;"
-                "  padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #9b9b9b;"
-                "}"
-                );
-            okButton->setFixedSize(100, 40);
-            btnLayout->addStretch();
-            btnLayout->addWidget(okButton);
-            btnLayout->addStretch();
-            dialogLayout->addLayout(btnLayout);
-
-            connect(okButton, &QPushButton::clicked, [=]() {
-                acceptedDialog->close();
-            });
-
-            // Ajustamos el tamaño y lo centramos
-            acceptedDialog->adjustSize();
-            acceptedDialog->move(this->geometry().center() - acceptedDialog->rect().center());
-            acceptedDialog->show();
+            createDialog(this, "Solicitud de amistad rechazada.")->show();
             fetchRequests();
         } else {
             QMessageBox::warning(this, "Error", "No se pudo rechazar la solicitud.");

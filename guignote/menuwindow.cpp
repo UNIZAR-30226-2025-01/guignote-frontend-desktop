@@ -13,16 +13,76 @@
 #include "imagebutton.h"
 #include "inventorywindow.h"
 #include "settingswindow.h"
+#include <QMessageBox>
 #include "friendswindow.h"
 #include "myprofilewindow.h"
 #include "userprofilewindow.h"
-#include <qgraphicseffect.h>
+#include <QGraphicsDropShadowEffect>
 #include <QTimer>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QFile>
+#include <QStandardPaths>
+#include <QSettings>
+#include <QDebug>
+
+// Función auxiliar para crear un diálogo modal de sesión expirada.
+static QDialog* createExpiredDialog(QWidget *parent) {
+    QDialog *expiredDialog = new QDialog(parent);
+    expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    expiredDialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+
+    QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(expiredDialog);
+    dialogShadow->setBlurRadius(10);
+    dialogShadow->setColor(QColor(0, 0, 0, 80));
+    dialogShadow->setOffset(4, 4);
+    expiredDialog->setGraphicsEffect(dialogShadow);
+
+    QVBoxLayout *dialogLayout = new QVBoxLayout(expiredDialog);
+    QLabel *expiredLabel = new QLabel("Su sesión ha caducado, por favor, vuelva a iniciar sesión.", expiredDialog);
+    expiredLabel->setWordWrap(true);
+    expiredLabel->setStyleSheet("color: white; font-size: 16px;");
+    expiredLabel->setAlignment(Qt::AlignCenter);
+    dialogLayout->addWidget(expiredLabel);
+
+    QPushButton *okButton = new QPushButton("OK", expiredDialog);
+    okButton->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #c2c2c3;"
+        "  color: #171718;"
+        "  border-radius: 15px;"
+        "  font-size: 20px;"
+        "  font-weight: bold;"
+        "  padding: 12px 25px;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #9b9b9b;"
+        "}"
+        );
+    okButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(okButton);
+    btnLayout->addStretch();
+    dialogLayout->addLayout(btnLayout);
+
+    QObject::connect(okButton, &QPushButton::clicked, [expiredDialog]() {
+        expiredDialog->close();
+        qApp->quit();
+    });
+
+    expiredDialog->adjustSize();
+    expiredDialog->move(parent->geometry().center() - expiredDialog->rect().center());
+    return expiredDialog;
+}
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::MenuWindow),  // Inicialización de la UI
+    ui(new Ui::MenuWindow),
     boton1v1(nullptr),
     boton2v2(nullptr),
     bottomBar(nullptr),
@@ -32,62 +92,39 @@ MenuWindow::MenuWindow(QWidget *parent) :
     exit(nullptr),
     usrLabel(nullptr)
 {
-    ui->setupUi(this);  // Cargar el diseño definido en menu.ui
+    ui->setupUi(this);
 
-    // ------------- MUSICA -------------
-
-    // En el constructor de MenuWindow (menuwindow.cpp):
+    // ------------- MÚSICA -------------
     backgroundPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
-
-    // Enlazas el reproductor con la salida de audio
     backgroundPlayer->setAudioOutput(audioOutput);
-
-    // Ahora ajustas el volumen a través de QAudioOutput:
-    audioOutput->setVolume(0.5); // Rango de 0.0 a 1.0
-
-    // Asignas el archivo de música (por ejemplo, un recurso)
+    audioOutput->setVolume(0.5); // Rango 0.0 a 1.0
     backgroundPlayer->setSource(QUrl("qrc:/bgm/menu_jazz_lofi.mp3"));
-
-
-    // Establecer el número de repeticiones (en Qt 6 en adelante):
     backgroundPlayer->setLoops(QMediaPlayer::Infinite);
-
-    // Reproducir
     backgroundPlayer->play();
 
     // ------------- IMÁGENES DE CARTAS -------------
-
-    // Crear los botones
     boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
-    // ------------- EVENTOS DE CLICK CARTAS -------------
-
-    // Conectar los botones a funciones (cuando se hace clic)
+    // ------------- EVENTOS DE CLICK EN CARTAS -------------
     connect(boton1v1, &ImageButton::clicked, this, []() {
         qDebug() << "Botón 1v1 presionado";
     });
-
     connect(boton2v2, &ImageButton::clicked, this, []() {
         qDebug() << "Botón 2v2 presionado";
     });
 
-    // ------------- BARS -------------
-
+    // ------------- BARRAS (BARS) -------------
     bottomBar = new QFrame(this);
     topBar = new QFrame(this);
-
     topBar->setObjectName("topBar");
     bottomBar->setObjectName("bottomBar");
 
-
     // ------------- DETECTAR CLICKS EN TOPBAR -------------
-
-    invisibleButton = new QPushButton(this);  // Botón dentro de topBar
-    invisibleButton->setStyleSheet("background: transparent; border: none;");  // Invisible
-    invisibleButton->setCursor(Qt::PointingHandCursor);  // Mantiene el cursor de puntero
-
+    invisibleButton = new QPushButton(this);
+    invisibleButton->setStyleSheet("background: transparent; border: none;");
+    invisibleButton->setCursor(Qt::PointingHandCursor);
     connect(invisibleButton, &QPushButton::clicked, [=]() {
         MyProfileWindow *profileWin = new MyProfileWindow(this);
         profileWin->setModal(true);
@@ -95,26 +132,53 @@ MenuWindow::MenuWindow(QWidget *parent) :
     });
 
     // ------------- NOMBRE DE USUARIO Y RANGO EN TOPBAR -------------
+    usrLabel = new QLabel(this);
+    QTimer::singleShot(1000, this, [this]() {
+    // Se carga el token desde el archivo de configuración
+    QString token = loadAuthToken();
+    if (token.isEmpty()) {
+        usrLabel->setText("ERROR");
+    } else {
+        QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
+        QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/estadisticas/"));
+        request.setRawHeader("Auth", token.toUtf8());
 
-    usrLabel = new QLabel(this);  // ✅ Use the global class member
+        QNetworkReply *reply = networkManager->get(request);
+        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            if (statusCode == 401) {
+                createExpiredDialog(this)->show();
+                reply->deleteLater();
+                return;
+            }
+            if (reply->error() == QNetworkReply::NoError) {
+                QByteArray responseData = reply->readAll();
+                QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
+                QJsonObject jsonObj = jsonDoc.object();
 
-    QString usr = "Usuario";
-    int ELO = 0;
-    QString rank = "Rango";
+                // Se extrae el nombre del usuario y otros datos
+                QString nombre = jsonObj.value("nombre").toString();
+                int ELO = 0;            // Actualiza si dispones de este dato
+                QString rank = "Rango"; // Actualiza si se recibe el rango
 
-    // Create the styled text
-    QString UsrELORank = QString(
-                             "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2) </span>"
-                             "<span style='font-size: 20px; font-weight: normal; color: white;'>%3</span>"
-                             ).arg(usr).arg(ELO).arg(rank);
+                QString UsrELORank = QString(
+                                         "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2) </span>"
+                                         "<span style='font-size: 20px; font-weight: normal; color: white;'>%3</span>"
+                                         ).arg(nombre).arg(ELO).arg(rank);
 
-    usrLabel->setText(UsrELORank);
+                usrLabel->setText(UsrELORank);
+            } else {
+                usrLabel->setText("Error al cargar usuario");
+            }
+            reply->deleteLater();
+        });
+    }
+    });
     usrLabel->setAlignment(Qt::AlignCenter);
     usrLabel->setTextFormat(Qt::RichText);
     usrLabel->setStyleSheet("color: white; background: transparent;");
 
-    // ------------- ICONS -------------
-
+    // ------------- ICONOS -------------
     settings = new Icon(this);
     friends = new Icon(this);
     exit = new Icon(this);
@@ -125,9 +189,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     exit->setImage(":/icons/door.png", 60, 60);
     inventory->setImage(":/icons/chest.png", 50, 50);
 
-    // ------------- EVENTOS DE CLICK EN ICONS -------------
-
-    // Ventana de Settings con cuadro modal similar
+    // ------------- EVENTOS DE CLICK EN ICONOS -------------
     connect(settings, &Icon::clicked, [=]() {
         settings->setImage(":/icons/darkenedsettings.png", 60, 60);
         SettingsWindow *settingsWin = new SettingsWindow(this, this);
@@ -137,8 +199,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
         });
         settingsWin->exec();
     });
-
-    // Ventana de Amigos creada de forma similar a MainWindow
     connect(friends, &Icon::clicked, this, [this]() {
         friends->setImage(":/icons/darkenedfriends.png", 60, 60);
         friendswindow *friendsWin = new friendswindow(this);
@@ -148,31 +208,26 @@ MenuWindow::MenuWindow(QWidget *parent) :
         });
         friendsWin->exec();
     });
-
-    // Ventana de Confirmar Salir con fondo oscurecido y bloqueo de interacción
     connect(exit, &Icon::clicked, this, [this]() {
         exit->setImage(":/icons/darkeneddoor.png", 60, 60);
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
         confirmDialog->setFixedSize(300,150);
-        confirmDialog->setStyleSheet(
-            "QDialog {"
-            "  background-color: #171718;"
-            "  border-radius: 5px;"
-            "  padding: 20px;"
-            "}"
-            );
+        confirmDialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+
         QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
         dialogShadow->setBlurRadius(10);
         dialogShadow->setColor(QColor(0, 0, 0, 80));
         dialogShadow->setOffset(4, 4);
         confirmDialog->setGraphicsEffect(dialogShadow);
+
         QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
         QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
         confirmLabel->setStyleSheet("QFrame { background-color: #171718; color: white; border-radius: 5px; }");
         confirmLabel->setAlignment(Qt::AlignCenter);
         dialogLayout->addWidget(confirmLabel);
+
         QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
         QString buttonStyle =
             "QPushButton {"
@@ -195,7 +250,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
         dialogButtonLayout->addWidget(yesButton);
         dialogButtonLayout->addWidget(noButton);
         dialogLayout->addLayout(dialogButtonLayout);
-        connect(yesButton, &QPushButton::clicked, [=]() {
+        connect(yesButton, &QPushButton::clicked, []() {
             qApp->quit();
         });
         connect(noButton, &QPushButton::clicked, [=]() {
@@ -204,20 +259,17 @@ MenuWindow::MenuWindow(QWidget *parent) :
         connect(confirmDialog, &QDialog::finished, [=](int) {
             exit->setImage(":/icons/door.png", 60, 60);
         });
-        // Posicionar inicialmente en el centro del padre
         confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
         confirmDialog->show();
 
-        // QTimer para mantener el diálogo centrado mientras se muestra
+        // QTimer para mantener el diálogo centrado
         QTimer *centerTimer = new QTimer(confirmDialog);
-        centerTimer->setInterval(50); // cada 50 ms
+        centerTimer->setInterval(50);
         connect(centerTimer, &QTimer::timeout, [this, confirmDialog]() {
             confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
         });
         centerTimer->start();
     });
-
-    // Ventana de Inventory con cuadro modal similar
     connect(inventory, &Icon::clicked, this, [this]() {
         inventory->setImage(":/icons/darkenedchest.png", 60, 60);
         InventoryWindow *inventoryWin = new InventoryWindow(this);
@@ -229,39 +281,37 @@ MenuWindow::MenuWindow(QWidget *parent) :
     });
 
     // ------------- ORNAMENTOS ESQUINAS -------------
-
-    // Definir el tamaño de los adornos decorativos
     ornamentSize = QSize(300, 299);
     QPixmap ornamentPixmap(":/images/set-golden-border-ornaments/gold_ornaments.png");
 
-    // Creación de los QLabel que contendrán los adornos en cada esquina
     cornerTopLeft = new QLabel(this);
     cornerTopRight = new QLabel(this);
     cornerBottomLeft = new QLabel(this);
     cornerBottomRight = new QLabel(this);
 
-    // Asignación de la imagen para la esquina superior izquierda
     cornerTopLeft->setPixmap(ornamentPixmap.scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-    // Esquina superior derecha: imagen transformada horizontalmente (invertir X)
     QTransform transformH;
     transformH.scale(-1, 1);
-    cornerTopRight->setPixmap(ornamentPixmap.transformed(transformH, Qt::SmoothTransformation)
-                                  .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    cornerTopRight->setPixmap(
+        ornamentPixmap.transformed(transformH, Qt::SmoothTransformation)
+            .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        );
 
-    // Esquina inferior izquierda: imagen transformada verticalmente (invertir Y)
     QTransform transformV;
     transformV.scale(1, -1);
-    cornerBottomLeft->setPixmap(ornamentPixmap.transformed(transformV, Qt::SmoothTransformation)
-                                    .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    cornerBottomLeft->setPixmap(
+        ornamentPixmap.transformed(transformV, Qt::SmoothTransformation)
+            .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        );
 
-    // Esquina inferior derecha: imagen transformada en ambas direcciones (invertir X e Y)
     QTransform transformHV;
     transformHV.scale(-1, -1);
-    cornerBottomRight->setPixmap(ornamentPixmap.transformed(transformHV, Qt::SmoothTransformation)
-                                     .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    cornerBottomRight->setPixmap(
+        ornamentPixmap.transformed(transformHV, Qt::SmoothTransformation)
+            .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        );
 
-    // Configurar propiedades comunes de los adornos: tamaño fijo, transparencia y estilo sin fondo
     QList<QLabel*> corners = {cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight};
     for (QLabel* corner : corners) {
         corner->setFixedSize(ornamentSize);
@@ -286,31 +336,50 @@ MenuWindow::MenuWindow(QWidget *parent) :
             spread: pad,
             x1: 0, y1: 0,
             x2: 0, y2: 1,
-            stop: 0 #3a3a3a, /* Gris medio */
-            stop: 1 #000000 /* Negro */
+            stop: 0 #3a3a3a,
+            stop: 1 #000000
         );
         border-radius: 8px;
-        border: 2px solid #000000; /* Borde negro sólido de 2px */
+        border: 2px solid #000000;
     }
-)");
+    )");
 
     repositionOrnaments();
-
-    // ------------- CARGAMOS SETTINGS   -------------
-
     getSettings();
 }
 
+// Función para extraer el token de autenticación desde el archivo .conf
+QString MenuWindow::loadAuthToken() {
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+
+    QFile configFile(configPath);
+    if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // Pon un qDebug() o algo para saber que falló
+        qDebug() << "No se pudo abrir el archivo de configuración en MenuWindow.";
+        return "";
+    }
+
+    QString token;
+    while (!configFile.atEnd()) {
+        QString line = configFile.readLine().trimmed();
+        if (line.startsWith("token=")) {
+            token = line.mid(QString("token=").length()).trimmed();
+            break;
+        }
+    }
+    configFile.close();
+    return token;
+}
+
+
+
 /**
  * @brief Reposiciona los adornos decorativos en las esquinas de la ventana.
- *
- * Calcula la posición de cada adorno teniendo en cuenta el tamaño de la ventana y el desplazamiento
- * requerido por la barra superior.
  */
 void MenuWindow::repositionOrnaments() {
     int w = this->width();
     int h = this->height();
-
     int topOffset = 0;
 
     cornerTopLeft->move(0, topOffset);
@@ -318,7 +387,6 @@ void MenuWindow::repositionOrnaments() {
     cornerBottomLeft->move(0, h - cornerBottomLeft->height());
     cornerBottomRight->move(w - cornerBottomRight->width(), h - cornerBottomRight->height());
 
-    // Asegurar que los adornos se muestren en un orden de pila adecuado (más abajo en la jerarquía visual)
     QList<QLabel*> corners = {cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight};
     for (QLabel* corner : corners) {
         corner->lower();
@@ -327,19 +395,15 @@ void MenuWindow::repositionOrnaments() {
 
 // Función para reposicionar los ImageButtons
 void MenuWindow::repositionImageButtons() {
-
     int w = this->width();
     int h = this->height();
+    int buttonSpacing = w / 10;
 
-    int buttonSpacing = w / 10; // Espaciado proporcional al tamaño de la ventana
-
-    // Redimensionar los botones
     QSize size = boton1v1->updatesize(h);
     size = boton2v2->updatesize(h);
     int buttonWidth = size.width();
     int buttonHeight = size.height();
 
-    // Calcular la posición central
     int totalWidth = (2 * buttonWidth) + buttonSpacing;
     int startX = (w - totalWidth) / 2;
     int startY = (h - buttonHeight) / 2;
@@ -348,52 +412,46 @@ void MenuWindow::repositionImageButtons() {
     boton2v2->move(startX + buttonWidth + buttonSpacing, startY);
 }
 
-// Función para reposicionar las barras
+// Función para reposicionar las barras (topBar y bottomBar)
 void MenuWindow::repositionBars() {
     int w = this->width();
-    int barWidthTop = w / 3;  // 1/3 del ancho de la ventana
-    int barWidthBottom = w * 0.3;  // 30% del ancho de la ventana
-    int barHeight = 80;    // Altura fija de la barra
-    int xPosT = (w - barWidthTop) / 2; // Centrado horizontalmente
-    int xPosB = (w - barWidthBottom) / 2; // Centrado horizontalmente
-    int yPos = this->height() - barHeight; // Pegado abajo con margen de 10px
+    int barWidthTop = w / 3;
+    int barWidthBottom = w * 0.3;
+    int barHeight = 80;
+    int xPosT = (w - barWidthTop) / 2;
+    int xPosB = (w - barWidthBottom) / 2;
+    int yPos = this->height() - barHeight;
 
     topBar->setGeometry(xPosT, 0, barWidthTop, barHeight);
     bottomBar->setGeometry(xPosB, yPos, barWidthBottom, barHeight);
-    QPoint topBarPos = topBar->pos(); // Obtener la posición relativa dentro de la ventana
+
+    QPoint topBarPos = topBar->pos();
     invisibleButton->setGeometry(topBarPos.x(), topBarPos.y(), topBar->width(), topBar->height());
 
-    // ✅ Position `usrLabel` in front of `topBar` but behind `invisibleButton`
     int usrLabelHeight = 30;
     int usrLabelWidth = qMin(200, barWidthTop - 20);
-
-    int xUsr = xPosT + (barWidthTop - usrLabelWidth) / 2;  // Center horizontally
-    int yUsr = topBarPos.y() + (barHeight - usrLabelHeight) / 2;  // Center vertically inside topBar
-
+    int xUsr = xPosT + (barWidthTop - usrLabelWidth) / 2;
+    int yUsr = topBarPos.y() + (barHeight - usrLabelHeight) / 2;
     usrLabel->setGeometry(xUsr, yUsr, usrLabelWidth, usrLabelHeight);
 
-    // 🔹 Set stacking order
-    topBar->lower();            // Send topBar to back
-    usrLabel->raise();          // Bring usrLabel in front of topBar
-    invisibleButton->raise();   // Bring invisibleButton in front of usrLabel
+    topBar->lower();
+    usrLabel->raise();
+    invisibleButton->raise();
 }
 
+// Función para reposicionar los iconos
 void MenuWindow::repositionIcons() {
-    // Obtener nuevas dimensiones de la ventana
     int windowWidth = this->width();
     int windowHeight = this->height();
-
-    // Definir el tamaño de las imágenes
     int imgWidth = settings->width();
     int imgHeight = settings->height();
-    int exitHeight = exit ->height();
+    int exitHeight = exit->height();
     int exitWidth = exit->width();
 
-    int separacion1 = windowWidth * 0.1;  // Espaciado entre iconos
+    int separacion1 = windowWidth * 0.1;
     int separacion2 = windowWidth * 0.033;
-    int margen = 40;       // Margen desde la parte inferior
+    int margen = 40;
 
-    // Posicionar en la parte inferior de la pantalla **centrando las imágenes**
     settings->move((windowWidth / 2) - (imgWidth / 2) - separacion1, windowHeight - (imgHeight / 2) - margen);
     friends->move((windowWidth / 2) + separacion1 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
     exit->move((windowWidth / 2) - separacion2 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
@@ -406,7 +464,6 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
         qWarning() << "Evitar redimensionamiento con tamaño inválido:" << this->width() << "x" << this->height();
         return;
     }
-
     repositionOrnaments();
     repositionBars();
     repositionImageButtons();
@@ -414,31 +471,34 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
 }
 
-
-void MenuWindow::setVolume(int volumePercentage)
-{
-    // En Qt6 se controla el volumen con QAudioOutput
-    // volume va de 0 a 100, pero QAudioOutput espera un valor [0.0, 1.0]
+void MenuWindow::setVolume(int volumePercentage) {
     if (audioOutput) {
         audioOutput->setVolume(volumePercentage / 100.0);
     }
 }
 
-
-// Destructor de la clase menu
 MenuWindow::~MenuWindow() {
-    delete ui;  // Liberar recursos de la interfaz
+    delete ui;
 }
 
-void MenuWindow::getSettings()
+// Sobrescribimos closeEvent para parar la música:
+void MenuWindow::closeEvent(QCloseEvent *event)
 {
+    // Detenemos la música antes de cerrar
+    if (backgroundPlayer) {
+        backgroundPlayer->stop();
+    }
+
+    // Luego dejamos que continúe el proceso normal de cierre
+    event->accept();
+}
+
+void MenuWindow::getSettings() {
     QSettings settings("guignote", "settings");
     bool fullscreen = settings.value("graphics/fullscreen", false).toBool();
     int volume = settings.value("sound/volume", 50).toInt();
-
     qDebug() << "Cargando configuración - Fullscreen:" << fullscreen << ", Volumen:" << volume;
 
-    // Actualizar el estado de pantalla según la configuración más reciente
     if (fullscreen) {
         if (!this->isFullScreen()) {
             this->showFullScreen();
@@ -448,14 +508,10 @@ void MenuWindow::getSettings()
             this->showNormal();
         }
     }
-
-    // Aplicar volumen solo si audioOutput está inicializado
     if (audioOutput) {
         audioOutput->setVolume(static_cast<double>(volume) / 100.0);
     } else {
         qWarning() << "Error: audioOutput no está inicializado.";
     }
-
-    // Forzar actualización de la UI para reflejar cambios inmediatamente
     this->update();
 }

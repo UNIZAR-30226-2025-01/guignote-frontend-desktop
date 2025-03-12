@@ -32,6 +32,7 @@ public slots:
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;  // Sobrescribimos closeEvent
 
 
 private:
@@ -67,6 +68,9 @@ private:
     void repositionBars();
     void repositionIcons();
     void getSettings();
+
+    // Métodos para la conexión con el backend
+    QString loadAuthToken();
 };
 
 #endif // MENUWINDOW_H

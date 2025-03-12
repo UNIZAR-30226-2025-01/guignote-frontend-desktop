@@ -176,4 +176,3 @@ QPixmap UserProfileWindow::createCircularImage(const QString &imagePath, int siz
 
     return circularPixmap;
 }
-
