@@ -264,7 +264,7 @@ void SettingsWindow::closeEvent(QCloseEvent *event)
 
 void SettingsWindow::saveSettings()
 {
-    QSettings settings("guignote", "settings");
+    QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
     settings.setValue("graphics/fullscreen", radioFullscreen->isChecked());
     settings.setValue("sound/volume", volumeSlider->value());
 }

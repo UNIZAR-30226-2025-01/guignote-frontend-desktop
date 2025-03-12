@@ -86,7 +86,7 @@ LoginWindow::LoginWindow(QWidget *parent)
         "QLineEdit {"
         "   background-color: #c2c2c3;"
         "   color: #171718;"
-        "   border-radius: 15px;"
+        "   border-radius: 10px;"
         "   font-size: 18px;"
         "   padding: 8px 10px;"
         "}";

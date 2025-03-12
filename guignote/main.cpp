@@ -1,5 +1,5 @@
+#include "loadingwindow.h"
 #include "mainwindow.h"
-#include "menuwindow.h"
 #include <QApplication>
 #include <QSettings>
 #include <QString>
@@ -66,10 +66,17 @@ int main(int argc, char *argv[])
     QString user = settings.value("auth/user", "").toString();
     QString pass = settings.value("auth/pass", "").toString();
 
+
     // Si no hay credenciales, mostramos la pantalla de inicio de sesión
     if (user.isEmpty() || pass.isEmpty()) {
         MainWindow w;
-        w.show();
+        // Leer la configuración de modo de visualización
+        bool fullscreen = settings.value("graphics/fullscreen", false).toBool();
+        if (fullscreen)
+            w.showFullScreen();
+        else
+            w.show();
+
         return a.exec();
     }
 
@@ -79,8 +86,8 @@ int main(int argc, char *argv[])
     if (ok) {
         // Guardamos el token para usarlo en las peticiones si lo necesitas
         settings.setValue("auth/token", token);
-        MenuWindow w;
-        w.show();
+        LoadingWindow l;    // Mostramos la pantalla de carga
+        l.show();
         return a.exec();
     } else {
         MainWindow w;

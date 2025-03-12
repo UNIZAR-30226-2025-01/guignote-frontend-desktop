@@ -128,7 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
         "QPushButton {"
         "  background-color: #c2c2c3;"
         "  color: #171718;"
-        "  border-radius: 15px;"
+        "  border-radius: 10px;"
         "  font-size: 20px;"
         "  font-weight: bold;"
         "  padding: 12px 25px;"
