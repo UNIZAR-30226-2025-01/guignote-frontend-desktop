@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 #include <QTimer>
 #include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
 #include <QShowEvent>
 #include <QMainWindow>
 #include <QDebug>
@@ -46,10 +47,14 @@ LoadingWindow::LoadingWindow(QWidget *parent)
     gifLabel->setMovie(loadingMovie);
     loadingMovie->start();
 
-    // Configurar el timer para la duración de la pantalla de carga (5 segundos).
+    // Configurar el timer para la duración de la pantalla de carga (3.5 segundos antes de iniciar el fade out).
     displayTimer->setSingleShot(true);
     connect(displayTimer, &QTimer::timeout, this, &LoadingWindow::startFadeOut);
 
+    // Configurar el efecto de opacidad.
+    QGraphicsOpacityEffect *opacityEffect = new QGraphicsOpacityEffect(this);
+    this->setGraphicsEffect(opacityEffect);
+    opacityEffect->setOpacity(1.0);
 }
 
 LoadingWindow::~LoadingWindow()
@@ -79,14 +84,11 @@ void LoadingWindow::showEvent(QShowEvent *event)
     if (loadingMovie) {
         loadingMovie->start();
     }
-    // Inicia el timer solo si no se ha iniciado ya el fade out
+    // Inicia el timer solo si no se ha iniciado ya el fade out.
     if (!fadeOutStarted) {
         displayTimer->start(3500);
     }
 }
-
-
-
 
 /**
  * @brief Inicia la animación de desvanecimiento de la pantalla de carga.
@@ -95,15 +97,20 @@ void LoadingWindow::startFadeOut() {
     if (fadeOutStarted)
         return;
     fadeOutStarted = true;
-    this->setWindowOpacity(1.0);  // Asegurarse de que empieza en opacidad completa.
-    fadeAnimation = new QPropertyAnimation(this, "windowOpacity");
+
+    // Obtener el efecto de opacidad aplicado.
+    QGraphicsOpacityEffect *opacityEffect = qobject_cast<QGraphicsOpacityEffect*>(this->graphicsEffect());
+    if (!opacityEffect)
+        return;
+
+    // Configurar la animación sobre la propiedad "opacity" del efecto.
+    fadeAnimation = new QPropertyAnimation(opacityEffect, "opacity");
     fadeAnimation->setDuration(1000); // Duración de 1 segundo.
     fadeAnimation->setStartValue(1.0);
     fadeAnimation->setEndValue(0.0);
     connect(fadeAnimation, &QPropertyAnimation::finished, this, &LoadingWindow::onFadeOutFinished);
     fadeAnimation->start();
 }
-
 
 /**
  * @brief Slot que se ejecuta al finalizar la animación de desvanecimiento.
@@ -130,17 +137,18 @@ void LoadingWindow::onFadeOutFinished() {
         fadeAnimation->deleteLater();
         fadeAnimation = nullptr;
     }
-    // En lugar de cerrar la ventana padre, se cierra solamente la pantalla de carga.
+    // Cierra la pantalla de carga.
     this->close();
 }
 
-
-
+/**
+ * @brief Evento que se ejecuta al cambiar el tamaño de la ventana.
+ *
+ * Ajusta el tamaño del label del gif al de la ventana.
+ *
+ * @param event Evento de tipo QResizeEvent.
+ */
 void LoadingWindow::resizeEvent(QResizeEvent *event) {
     QDialog::resizeEvent(event);  // Llama a la implementación base.
     gifLabel->setFixedSize(this->size());  // Ajusta el label al tamaño de la ventana.
 }
-
-
-
-

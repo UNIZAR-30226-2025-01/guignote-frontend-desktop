@@ -27,6 +27,8 @@
 #include <QStandardPaths>
 #include <QSettings>
 #include <QDebug>
+#include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
 
 // Función auxiliar para crear un diálogo modal de sesión expirada.
 static QDialog* createExpiredDialog(QWidget *parent) {
@@ -134,45 +136,45 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // ------------- NOMBRE DE USUARIO Y RANGO EN TOPBAR -------------
     usrLabel = new QLabel(this);
     QTimer::singleShot(1000, this, [this]() {
-    // Se carga el token desde el archivo de configuración
-    QString token = loadAuthToken();
-    if (token.isEmpty()) {
-        usrLabel->setText("ERROR");
-    } else {
-        QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
-        QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/estadisticas/"));
-        request.setRawHeader("Auth", token.toUtf8());
+        // Se carga el token desde el archivo de configuración
+        QString token = loadAuthToken();
+        if (token.isEmpty()) {
+            usrLabel->setText("ERROR");
+        } else {
+            QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
+            QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/estadisticas/"));
+            request.setRawHeader("Auth", token.toUtf8());
 
-        QNetworkReply *reply = networkManager->get(request);
-        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            if (statusCode == 401) {
-                createExpiredDialog(this)->show();
+            QNetworkReply *reply = networkManager->get(request);
+            connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+                int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                if (statusCode == 401) {
+                    createExpiredDialog(this)->show();
+                    reply->deleteLater();
+                    return;
+                }
+                if (reply->error() == QNetworkReply::NoError) {
+                    QByteArray responseData = reply->readAll();
+                    QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
+                    QJsonObject jsonObj = jsonDoc.object();
+
+                    // Se extrae el nombre del usuario y otros datos
+                    QString nombre = jsonObj.value("nombre").toString();
+                    int ELO = 0;            // Actualiza si dispones de este dato
+                    QString rank = "Rango"; // Actualiza si se recibe el rango
+
+                    QString UsrELORank = QString(
+                                             "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2) </span>"
+                                             "<span style='font-size: 20px; font-weight: normal; color: white;'>%3</span>"
+                                             ).arg(nombre).arg(ELO).arg(rank);
+
+                    usrLabel->setText(UsrELORank);
+                } else {
+                    usrLabel->setText("Error al cargar usuario");
+                }
                 reply->deleteLater();
-                return;
-            }
-            if (reply->error() == QNetworkReply::NoError) {
-                QByteArray responseData = reply->readAll();
-                QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
-                QJsonObject jsonObj = jsonDoc.object();
-
-                // Se extrae el nombre del usuario y otros datos
-                QString nombre = jsonObj.value("nombre").toString();
-                int ELO = 0;            // Actualiza si dispones de este dato
-                QString rank = "Rango"; // Actualiza si se recibe el rango
-
-                QString UsrELORank = QString(
-                                         "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2) </span>"
-                                         "<span style='font-size: 20px; font-weight: normal; color: white;'>%3</span>"
-                                         ).arg(nombre).arg(ELO).arg(rank);
-
-                usrLabel->setText(UsrELORank);
-            } else {
-                usrLabel->setText("Error al cargar usuario");
-            }
-            reply->deleteLater();
-        });
-    }
+            });
+        }
     });
     usrLabel->setAlignment(Qt::AlignCenter);
     usrLabel->setTextFormat(Qt::RichText);
@@ -372,8 +374,6 @@ QString MenuWindow::loadAuthToken() {
     return token;
 }
 
-
-
 /**
  * @brief Reposiciona los adornos decorativos en las esquinas de la ventana.
  */
@@ -514,4 +514,21 @@ void MenuWindow::getSettings() {
         qWarning() << "Error: audioOutput no está inicializado.";
     }
     this->update();
+}
+
+/**
+ * @brief Evento que se ejecuta al mostrar la ventana.
+ *
+ * Aplica una animación de fade in para que la aparición del menú sea suave.
+ */
+void MenuWindow::showEvent(QShowEvent *event) {
+    QWidget::showEvent(event);
+    QGraphicsOpacityEffect *fadeEffect = new QGraphicsOpacityEffect(this);
+    this->setGraphicsEffect(fadeEffect);
+    fadeEffect->setOpacity(0.0);
+    QPropertyAnimation *fadeInAnimation = new QPropertyAnimation(fadeEffect, "opacity", this);
+    fadeInAnimation->setDuration(1500); // Duración mayor para suavizar la transición
+    fadeInAnimation->setStartValue(0.0);
+    fadeInAnimation->setEndValue(1.0);
+    fadeInAnimation->start(QAbstractAnimation::DeleteWhenStopped);
 }

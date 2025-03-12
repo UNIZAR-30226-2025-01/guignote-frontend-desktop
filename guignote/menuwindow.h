@@ -33,6 +33,7 @@ public slots:
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void closeEvent(QCloseEvent *event) override;  // Sobrescribimos closeEvent
+    void showEvent(QShowEvent *event) override;
 
 
 private:
