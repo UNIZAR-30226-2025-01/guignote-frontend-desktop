@@ -95,6 +95,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
     usrLabel(nullptr)
 {
     ui->setupUi(this);
+    // Activa el relleno de fondo desde la hoja de estilo
+    this->setAttribute(Qt::WA_StyledBackground, true);
 
     // ------------- MÚSICA -------------
     backgroundPlayer = new QMediaPlayer(this);
