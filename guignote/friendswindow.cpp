@@ -111,14 +111,16 @@ void friendswindow::setupUI() {
     // QTabWidget con las pestañas: Amigos, Solicitudes y Buscar.
     tabWidget = new QTabWidget(this);
     tabWidget->setStyleSheet(
-        "QTabBar::tab { background-color: #222; color: white; padding: 12px; font-size: 16px;"
-        "border-top-left-radius: 10px; border-top-right-radius: 10px; }"
+        "QTabBar::tab { background-color: #222; color: white; padding: 12px; font-size: 16px; "
+        "border-top-left-radius: 10px; border-top-right-radius: 10px; margin-right: 10px; }"  // Se añadió margin-right
         "QTabBar::tab:selected { background-color: #4CAF50; }"
         "QTabWidget::pane { border: 1px solid #555; border-radius: 10px; }"
         );
     tabWidget->addTab(createFriendsTab(), "Amigos");
     tabWidget->addTab(createRequestsTab(), "Solicitudes");
     tabWidget->addTab(createSearchTab(), "Buscar");
+
+
 
     mainLayout->addWidget(tabWidget);
     setLayout(mainLayout);
@@ -179,8 +181,14 @@ QWidget* friendswindow::createSearchTab() {
     layout->addWidget(searchResultsListWidget);
     layout->setContentsMargins(20, 0, 20, 12);
     page->setLayout(layout);
+
+    // Llamamos a searchUsers para cargar todos los usuarios al abrir la pestaña.
+    searchUsers();
+
     return page;
 }
+
+
 
 // Función para extraer el token de autenticación desde el archivo .conf
 QString friendswindow::loadAuthToken() {
@@ -370,16 +378,16 @@ void friendswindow::fetchRequests() {
     });
 }
 
-// Busca usuarios según el texto ingresado en el campo de búsqueda.
 void friendswindow::searchUsers() {
     QString searchText = searchLineEdit->text().trimmed();
     qDebug() << "searchUsers triggered with text:" << searchText;
     currentSearchQuery = searchText;
 
-    if (searchText.isEmpty()) {
-        searchResultsListWidget->clear();
-        return;
-    }
+    // Se elimina el siguiente bloque para que, aun cuando searchText esté vacío, se realice la búsqueda:
+    // if (searchText.isEmpty()) {
+    //     searchResultsListWidget->clear();
+    //     return;
+    // }
 
     searchResultsListWidget->clear();
 
@@ -431,15 +439,27 @@ void friendswindow::searchUsers() {
     });
 }
 
-// Crea un widget para mostrar un resultado de búsqueda de usuario.
+
 QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
-    QHBoxLayout *layout = new QHBoxLayout(widget);
-    layout->setContentsMargins(10, 2, 10, 2);
-    layout->setSpacing(7);
+    widget->setStyleSheet("background-color: #2a2a2a; border: 1px solid #444; border-radius: 10px;");
 
+    QHBoxLayout *layout = new QHBoxLayout(widget);
+    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setSpacing(15);
+
+    // Avatar placeholder
+    QLabel *avatarLabel = new QLabel(widget);
+    avatarLabel->setFixedSize(50, 50);
+    avatarLabel->setStyleSheet("background-color: #555; border-radius: 25px;");
+    layout->addWidget(avatarLabel);
+
+    // Información del usuario
     QVBoxLayout *infoLayout = new QVBoxLayout();
+    // Ajustamos el margen interno del layout para dar más espacio
+    infoLayout->setContentsMargins(5, 5, 5, 5);
+
     QString nombre;
     if (usuario.contains("nombre"))
         nombre = usuario["nombre"].toString();
@@ -450,7 +470,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     else
         nombre = "Nombre no disponible";
     QLabel *nameLabel = new QLabel(nombre, widget);
-    nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
+    nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold; padding-top: 5px; padding-bottom: 5px;");
     infoLayout->addWidget(nameLabel);
 
     int wins = usuario.contains("victorias") ? usuario["victorias"].toInt() : 0;
@@ -461,12 +481,13 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
             .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
         widget
         );
-    statsLabel->setStyleSheet("color: white; font-size: 18px;");
+    statsLabel->setStyleSheet("color: white; font-size: 18px; padding-top: 5px; padding-bottom: 5px;");
     infoLayout->addWidget(statsLabel);
 
     layout->addLayout(infoLayout);
     layout->addStretch();
 
+    // Botón para agregar amigo
     QPushButton *addButton = new QPushButton("Agregar amigo", widget);
     addButton->setStyleSheet("background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
     QString userId;
@@ -481,9 +502,10 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     connect(addButton, &QPushButton::clicked, this, &friendswindow::sendFriendRequest);
     layout->addWidget(addButton);
 
-    widget->setLayout(layout);
     return widget;
 }
+
+
 
 // Crea un widget para mostrar cada solicitud de amistad.
 QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
@@ -527,7 +549,6 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     return widget;
 }
 
-// Envía una solicitud de amistad a un usuario.
 void friendswindow::sendFriendRequest() {
     QPushButton *button = qobject_cast<QPushButton*>(sender());
     if (!button) {
@@ -558,7 +579,9 @@ void friendswindow::sendFriendRequest() {
     connect(reply, &QNetworkReply::finished, [this, reply, button, userId]() {
         if (reply->error() == QNetworkReply::NoError) {
             qDebug() << "Solicitud enviada correctamente para userId:" << userId;
-            button->setText("Solicitud enviada!");
+            // Actualizamos el botón para indicar que la solicitud fue enviada
+            button->setText("Solicitud Enviada");
+            button->setStyleSheet("background-color: #79c4ff; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
             button->setEnabled(false);
             createDialog(this, "Se ha enviado la solicitud de amistad.")->show();
         } else {
@@ -568,6 +591,7 @@ void friendswindow::sendFriendRequest() {
         reply->deleteLater();
     });
 }
+
 
 // Acepta una solicitud de amistad.
 void friendswindow::acceptRequest() {
