@@ -144,7 +144,6 @@ void FriendsMessageWindow::loadMessages()
 
         if (reply->error() == QNetworkReply::NoError) {
             QJsonDocument doc = QJsonDocument::fromJson(responseData);
-            qDebug() << "JSON recibido del servidor:" << doc.toJson(QJsonDocument::Indented); // 🔹 Debug JSON completo
 
             if (!doc.isObject()) {
                 qDebug() << "Error: Respuesta del servidor no es un JSON válido.";
@@ -161,40 +160,45 @@ void FriendsMessageWindow::loadMessages()
             messagesListWidget->clear();
 
             for (int i = messagesArray.size() - 1; i >= 0; --i) {
-                if (!messagesArray[i].isObject()) {
-                    qDebug() << "Error: messagesArray[" << i << "] no es un objeto JSON válido.";
-                    continue;
-                }
+                if (!messagesArray[i].isObject()) continue;
 
                 QJsonObject messageObject = messagesArray[i].toObject();
-
-                if (!messageObject.contains("emisor")) {
-                    qDebug() << "Error: La clave 'emisor' no existe en el mensaje.";
-                    qDebug() << "Contenido del objeto JSON:" << messageObject;
-                    continue;
-                }
-
-                // 🔹 Convertir correctamente "emisor" a QString
                 QString senderId = QString::number(messageObject["emisor"].toInt());
                 QString content = messageObject["contenido"].toString();
 
                 QLabel *messageLabel = new QLabel(content);
                 messageLabel->setWordWrap(true);
                 messageLabel->setContentsMargins(10, 5, 10, 5);
+                messageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+                QWidget *messageContainer = new QWidget();
+                messageContainer->setStyleSheet("border: none; background: transparent;");
+                QHBoxLayout *layout = new QHBoxLayout(messageContainer);
+                layout->addWidget(messageLabel);
+                layout->setContentsMargins(5, 5, 5, 5);
 
                 if (senderId != friendID) {
-                    messageLabel->setStyleSheet("background-color: #2196F3; color: white; padding: 8px; border-radius: 8px;");
-                    messageLabel->setAlignment(Qt::AlignRight);
+                    messageLabel->setStyleSheet(
+                        "background-color: #2196F3; color: white; padding: 8px;"
+                        "max-width: 400px; min-width: 50px; font-size: 16px;"
+                        "border: none;"
+                        );
+                    layout->setAlignment(Qt::AlignRight);
                 } else {
-                    messageLabel->setStyleSheet("background-color: white; color: black; padding: 8px; border-radius: 8px;");
-                    messageLabel->setAlignment(Qt::AlignLeft);
+                    messageLabel->setStyleSheet(
+                        "background-color: white; color: black; padding: 8px;"
+                        "max-width: 400px; min-width: 50px; font-size: 16px;"
+                        "border: none;"
+                        );
+                    layout->setAlignment(Qt::AlignLeft);
                 }
 
                 QListWidgetItem *item = new QListWidgetItem();
-                item->setSizeHint(messageLabel->sizeHint());
+                item->setSizeHint(messageContainer->sizeHint());
                 messagesListWidget->addItem(item);
-                messagesListWidget->setItemWidget(item, messageLabel);
+                messagesListWidget->setItemWidget(item, messageContainer);
             }
+            messagesListWidget->scrollToBottom();
         } else {
             qDebug() << "Error al cargar mensajes:" << reply->errorString();
         }
