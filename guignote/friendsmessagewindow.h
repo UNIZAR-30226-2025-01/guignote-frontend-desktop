@@ -6,6 +6,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QLineEdit>
+#include <QNetworkAccessManager>
+#include <QListWidget>
 
 class FriendsMessageWindow : public QWidget
 {
@@ -21,12 +23,16 @@ private:
     QLineEdit *messageInput;
     QString friendID;
     QString usr;
+    QNetworkAccessManager *networkManager;
+    QListWidget *messagesListWidget;
+    QTimer *messageTimer;
 
     void setupUI();
     QString loadAuthToken();
 
     void sendMessage();
     void loadMessages();
+
 };
 
 #endif // FRIENDSMESSAGEWINDOW_H
