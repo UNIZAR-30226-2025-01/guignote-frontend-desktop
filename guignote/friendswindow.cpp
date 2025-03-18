@@ -1,4 +1,5 @@
 #include "friendswindow.h"
+#include "friendsmessagewindow.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QTabWidget>
@@ -299,7 +300,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     Icon *messageIcon = new Icon(widget);
     messageIcon->setImage(":/icons/message.png", 100, 100);
     connect(messageIcon, &Icon::clicked, [=](){
-        qDebug() << "boton mensaje";
+        FriendsMessageWindow *msgWin = new FriendsMessageWindow(this, friendId, nombre);
+        msgWin->show();
     });
     layout->addWidget(messageIcon);
     layout->addSpacing(10);
