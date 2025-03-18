@@ -295,13 +295,24 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
         friendId = QString::number(amigo["ID"].toInt());
     qDebug() << "El ID del amigo es:" << friendId;
 
+    // Botón para abrir el chat
+    Icon *messageIcon = new Icon(widget);
+    messageIcon->setImage(":/icons/message.png", 100, 100);
+    connect(messageIcon, &Icon::clicked, [=](){
+        qDebug() << "boton mensaje";
+    });
+    layout->addWidget(messageIcon);
+    layout->addSpacing(10);
+
+
     Icon *removeIcon = new Icon(widget);
-    removeIcon->setImage(":/icons/remove.png", 110, 110);
-    removeIcon->setToolTip("Eliminar amigo");
+    removeIcon->setImage(":/icons/remove.png", 100, 100);
+    //removeIcon->setToolTip("Eliminar amigo");
     connect(removeIcon, &Icon::clicked, [this, friendId]() {
         removeFriend(friendId);
     });
     layout->addWidget(removeIcon);
+
 
     widget->setLayout(layout);
     return widget;

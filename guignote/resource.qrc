@@ -32,5 +32,6 @@
         <file>icons/darkenedchest.png</file>
         <file>icons/remove.png</file>
         <file>video/carga.gif</file>
+        <file>icons/message.png</file>
     </qresource>
 </RCC>
