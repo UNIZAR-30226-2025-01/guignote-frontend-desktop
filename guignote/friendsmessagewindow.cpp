@@ -12,9 +12,6 @@
 #include <QDebug>
 #include <QTimer>
 
-
-
-
 FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString Usuario)
     : QWidget(parent)
 {
@@ -168,33 +165,43 @@ void FriendsMessageWindow::loadMessages()
 
                 QLabel *messageLabel = new QLabel(content);
                 messageLabel->setWordWrap(true);
-                messageLabel->setContentsMargins(10, 5, 10, 5);
-                messageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+                messageLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+                messageLabel->setAlignment(Qt::AlignLeft);
 
+                // Crear un contenedor para el mensaje
                 QWidget *messageContainer = new QWidget();
                 messageContainer->setStyleSheet("border: none; background: transparent;");
-                QHBoxLayout *layout = new QHBoxLayout(messageContainer);
-                layout->addWidget(messageLabel);
-                layout->setContentsMargins(5, 5, 5, 5);
 
+                // Agregar un layout al contenedor del mensaje
+                QVBoxLayout *containerLayout = new QVBoxLayout(messageContainer);
+                containerLayout->setContentsMargins(5, 5, 5, 5);
+                containerLayout->setSpacing(10); // 🔹 Espaciado interno para evitar compresión
+                containerLayout->addWidget(messageLabel);
+
+                messageLabel->adjustSize();
+
+                // Crear y agregar el item a la lista
+                QListWidgetItem *item = new QListWidgetItem();
+                int messageHeight = messageLabel->height() + 15;
+                item->setSizeHint(QSize(400, messageHeight));
+                messagesListWidget->addItem(item);
+                messagesListWidget->setItemWidget(item, messageContainer);
+
+                // Ajustar el estilo según el emisor del mensaje
                 if (senderId != friendID) {
                     messageLabel->setStyleSheet(
-                        "background-color: #2196F3; color: white; padding: 8px;"
-                        "max-width: 400px; min-width: 50px; font-size: 16px;"
-                        "border: none;"
+                        "background-color: #2196F3; color: white; padding: 8px; font-size: 16px;"
+                        "border-radius: 10px; min-width: 100px; min-height: 30px; max-width: 400px;"
                         );
-                    layout->setAlignment(Qt::AlignRight);
+                    containerLayout->setAlignment(Qt::AlignRight);
                 } else {
                     messageLabel->setStyleSheet(
-                        "background-color: white; color: black; padding: 8px;"
-                        "max-width: 400px; min-width: 50px; font-size: 16px;"
-                        "border: none;"
+                        "background-color: white; color: black; padding: 8px; font-size: 16px;"
+                        "border-radius: 10px; min-width: 100px; min-height: 30px; max-width: 400px;"
                         );
-                    layout->setAlignment(Qt::AlignLeft);
+                    containerLayout->setAlignment(Qt::AlignLeft);
                 }
 
-                QListWidgetItem *item = new QListWidgetItem();
-                item->setSizeHint(messageContainer->sizeHint());
                 messagesListWidget->addItem(item);
                 messagesListWidget->setItemWidget(item, messageContainer);
             }
