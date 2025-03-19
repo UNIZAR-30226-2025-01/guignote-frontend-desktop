@@ -29,6 +29,7 @@ private:
 
     void setupUI();
     QString loadAuthToken();
+    void adjustMessageSize(QListWidgetItem *item, QLabel *messageLabel);
 
     void sendMessage();
     void loadMessages();

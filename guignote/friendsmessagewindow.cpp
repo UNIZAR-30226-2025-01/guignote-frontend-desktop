@@ -165,7 +165,7 @@ void FriendsMessageWindow::loadMessages()
 
                 QLabel *messageLabel = new QLabel(content);
                 messageLabel->setWordWrap(true);
-                messageLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+                messageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
                 messageLabel->setAlignment(Qt::AlignLeft);
 
                 // Crear un contenedor para el mensaje
@@ -175,19 +175,20 @@ void FriendsMessageWindow::loadMessages()
                 // Agregar un layout al contenedor del mensaje
                 QVBoxLayout *containerLayout = new QVBoxLayout(messageContainer);
                 containerLayout->setContentsMargins(5, 5, 5, 5);
-                containerLayout->setSpacing(10); // 🔹 Espaciado interno para evitar compresión
+                containerLayout->setSpacing(5);
                 containerLayout->addWidget(messageLabel);
-
-                messageLabel->adjustSize();
 
                 // Crear y agregar el item a la lista
                 QListWidgetItem *item = new QListWidgetItem();
-                int messageHeight = messageLabel->height() + 15;
-                item->setSizeHint(QSize(400, messageHeight));
                 messagesListWidget->addItem(item);
                 messagesListWidget->setItemWidget(item, messageContainer);
 
-                // Ajustar el estilo según el emisor del mensaje
+                // Ajustar la altura dinámicamente después del renderizado
+                QTimer::singleShot(0, this, [=]() {
+                    adjustMessageSize(item, messageLabel);
+                });
+
+                // Ajustar color y estilo de la burbuja según el emisor
                 if (senderId != friendID) {
                     messageLabel->setStyleSheet(
                         "background-color: #2196F3; color: white; padding: 8px; font-size: 16px;"
@@ -204,8 +205,8 @@ void FriendsMessageWindow::loadMessages()
 
                 messagesListWidget->addItem(item);
                 messagesListWidget->setItemWidget(item, messageContainer);
+                messagesListWidget->scrollToBottom();
             }
-            messagesListWidget->scrollToBottom();
         } else {
             qDebug() << "Error al cargar mensajes:" << reply->errorString();
         }
@@ -214,6 +215,13 @@ void FriendsMessageWindow::loadMessages()
     });
 }
 
+void FriendsMessageWindow::adjustMessageSize(QListWidgetItem *item, QLabel *messageLabel) {
+    messageLabel->adjustSize();
+    int labelHeight = (messageLabel->height())*0.35;
+    if (labelHeight < 40) labelHeight = 40; // Asegurar un tamaño mínimo
+
+    item->setSizeHint(QSize(400, labelHeight + 10)); // Ajustar tamaño correctamente
+}
 
 
 // Función para extraer el token de autenticación desde el archivo .conf
