@@ -25,12 +25,9 @@ FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString 
     networkManager = new QNetworkAccessManager(this);
 
     setupUI();
+    connectWebSocket();
     loadMessages();
 
-    messageTimer = new QTimer(this);
-    connect(messageTimer, &QTimer::timeout, this, &FriendsMessageWindow::loadMessages);
-
-    messageTimer->start(1000);
 }
 
 void FriendsMessageWindow::setupUI()
@@ -113,11 +110,97 @@ void FriendsMessageWindow::sendMessage()
     QByteArray jsonData = doc.toJson();
 
     QNetworkReply *reply = networkManager->post(request, jsonData);
-    connect(reply, &QNetworkReply::finished, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, this, [=]() {
+        // Obtener el código de estado HTTP
+        QVariant statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+
+        if (!statusCode.isValid()) {
+            qDebug() << "Error: No se pudo obtener el código de estado HTTP.";
+            reply->deleteLater();
+            return;
+        }
+
+        int httpStatus = statusCode.toInt();
         QByteArray responseData = reply->readAll();
-        qDebug() << "Respuesta del servidor:" << responseData;
+        QJsonDocument jsonResponse = QJsonDocument::fromJson(responseData);
+        QJsonObject jsonObject = jsonResponse.object();
+
+        // Manejo de respuestas según el código de estado HTTP
+        switch (httpStatus) {
+        case 201:
+            loadMessages();
+            break;
+        case 400:
+            qDebug() << "❌ Error 400: Faltan campos o datos inválidos.";
+            break;
+        case 401:
+            qDebug() << "❌ Error 401: Token inválido o expirado.";
+            break;
+        case 403:
+            qDebug() << "❌ Error 403: Solo puedes chatear con amigos.";
+            break;
+        case 404:
+            qDebug() << "❌ Error 404: Usuario receptor no encontrado.";
+            break;
+        case 405:
+            qDebug() << "❌ Error 405: Método no permitido.";
+            break;
+        default:
+            qDebug() << "⚠️ Error inesperado, código:" << httpStatus;
+            qDebug() << "Respuesta del servidor:" << responseData;
+            break;
+        }
+
+        reply->deleteLater();
+    });
+}
+
+void FriendsMessageWindow::connectWebSocket() {
+    QString token = loadAuthToken();
+    if (token.isEmpty()) {
+        qDebug() << "No se pudo obtener el token de autenticación.";
+        return;
+    }
+
+    // Construir la URL con el token
+    QString wsUrl = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
+                        .arg(friendID)
+                        .arg(token);
+
+    // Crear WebSocket
+    socket = new QWebSocket();
+
+    // Conectar señales del WebSocket
+    connect(socket, &QWebSocket::connected, this, []() {
+        qDebug() << "🔗 Conectado al WebSocket del chat.";
     });
 
+    connect(socket, &QWebSocket::disconnected, this, []() {
+        qDebug() << "❌ WebSocket desconectado.";
+    });
+
+    connect(socket, &QWebSocket::textMessageReceived, this, [this](const QString &message) {
+        qDebug() << "📩 Mensaje recibido:" << message;
+
+        // Convertir el mensaje a JSON
+        QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+        if (!doc.isObject()) {
+            qDebug() << "⚠️ Error: Respuesta del servidor no es un JSON válido.";
+            return;
+        }
+
+        QJsonObject jsonObj = doc.object();
+        if (jsonObj.contains("error")) {
+            qDebug() << "⚠️ Error del WebSocket:" << jsonObj["error"].toString();
+            return;
+        }
+
+        // Si recibimos un mensaje válido, recargamos la lista de mensajes
+        loadMessages();
+    });
+
+    // Conectar WebSocket al servidor
+    socket->open(QUrl(wsUrl));
 }
 
 
@@ -137,7 +220,6 @@ void FriendsMessageWindow::loadMessages()
 
     connect(reply, &QNetworkReply::finished, [this, reply]() {
         QByteArray responseData = reply->readAll();
-        qDebug() << "Respuesta del servidor (mensajes):" << responseData;
 
         if (reply->error() == QNetworkReply::NoError) {
             QJsonDocument doc = QJsonDocument::fromJson(responseData);
@@ -246,4 +328,11 @@ QString FriendsMessageWindow::loadAuthToken() {
         qDebug() << "No se encontró el token en el archivo de configuración.";
     }
     return token;
+}
+
+FriendsMessageWindow::~FriendsMessageWindow() {
+    if (socket) {
+        socket->close();
+        socket->deleteLater();
+    }
 }

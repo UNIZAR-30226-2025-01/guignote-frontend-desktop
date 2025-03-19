@@ -8,6 +8,10 @@
 #include <QLineEdit>
 #include <QNetworkAccessManager>
 #include <QListWidget>
+#include <QWebSocket>
+#include <QJsonDocument>
+#include <QJsonObject>
+
 
 class FriendsMessageWindow : public QWidget
 {
@@ -15,8 +19,12 @@ class FriendsMessageWindow : public QWidget
 
 public:
     explicit FriendsMessageWindow(QWidget *parent = nullptr, QString ID = "", QString Usuario = "");
+    ~FriendsMessageWindow()
 
 private:
+    QWebSocket *socket; // 🔹 WebSocket para recibir mensajes
+    void connectWebSocket(); // 🔹 Función para conectar el WebSocket
+
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
     QPushButton *closeButton;
@@ -25,7 +33,6 @@ private:
     QString usr;
     QNetworkAccessManager *networkManager;
     QListWidget *messagesListWidget;
-    QTimer *messageTimer;
 
     void setupUI();
     QString loadAuthToken();
