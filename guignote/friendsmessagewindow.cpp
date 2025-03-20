@@ -11,6 +11,7 @@
 #include <QNetworkRequest>
 #include <QDebug>
 #include <QTimer>
+#include <QWebSocket>
 
 FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString Usuario)
     : QWidget(parent)
@@ -26,7 +27,47 @@ FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString 
 
     setupUI();
     loadMessages();
+    setupWebSocketConnection();
+}
 
+void FriendsMessageWindow::setupWebSocketConnection()
+{
+    // Crear el QWebSocket
+    webSocket = new QWebSocket();
+
+    // Construir la URL con los parámetros necesarios
+    QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
+                            .arg(friendID)
+                            .arg(loadAuthToken());
+    QUrl url(urlString);
+
+    // Abrir la conexión WebSocket
+    webSocket->open(url);
+
+    // Conectar señales a sus respectivos slots
+    connect(webSocket, &QWebSocket::connected, this, &FriendsMessageWindow::onConnected);
+    connect(webSocket, &QWebSocket::disconnected, this, &FriendsMessageWindow::onDisconnected);
+    connect(webSocket, &QWebSocket::textMessageReceived,
+            this, &FriendsMessageWindow::onTextMessageReceived);
+}
+
+
+void FriendsMessageWindow::onConnected()
+{
+    qDebug() << "Conexión WebSocket establecida.";
+    // Aquí puedes enviar un mensaje de saludo o realizar otras acciones necesarias
+}
+
+void FriendsMessageWindow::onDisconnected()
+{
+    qDebug() << "Conexión WebSocket cerrada.";
+    // Maneja la desconexión según sea necesario
+}
+
+void FriendsMessageWindow::onTextMessageReceived(const QString &message)
+{
+    qDebug() << "Mensaje recibido:" << message;
+    loadMessages(); // Actualiza la lista de mensajes
 }
 
 void FriendsMessageWindow::setupUI()
@@ -98,61 +139,31 @@ void FriendsMessageWindow::sendMessage()
         return;
     }
 
-    QNetworkRequest request(QUrl("http://188.165.76.134:8000/mensajes/enviar/"));
-    request.setRawHeader("Auth", token.toUtf8());
+    // Crear la URL del WebSocket con el receptor ID y el token
+    QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
+                            .arg(friendID)
+                            .arg(token);
+    QUrl url(urlString);
 
+    // Si no hay conexión activa, establecer la conexión WebSocket
+    if (!webSocket->isValid()) {
+        webSocket->open(url);
+    }
+
+    // Crear el mensaje en formato JSON
     QJsonObject json;
-    json["receptor_id"] = friendID;
     json["contenido"] = message;
 
+    // Convertir el mensaje a QByteArray
     QJsonDocument doc(json);
     QByteArray jsonData = doc.toJson();
 
-    QNetworkReply *reply = networkManager->post(request, jsonData);
-    connect(reply, &QNetworkReply::finished, this, [=]() {
-        // Obtener el código de estado HTTP
-        QVariant statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+    // Enviar el mensaje por el WebSocket
+    webSocket->sendTextMessage(QString::fromUtf8(jsonData));
 
-        if (!statusCode.isValid()) {
-            qDebug() << "Error: No se pudo obtener el código de estado HTTP.";
-            reply->deleteLater();
-            return;
-        }
-
-        int httpStatus = statusCode.toInt();
-        QByteArray responseData = reply->readAll();
-        QJsonDocument jsonResponse = QJsonDocument::fromJson(responseData);
-        QJsonObject jsonObject = jsonResponse.object();
-
-        // Manejo de respuestas según el código de estado HTTP
-        switch (httpStatus) {
-        case 201:
-            loadMessages();
-            break;
-        case 400:
-            qDebug() << "❌ Error 400: Faltan campos o datos inválidos.";
-            break;
-        case 401:
-            qDebug() << "❌ Error 401: Token inválido o expirado.";
-            break;
-        case 403:
-            qDebug() << "❌ Error 403: Solo puedes chatear con amigos.";
-            break;
-        case 404:
-            qDebug() << "❌ Error 404: Usuario receptor no encontrado.";
-            break;
-        case 405:
-            qDebug() << "❌ Error 405: Método no permitido.";
-            break;
-        default:
-            qDebug() << "⚠️ Error inesperado, código:" << httpStatus;
-            qDebug() << "Respuesta del servidor:" << responseData;
-            break;
-        }
-
-        reply->deleteLater();
-    });
+    qDebug() << "Mensaje enviado:" << message;
 }
+
 
 void FriendsMessageWindow::loadMessages()
 {
@@ -214,10 +225,12 @@ void FriendsMessageWindow::loadMessages()
                 QListWidgetItem *item = new QListWidgetItem();
                 messagesListWidget->addItem(item);
                 messagesListWidget->setItemWidget(item, messageContainer);
+                messagesListWidget->setSelectionMode(QAbstractItemView::NoSelection);
 
                 // Ajustar la altura dinámicamente después del renderizado
                 QTimer::singleShot(0, this, [=]() {
                     adjustMessageSize(item, messageLabel);
+                    messagesListWidget->scrollToBottom();
                 });
 
                 // Ajustar color y estilo de la burbuja según el emisor
@@ -237,7 +250,6 @@ void FriendsMessageWindow::loadMessages()
 
                 messagesListWidget->addItem(item);
                 messagesListWidget->setItemWidget(item, messageContainer);
-                messagesListWidget->scrollToBottom();
             }
         } else {
             qDebug() << "Error al cargar mensajes:" << reply->errorString();
@@ -279,3 +291,10 @@ QString FriendsMessageWindow::loadAuthToken() {
     }
     return token;
 }
+
+FriendsMessageWindow::~FriendsMessageWindow()
+{
+    qDebug() << "Pantalla Cerrada";
+    delete webSocket;
+}
+

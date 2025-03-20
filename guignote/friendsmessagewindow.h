@@ -10,7 +10,7 @@
 #include <QListWidget>
 #include <QJsonDocument>
 #include <QJsonObject>
-
+#include <QWebSocket>
 
 class FriendsMessageWindow : public QWidget
 {
@@ -18,8 +18,11 @@ class FriendsMessageWindow : public QWidget
 
 public:
     explicit FriendsMessageWindow(QWidget *parent = nullptr, QString ID = "", QString Usuario = "");
+    ~FriendsMessageWindow();
 
 private:
+    QWebSocket *webSocket;
+    void onTextMessageReceived(const QString &message);
 
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
@@ -31,12 +34,14 @@ private:
     QListWidget *messagesListWidget;
 
     void setupUI();
+    void setupWebSocketConnection();
     QString loadAuthToken();
     void adjustMessageSize(QListWidgetItem *item, QLabel *messageLabel);
 
     void sendMessage();
     void loadMessages();
-
+    void onConnected();
+    void onDisconnected();
 };
 
 #endif // FRIENDSMESSAGEWINDOW_H
