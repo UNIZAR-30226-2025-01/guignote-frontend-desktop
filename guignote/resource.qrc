@@ -33,5 +33,7 @@
         <file>icons/remove.png</file>
         <file>video/carga.gif</file>
         <file>icons/message.png</file>
+        <file>icons/trophy.png</file>
+        <file>icons/darkenedtrophy.png</file>
     </qresource>
 </RCC>

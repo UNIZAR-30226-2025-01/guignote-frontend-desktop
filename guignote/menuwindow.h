@@ -53,6 +53,7 @@ private:
     Icon *friends;
     Icon *exit;
     Icon *inventory;
+    Icon *rankings;
     QPushButton *invisibleButton;
     QLabel *usrLabel;
 

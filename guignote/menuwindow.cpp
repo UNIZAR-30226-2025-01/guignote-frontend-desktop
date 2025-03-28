@@ -17,6 +17,7 @@
 #include "friendswindow.h"
 #include "myprofilewindow.h"
 #include "userprofilewindow.h"
+#include "rankingwindow.h"
 #include <QGraphicsDropShadowEffect>
 #include <QTimer>
 #include <QNetworkAccessManager>
@@ -187,11 +188,13 @@ MenuWindow::MenuWindow(QWidget *parent) :
     friends = new Icon(this);
     exit = new Icon(this);
     inventory = new Icon(this);
+    rankings = new Icon(this);
 
     settings->setImage(":/icons/settings.png", 50, 50);
     friends->setImage(":/icons/friends.png", 60, 60);
     exit->setImage(":/icons/door.png", 60, 60);
     inventory->setImage(":/icons/chest.png", 50, 50);
+    rankings->setImage(":/icons/trophy.png", 50, 50);
 
     // ------------- EVENTOS DE CLICK EN ICONOS -------------
     connect(settings, &Icon::clicked, [=]() {
@@ -283,6 +286,19 @@ MenuWindow::MenuWindow(QWidget *parent) :
         });
         inventoryWin->exec();
     });
+    connect(rankings, &Icon::clicked, this, [this]() {
+        rankings->setImage(":/icons/darkenedtrophy.png", 60, 60);
+
+        RankingWindow *rankingWin = new RankingWindow(this);
+        rankingWin->setModal(true);
+
+        connect(rankingWin, &QDialog::finished, [this, rankingWin](int){
+            rankings->setImage(":/icons/trophy.png", 60, 60);
+        });
+
+        rankingWin->exec();
+    });
+
 
     // ------------- ORNAMENTOS ESQUINAS -------------
     ornamentSize = QSize(300, 299);
@@ -443,21 +459,40 @@ void MenuWindow::repositionBars() {
 
 // Función para reposicionar los iconos
 void MenuWindow::repositionIcons() {
-    int windowWidth = this->width();
-    int windowHeight = this->height();
-    int imgWidth = settings->width();
-    int imgHeight = settings->height();
-    int exitHeight = exit->height();
+    int barWidth = bottomBar->width();
+    int barHeight = bottomBar->height();
+    QPoint barPos = bottomBar->pos();
+    int barX = barPos.x();
+    int barY = barPos.y();
+
+    int margen = 20;
+
+    int iconWidth = settings->width();
+    int iconHeight = settings->height();
     int exitWidth = exit->width();
+    int exitHeight = exit->height();
 
-    int separacion1 = windowWidth * 0.1;
-    int separacion2 = windowWidth * 0.033;
-    int margen = 40;
+    int totalIconsWidth = 4 * iconWidth + exitWidth;
+    int spacing = (barWidth - totalIconsWidth) / 6;
 
-    settings->move((windowWidth / 2) - (imgWidth / 2) - separacion1, windowHeight - (imgHeight / 2) - margen);
-    friends->move((windowWidth / 2) + separacion1 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
-    exit->move((windowWidth / 2) - separacion2 - (exitWidth / 2), windowHeight - (exitHeight / 2) - margen);
-    inventory->move((windowWidth / 2) + separacion2 - (imgWidth / 2), windowHeight - (imgHeight / 2) - margen);
+    int yCommon = barY + (barHeight - iconHeight) / 2;
+    int yExit = barY + (barHeight - exitHeight) / 2;
+
+    int x = barX + spacing;
+
+    friends->move(x, yCommon);
+    x += iconWidth + spacing;
+
+    rankings->move(x, yCommon);
+    x += iconWidth + spacing;
+
+    inventory->move(x, yCommon);
+    x += iconWidth + spacing;
+
+    settings->move(x, yCommon);
+    x += iconWidth + spacing;
+
+    exit->move(x, yExit);
 }
 
 // Función para recolocar y reposicionar todos los elementos

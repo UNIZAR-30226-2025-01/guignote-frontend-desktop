@@ -66,7 +66,6 @@ void FriendsMessageWindow::onDisconnected()
 
 void FriendsMessageWindow::onTextMessageReceived(const QString &message)
 {
-    qDebug() << "Mensaje recibido:" << message;
     loadMessages(); // Actualiza la lista de mensajes
 }
 

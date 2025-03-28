@@ -47,6 +47,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         userprofilewindow.h userprofilewindow.cpp
         loadingwindow.h loadingwindow.cpp
         friendsmessagewindow.h friendsmessagewindow.cpp
+        rankingwindow.h rankingwindow.cpp
     )
 else()
     if(ANDROID)
