@@ -447,8 +447,8 @@ void MenuWindow::repositionBars() {
     invisibleButton->setGeometry(topBarPos.x(), topBarPos.y(), topBar->width(), topBar->height());
 
     int usrLabelHeight = 30;
-    int usrLabelWidth = qMin(200, barWidthTop - 20);
-    int xUsr = xPosT + (barWidthTop - usrLabelWidth) / 2;
+    int usrLabelWidth = barWidthTop - 20;
+    int xUsr = xPosT + 10; // 10px de margen lateral
     int yUsr = topBarPos.y() + (barHeight - usrLabelHeight) / 2;
     usrLabel->setGeometry(xUsr, yUsr, usrLabelWidth, usrLabelHeight);
 
