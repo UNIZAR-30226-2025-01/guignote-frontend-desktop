@@ -7,6 +7,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QCheckBox>
+#include <QListWidget>
+#include <QJsonArray>
 
 class RankingWindow : public QDialog
 {
@@ -16,17 +18,28 @@ public:
     explicit RankingWindow(QWidget *parent = nullptr);
 
 private:
-    QPushButton *individualButton;
-    QPushButton *parejasButton;
-    QCheckBox *soloAmigosCheck;
-
-    void setupUI();
-
+    // UI
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
     QPushButton *closeButton;
+    QPushButton *individualButton;
+    QPushButton *parejasButton;
+    QCheckBox *soloAmigosCheck;
+    QListWidget *rankingListWidget;
+
+    // Networking
     QNetworkAccessManager *networkManager;
+    QString authToken;
+
+    // Métodos
+    void setupUI();
+    QString loadAuthToken();
+
+    void fetchIndividualRanking();
+    void fetchTeamRanking();
+    void handleIndividualRankingResponse();
+    void handleTeamRankingResponse();
+    void updateRankingList(const QJsonArray &playersArray);
 };
 
 #endif // RANKINGWINDOW_H
-
