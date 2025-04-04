@@ -27,6 +27,7 @@ RankingWindow::RankingWindow(QWidget *parent)
     networkManager = new QNetworkAccessManager(this);
     authToken = loadAuthToken();
     setupUI();
+    fetchIndividualRanking();
 }
 
 QString RankingWindow::loadAuthToken() {
