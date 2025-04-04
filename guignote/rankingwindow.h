@@ -39,7 +39,7 @@ private:
     void fetchTeamRanking();
     void handleIndividualRankingResponse();
     void handleTeamRankingResponse();
-    void updateRankingList(const QJsonArray &playersArray);
+    void updateRankingList(const QJsonArray &playersArray, int type);
 };
 
 #endif // RANKINGWINDOW_H

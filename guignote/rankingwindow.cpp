@@ -175,7 +175,7 @@ void RankingWindow::handleIndividualRankingResponse() {
         QByteArray responseData = reply->readAll();
         QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
         QJsonArray playersArray = jsonDoc.object().value("top_elo_players").toArray();
-        updateRankingList(playersArray);
+        updateRankingList(playersArray, 1);
     } else {
         qDebug() << "Error al obtener el ranking individual:" << reply->errorString();
     }
@@ -188,21 +188,29 @@ void RankingWindow::handleTeamRankingResponse() {
         QByteArray responseData = reply->readAll();
         QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData);
         QJsonArray playersArray = jsonDoc.object().value("top_elo_parejas_players").toArray();
-        updateRankingList(playersArray);
+        updateRankingList(playersArray, 2);
     } else {
         qDebug() << "Error al obtener el ranking por parejas:" << reply->errorString();
     }
     reply->deleteLater();
 }
 
-void RankingWindow::updateRankingList(const QJsonArray &playersArray) {
+void RankingWindow::updateRankingList(const QJsonArray &playersArray, int type) {
     rankingListWidget->clear();
 
     int position = 1;
     for (const QJsonValue &value : playersArray) {
         QJsonObject playerObj = value.toObject();
         QString playerName = playerObj.value("nombre").toString();
-        int elo = playerObj.value("elo").toInt();
+
+        int elo;
+
+        if (type == 1){
+            elo = playerObj.value("elo").toInt();
+        } else {
+            elo = playerObj.value("elo_parejas").toInt();
+        }
+
 
         QString listItemText = QString("%1º  %2 - Elo: %3")
                                    .arg(position)
