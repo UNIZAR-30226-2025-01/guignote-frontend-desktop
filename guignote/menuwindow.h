@@ -73,6 +73,9 @@ private:
 
     // Métodos para la conexión con el backend
     QString loadAuthToken();
+
+    //DEBUG
+    void debugButton();
 };
 
 #endif // MENUWINDOW_H

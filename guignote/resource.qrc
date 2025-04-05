@@ -77,5 +77,6 @@
         <file>decks/base/SotaCopas.png</file>
         <file>decks/base/SotaEspadas.png</file>
         <file>decks/base/SotaOros.png</file>
+        <file>images/set-golden-border-ornaments/black_ornaments.png</file>
     </qresource>
 </RCC>

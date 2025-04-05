@@ -8,6 +8,7 @@
  */
 
 #include "menuwindow.h"
+#include "gamewindow.h"
 #include "icon.h"
 #include "ui_menuwindow.h"
 #include "imagebutton.h"
@@ -30,6 +31,39 @@
 #include <QDebug>
 #include <QPropertyAnimation>
 #include <QGraphicsOpacityEffect>
+
+//DEBUG
+void MenuWindow::debugButton() {
+    // Create a button to open the GameWindow
+    QPushButton *openGameButton = new QPushButton("Open Game Window", this);
+
+    // Set the width of the button to one-tenth of the window's width
+    int buttonWidth = this->width() / 10;
+    openGameButton->setFixedWidth(buttonWidth);
+
+    // Create a layout and add the button
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->addWidget(openGameButton);
+    setLayout(layout);  // Set the layout for the menu window
+
+    // Connect the button click to the functionality
+    connect(openGameButton, &QPushButton::clicked, this, [this]() {
+
+        // Get the current size of MenuWindow
+        QSize windowSize = this->size();  // Get the size of MenuWindow
+
+        // Create and show the GameWindow with the same size as MenuWindow
+        GameWindow *gameWindow = new GameWindow(0, 1);
+        gameWindow->resize(windowSize);  // Set the size of GameWindow to match MenuWindow
+        gameWindow->show();
+
+        // Close the current window (MenuWindow)
+        this->close();
+    });
+}
+
+
+
 
 // Función auxiliar para crear un diálogo modal de sesión expirada.
 static QDialog* createExpiredDialog(QWidget *parent) {
@@ -366,6 +400,9 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     repositionOrnaments();
     getSettings();
+
+    //DEBUG
+    debugButton();
 }
 
 // Función para extraer el token de autenticación desde el archivo .conf
