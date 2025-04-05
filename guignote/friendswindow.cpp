@@ -1,5 +1,4 @@
 #include "friendswindow.h"
-#include "friendsmessagewindow.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QTabWidget>
@@ -9,7 +8,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include "icon.h"
 #include <QUrlQuery>
 #include <QFile>
 #include <QStandardPaths>
@@ -20,6 +18,8 @@
 #include <QListWidget>
 #include <QLineEdit>
 #include <QDebug>
+#include "friendsmessagewindow.h"
+#include "userprofilewindow.h"
 
 // Función auxiliar para crear un diálogo modal con mensaje personalizado.
 // Si exitApp es verdadero, al cerrar se finaliza la aplicación.
@@ -112,10 +112,18 @@ void friendswindow::setupUI() {
     // QTabWidget con las pestañas: Amigos, Solicitudes y Buscar.
     tabWidget = new QTabWidget(this);
     tabWidget->setStyleSheet(
-        "QTabBar::tab { background-color: #222; color: white; padding: 12px; font-size: 16px; "
-        "border-top-left-radius: 10px; border-top-right-radius: 10px; margin-right: 10px; }"  // Se añadió margin-right
-        "QTabBar::tab:selected { background-color: #4CAF50; }"
         "QTabWidget::pane { border: 1px solid #555; border-radius: 10px; }"
+        "QTabBar { margin-left: 15px; }"
+        "QTabBar::tab {"
+        "  background-color: #C2C7B0;"
+        "  color: #203F31;"
+        "  padding: 12px;"
+        "  font-size: 16px;"
+        "  border-top-left-radius: 10px;"
+        "  border-top-right-radius: 10px;"
+        "  margin-right: 10px;"
+        "}"
+        "QTabBar::tab:selected { background-color: #1D4536; color: #F9F9F4; }"
         );
     tabWidget->addTab(createFriendsTab(), "Amigos");
     tabWidget->addTab(createRequestsTab(), "Solicitudes");
@@ -251,7 +259,6 @@ void friendswindow::fetchFriends() {
     });
 }
 
-// Crea un "friend card" a partir de un objeto JSON.
 QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
@@ -259,7 +266,7 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
 
     QHBoxLayout *layout = new QHBoxLayout(widget);
     layout->setContentsMargins(10, 2, 10, 2);
-    layout->setSpacing(7);
+    layout->setSpacing(15);
 
     QVBoxLayout *infoLayout = new QVBoxLayout();
     QString nombre = "Nombre no disponible";
@@ -288,37 +295,131 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     layout->addLayout(infoLayout);
     layout->addStretch();
 
-    // Extraer el id del amigo
     QString friendId;
     if (amigo.contains("id"))
         friendId = QString::number(amigo["id"].toInt());
     else if (amigo.contains("ID"))
         friendId = QString::number(amigo["ID"].toInt());
-    qDebug() << "El ID del amigo es:" << friendId;
 
-    // Botón para abrir el chat
-    Icon *messageIcon = new Icon(widget);
-    messageIcon->setImage(":/icons/message.png", 100, 100);
-    connect(messageIcon, &Icon::clicked, [=](){
-        FriendsMessageWindow *msgWin = new FriendsMessageWindow(this, friendId, nombre);
-        msgWin->show();
+    // Botones en horizontal con más separación
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->setSpacing(15);  // Más espacio entre botones
+
+    QPushButton *profileButton = new QPushButton("Perfil", widget);
+    QPushButton *messageButton = new QPushButton("Mensajes", widget);
+    QPushButton *deleteButton = new QPushButton("Eliminar", widget);
+
+    // Estilos idénticos para todos los botones
+    QString buttonStyle =
+        "QPushButton {"
+        "  background-color: #1D4536;"
+        "  color: #F9F9F4;"
+        "  font-size: 16px;"
+        "  padding: 8px 15px;"
+        "  border-radius: 10px;"
+        "  min-width: 80px;"
+        "}"
+        "QPushButton:hover { background-color: #2A5C45; }";
+
+    QString deleteButtonStyle =
+        "QPushButton {"
+        "  background-color: #8B3A3A;"
+        "  color: #F1F1F1;"
+        "  font-size: 16px;"
+        "  padding: 8px 15px;"
+        "  border-radius: 10px;"
+        "  min-width: 80px;"
+        "}"
+        "QPushButton:hover { background-color: #C9B170; color: #1C1C1C; }";
+
+    profileButton->setStyleSheet(buttonStyle);
+    messageButton->setStyleSheet(buttonStyle);
+    deleteButton->setStyleSheet(deleteButtonStyle);
+
+    buttonLayout->addWidget(profileButton);
+    buttonLayout->addWidget(messageButton);
+    buttonLayout->addWidget(deleteButton);
+
+    layout->addLayout(buttonLayout);
+
+    // Conexiones
+    connect(profileButton, &QPushButton::clicked, [this]() {
+        UserProfileWindow *profileWin = new UserProfileWindow(this);
+        profileWin->setWindowModality(Qt::ApplicationModal);
+        profileWin->move(this->geometry().center() - profileWin->rect().center());
+        profileWin->show();
     });
-    layout->addWidget(messageIcon);
-    layout->addSpacing(10);
 
-
-    Icon *removeIcon = new Icon(widget);
-    removeIcon->setImage(":/icons/remove.png", 100, 100);
-    //removeIcon->setToolTip("Eliminar amigo");
-    connect(removeIcon, &Icon::clicked, [this, friendId]() {
-        removeFriend(friendId);
+    connect(messageButton, &QPushButton::clicked, [this]() {
+        FriendsMessageWindow *messageWin = new FriendsMessageWindow(this);
+        messageWin->setWindowModality(Qt::ApplicationModal);
+        messageWin->move(this->geometry().center() - messageWin->rect().center());
+        messageWin->show();
     });
-    layout->addWidget(removeIcon);
 
+    connect(deleteButton, &QPushButton::clicked, [this, friendId]() {
+        QDialog *confirmDialog = new QDialog(this);
+        confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+        confirmDialog->setModal(true);
+        confirmDialog->setStyleSheet(
+            "QDialog {"
+            "  background-color: #171718;"
+            "  border-radius: 5px;"
+            "  padding: 20px;"
+            "}"
+            );
+
+        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
+        dialogShadow->setBlurRadius(10);
+        dialogShadow->setColor(QColor(0, 0, 0, 80));
+        dialogShadow->setOffset(4, 4);
+        confirmDialog->setGraphicsEffect(dialogShadow);
+
+        QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
+        QLabel *confirmLabel = new QLabel("¿Está seguro que desea eliminar a este amigo?", confirmDialog);
+        confirmLabel->setWordWrap(true);
+        confirmLabel->setStyleSheet("color: white; font-size: 16px;");
+        confirmLabel->setAlignment(Qt::AlignCenter);
+        dialogLayout->addWidget(confirmLabel);
+
+        QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
+        QPushButton *yesButton = new QPushButton("Sí", confirmDialog);
+        QPushButton *noButton = new QPushButton("No", confirmDialog);
+        yesButton->setStyleSheet(
+            "QPushButton {"
+            "  background-color: #1D4536;"
+            "  color: #F9F9F4;"
+            "  padding: 10px 25px;"
+            "  border-radius: 10px;"
+            "}"
+            );
+        noButton->setStyleSheet(
+            "QPushButton {"
+            "  background-color: #8B3A3A;"
+            "  color: #F1F1F1;"
+            "  padding: 10px 25px;"
+            "  border-radius: 10px;"
+            "}"
+            );
+        dialogButtonLayout->addWidget(yesButton);
+        dialogButtonLayout->addWidget(noButton);
+        dialogLayout->addLayout(dialogButtonLayout);
+
+        connect(yesButton, &QPushButton::clicked, [this, confirmDialog, friendId]() {
+            removeFriend(friendId);
+            confirmDialog->close();
+        });
+        connect(noButton, &QPushButton::clicked, confirmDialog, &QDialog::close);
+
+        confirmDialog->adjustSize();
+        confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        confirmDialog->show();
+    });
 
     widget->setLayout(layout);
     return widget;
 }
+
 
 // Envía una solicitud para eliminar a un amigo.
 void friendswindow::removeFriend(const QString &friendId) {
@@ -502,7 +603,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
 
     // Botón para agregar amigo
     QPushButton *addButton = new QPushButton("Agregar amigo", widget);
-    addButton->setStyleSheet("background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
+    addButton->setStyleSheet("background-color: #1D4536; color: #F9F9F4; font-size: 18px; padding: 10px; border-radius: 10px;");
     QString userId;
     if (usuario.contains("id"))
         userId = QString::number(usuario["id"].toInt());
@@ -543,16 +644,16 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     QString solicitudId = QString::number(solicitud["id"].toInt());
     acceptBtn->setProperty("solicitudId", solicitudId);
     acceptBtn->setStyleSheet(
-        "QPushButton { background-color: #4CAF50; color: white; font-size: 18px; padding: 10px; border-radius: 10px; }"
-        "QPushButton:hover { background-color: #3E8E41; }"
+        "QPushButton { background-color: #1D4536; color: #F9F9F4; font-size: 18px; padding: 10px; border-radius: 10px; }"
+        "QPushButton:hover { background-color: #2A5C45; }"
         );
     connect(acceptBtn, &QPushButton::clicked, this, &friendswindow::acceptRequest);
     layout->addWidget(acceptBtn);
 
     QPushButton *rejectBtn = new QPushButton("Rechazar", widget);
     rejectBtn->setStyleSheet(
-        "QPushButton { background-color: #E53935; color: white; font-size: 18px; padding: 10px; border-radius: 10px; }"
-        "QPushButton:hover { background-color: #CC342F; }"
+        "QPushButton { background-color: #8B3A3A; color: #F1F1F1; font-size: 18px; padding: 10px; border-radius: 10px; }"
+        "QPushButton:hover { background-color: #C9B170; color: #1C1C1C; }"
         );
     rejectBtn->setProperty("solicitudId", solicitudId);
     connect(rejectBtn, &QPushButton::clicked, this, &friendswindow::rejectRequest);
@@ -594,7 +695,7 @@ void friendswindow::sendFriendRequest() {
             qDebug() << "Solicitud enviada correctamente para userId:" << userId;
             // Actualizamos el botón para indicar que la solicitud fue enviada
             button->setText("Solicitud Enviada");
-            button->setStyleSheet("background-color: #79c4ff; color: white; font-size: 18px; padding: 10px; border-radius: 10px;");
+            button->setStyleSheet("background-color: #C2C7B0; color: #203F31; font-size: 18px; padding: 10px; border-radius: 10px;");
             button->setEnabled(false);
             createDialog(this, "Se ha enviado la solicitud de amistad.")->show();
         } else {

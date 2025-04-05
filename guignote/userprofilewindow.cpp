@@ -1,8 +1,12 @@
 #include "userprofilewindow.h"
 #include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QPixmap>
 #include <QPainter>
 #include <QPainterPath>
+#include <QGraphicsDropShadowEffect>
+#include <QPushButton>
+#include <QLabel>
 #include <QDebug>
 #include "icon.h"
 
@@ -13,34 +17,35 @@ UserProfileWindow::UserProfileWindow(QWidget *parent) : QDialog(parent) {
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(800, 600);
 
+    // Añadir sombra
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(10);
+    shadow->setColor(QColor(0, 0, 0, 80));
+    shadow->setOffset(4, 4);
+    setGraphicsEffect(shadow);
+
     // Construye la interfaz de usuario.
     setupUI();
 }
 
 void UserProfileWindow::setupUI() {
-
-    // ------------- SETTINGS DE VENTANA -------------
-
-    // Layout principal vertical de la ventana.
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
-    mainLayout->setSpacing(10);
+    mainLayout->setSpacing(15);
     mainLayout->setAlignment(Qt::AlignTop);
 
     // ------------- TITULO Y BOTON DE CIERRE -------------
-
     QHBoxLayout *headerLayout = new QHBoxLayout();
-
     titleLabel = new QLabel("Perfil Amigo", this);
     titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    titleLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold;");
+    titleLabel->setStyleSheet("color: white; font-size: 28px; font-weight: bold;");
 
     closeButton = new QPushButton(this);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
-    closeButton->setIconSize(QSize(18, 18));
-    closeButton->setFixedSize(30, 30);
+    closeButton->setIconSize(QSize(22, 22));
+    closeButton->setFixedSize(35, 35);
     closeButton->setStyleSheet(
-        "QPushButton { background-color: #c2c2c3; border: none; border-radius: 15px; }"
+        "QPushButton { background-color: #c2c2c3; border: none; border-radius: 17px; }"
         "QPushButton:hover { background-color: #9b9b9b; }"
         );
     connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
@@ -50,7 +55,7 @@ void UserProfileWindow::setupUI() {
     headerLayout->addWidget(closeButton);
     mainLayout->addLayout(headerLayout);
 
-    // *** Centrar la imagen debajo del título y el botón de cierre ***
+    // ------------- IMAGEN DE PERFIL -------------
     QVBoxLayout *imageLayout = new QVBoxLayout();
     imageLayout->setAlignment(Qt::AlignCenter);
 
@@ -97,30 +102,27 @@ void UserProfileWindow::setupUI() {
 
     QLabel *statsLabel = new QLabel(stats, this);
     statsLabel->setAlignment(Qt::AlignCenter);
-    statsLabel->setStyleSheet("color: white; font-size: 24px;");
+    statsLabel->setStyleSheet("color: white; font-size: 18px;");
 
     imageLayout->addWidget(statsLabel);
     mainLayout->addLayout(imageLayout);
 
     // ------------- BOTONES INFERIORES -------------
-
     QHBoxLayout *buttonsLayout = new QHBoxLayout();
 
     QPushButton *leftButton = new QPushButton("Partida Amistosa", this);
     leftButton->setStyleSheet(
-        "QPushButton { background-color: green; color: white; font-size: 18px; padding: 10px; border-radius: 5px; "
+        "QPushButton { background-color: #1D4536; color: #F9F9F4; font-size: 18px; padding: 10px; border-radius: 5px; "
         "border: 2px solid #006400; }"
-        "QPushButton:hover { background-color: #008000; }"
-        "QPushButton:pressed { background-color: #004d00; }"
+        "QPushButton:hover { background-color: #2A5C45; }"
         );
     leftButton->setFixedSize(200, 50);
 
     QPushButton *rightButton = new QPushButton("Jugar en Equipo", this);
     rightButton->setStyleSheet(
-        "QPushButton { background-color: green; color: white; font-size: 18px; padding: 10px; border-radius: 5px; "
+        "QPushButton { background-color: #1D4536; color: #F9F9F4; font-size: 18px; padding: 10px; border-radius: 5px; "
         "border: 2px solid #006400; }"
-        "QPushButton:hover { background-color: #008000; }"
-        "QPushButton:pressed { background-color: #004d00; }"
+        "QPushButton:hover { background-color: #2A5C45; }"
         );
     rightButton->setFixedSize(200, 50);
 
@@ -128,8 +130,7 @@ void UserProfileWindow::setupUI() {
     buttonsLayout->addStretch();
     buttonsLayout->addWidget(rightButton, 0, Qt::AlignRight);
 
-    // ------------- DETECTAR BOTONES INFERIORES -------------
-
+    // ------------- CONEXIONES DE BOTONES -------------
     connect(leftButton, &QPushButton::clicked, this, []() {
         qDebug() << "Botón Partida Amistosa presionado";
     });
@@ -141,7 +142,6 @@ void UserProfileWindow::setupUI() {
     mainLayout->addLayout(buttonsLayout);
     setLayout(mainLayout);
 }
-
 
 /**
  * @brief Convierte una imagen en un círculo.
