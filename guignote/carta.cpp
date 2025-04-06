@@ -1,6 +1,8 @@
 #include "carta.h"
+#include "mano.h"
 #include <QPainter>
 #include <QMouseEvent>
+#include <QDebug>
 
 Carta::Carta(QWidget *parent, QString num, QString suit, int h, int skin)
     : QLabel(parent), arrastrando(false)
@@ -12,6 +14,13 @@ Carta::Carta(QWidget *parent, QString num, QString suit, int h, int skin)
 
     QPixmap img = selectPixmap(num, suit, skin);
     setImagen(img, h);
+
+    ID = -1;
+    this->locked = true;
+}
+
+void Carta::setLock(bool lock){
+    locked=lock;
 }
 
 QPixmap Carta::selectPixmap(QString num, QString suit, int skin){
@@ -59,15 +68,44 @@ void Carta::setImagen(const QPixmap &pixmap, int h)
 
 void Carta::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton) {
+    if (event->button() == Qt::LeftButton && !locked) {
         arrastrando = true;
         offsetArrastre = event->pos();
     }
 }
 
+
+
 void Carta::mouseMoveEvent(QMouseEvent *event)
 {
-    if (arrastrando && (event->buttons() & Qt::LeftButton)) {
+    if (arrastrando && (event->buttons() & Qt::LeftButton) && !locked) {
         move(mapToParent(event->pos() - offsetArrastre));
     }
+}
+
+void Carta::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && !locked) {
+        arrastrando = false;
+
+        if (mano && ID != -1) {
+            // suelta en algún lugar válido o vuelve a la mano
+            mano->mostrarMano();  // vuelve a colocar la mano
+            qDebug() << "Carta reordenada";
+        } else {
+            qDebug() << "Carta soltada sin estar en mano";
+        }
+    }
+}
+
+
+//Gestión de mano
+void Carta::añadirAMano(Mano *mano, int id){
+    ID = id;
+    this->mano = mano;
+}
+
+void Carta::eliminarDeMano(){
+    mano->eliminarCarta(ID);
+    ID = -1;
 }

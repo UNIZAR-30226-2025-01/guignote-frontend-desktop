@@ -2,6 +2,7 @@
 #include "settingswindow.h"
 #include "menuwindow.h"
 #include "carta.h"
+#include "mano.h"
 #include <QLabel>
 #include <QPixmap>
 #include <QSize>
@@ -246,12 +247,26 @@ void GameWindow::setBackground() {
 
 void GameWindow::setupGameElements() {
     Carta *testCard = new Carta(this, "1", "Bastos", cardSize, 0);
-    testCard->move(50, 50);
     testCard->show();
 
     Carta *testCard2 = new Carta(this, "10", "Oros", cardSize, 1);
-    testCard2->move(500, 500);
     testCard2->show();
+
+    Mano *mano0 = new Mano(1,0);
+    mano0->añadirCarta(testCard);
+    mano0->añadirCarta(testCard2);
+
+    Mano *mano1 = new Mano(2,1);
+    Mano *mano2 = new Mano(3,2);
+    Mano *mano3 = new Mano(4,3);
+
+    Carta *testCard3 = new Carta(this, "0", "Copas", cardSize, 1);
+    Carta *testCard4 = new Carta(this, "0", "Oros", cardSize, 0);
+    Carta *testCard5 = new Carta(this, "0", "Espadas", cardSize, 1);
+
+    mano1->añadirCarta(testCard3);
+    mano2->añadirCarta(testCard4);
+    mano3->añadirCarta(testCard5);
 }
 
 void GameWindow::repositionOrnaments() {
