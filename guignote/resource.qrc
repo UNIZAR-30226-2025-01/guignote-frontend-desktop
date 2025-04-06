@@ -59,24 +59,65 @@
         <file>decks/base/7Copas.png</file>
         <file>decks/base/7Espadas.png</file>
         <file>decks/base/7Oros.png</file>
-        <file>decks/base/AsBastos.png</file>
-        <file>decks/base/AsCopas.png</file>
-        <file>decks/base/AsEspadas.png</file>
-        <file>decks/base/AsOros.png</file>
         <file>decks/base/Back.png</file>
         <file>decks/base/Blank.png</file>
-        <file>decks/base/CaballoBastos.png</file>
-        <file>decks/base/CaballoCopas.png</file>
-        <file>decks/base/CaballoEspadas.png</file>
-        <file>decks/base/CaballoOros.png</file>
-        <file>decks/base/ReyBastos.png</file>
-        <file>decks/base/ReyCopas.png</file>
-        <file>decks/base/ReyEspadas.png</file>
-        <file>decks/base/ReyOros.png</file>
-        <file>decks/base/SotaBastos.png</file>
-        <file>decks/base/SotaCopas.png</file>
-        <file>decks/base/SotaEspadas.png</file>
-        <file>decks/base/SotaOros.png</file>
         <file>images/set-golden-border-ornaments/black_ornaments.png</file>
+        <file>decks/poker/2Bastos.png</file>
+        <file>decks/poker/2Copas.png</file>
+        <file>decks/poker/2Espadas.png</file>
+        <file>decks/poker/2Oros.png</file>
+        <file>decks/poker/3Bastos.png</file>
+        <file>decks/poker/3Copas.png</file>
+        <file>decks/poker/3Espadas.png</file>
+        <file>decks/poker/3Oros.png</file>
+        <file>decks/poker/4Bastos.png</file>
+        <file>decks/poker/4Copas.png</file>
+        <file>decks/poker/4Espadas.png</file>
+        <file>decks/poker/4Oros.png</file>
+        <file>decks/poker/5Bastos.png</file>
+        <file>decks/poker/5Copas.png</file>
+        <file>decks/poker/5Espadas.png</file>
+        <file>decks/poker/5Oros.png</file>
+        <file>decks/poker/6Bastos.png</file>
+        <file>decks/poker/6Copas.png</file>
+        <file>decks/poker/6Espadas.png</file>
+        <file>decks/poker/6Oros.png</file>
+        <file>decks/poker/7Bastos.png</file>
+        <file>decks/poker/7Copas.png</file>
+        <file>decks/poker/7Espadas.png</file>
+        <file>decks/poker/7Oros.png</file>
+        <file>decks/poker/Back.png</file>
+        <file>decks/base/10Bastos.png</file>
+        <file>decks/base/10Copas.png</file>
+        <file>decks/base/10Espadas.png</file>
+        <file>decks/base/10Oros.png</file>
+        <file>decks/base/11Bastos.png</file>
+        <file>decks/base/11Copas.png</file>
+        <file>decks/base/11Espadas.png</file>
+        <file>decks/base/11Oros.png</file>
+        <file>decks/base/12Bastos.png</file>
+        <file>decks/base/12Copas.png</file>
+        <file>decks/base/12Espadas.png</file>
+        <file>decks/base/12Oros.png</file>
+        <file>decks/base/1Bastos.png</file>
+        <file>decks/base/1Copas.png</file>
+        <file>decks/base/1Espadas.png</file>
+        <file>decks/base/1Oros.png</file>
+        <file>decks/poker/10Bastos.png</file>
+        <file>decks/poker/10Copas.png</file>
+        <file>decks/poker/10Espadas.png</file>
+        <file>decks/poker/10Oros.png</file>
+        <file>decks/poker/11Bastos.png</file>
+        <file>decks/poker/11Copas.png</file>
+        <file>decks/poker/11Espadas.png</file>
+        <file>decks/poker/11Oros.png</file>
+        <file>decks/poker/12Bastos.png</file>
+        <file>decks/poker/12Copas.png</file>
+        <file>decks/poker/12Espadas.png</file>
+        <file>decks/poker/12Oros.png</file>
+        <file>decks/poker/1Bastos.png</file>
+        <file>decks/poker/1Copas.png</file>
+        <file>decks/poker/1Espadas.png</file>
+        <file>decks/poker/1Oros.png</file>
     </qresource>
 </RCC>

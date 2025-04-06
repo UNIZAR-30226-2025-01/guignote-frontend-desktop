@@ -16,6 +16,7 @@ public:
 private:
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
+    int cardSize;
 
     // 0 -> 1v1 Ranked
     // 1 -> 1v1 Friendly
@@ -23,6 +24,7 @@ private:
 
     void setBackground(); // Function to set the background based on the bg value
     void setupUI();
+    void setupGameElements();
     void resizeEvent(QResizeEvent *event);
     void repositionOrnaments();
     void repositionOptions();

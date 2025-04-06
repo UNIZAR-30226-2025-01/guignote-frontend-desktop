@@ -1,6 +1,7 @@
 #include "gamewindow.h"
 #include "settingswindow.h"
 #include "menuwindow.h"
+#include "carta.h"
 #include <QLabel>
 #include <QPixmap>
 #include <QSize>
@@ -14,8 +15,10 @@
 GameWindow::GameWindow(int type, int fondo) {
     bg = fondo;
     gameType = type;
+    cardSize = 250;
     setBackground();
     setupUI();
+    setupGameElements();
 }
 
 void GameWindow::setupUI() {
@@ -239,6 +242,16 @@ void GameWindow::setBackground() {
             corner->setStyleSheet("background: transparent;");
             corner->raise();
         }
+}
+
+void GameWindow::setupGameElements() {
+    Carta *testCard = new Carta(this, "1", "Bastos", cardSize, 0);
+    testCard->move(50, 50);
+    testCard->show();
+
+    Carta *testCard2 = new Carta(this, "10", "Oros", cardSize, 1);
+    testCard2->move(500, 500);
+    testCard2->show();
 }
 
 void GameWindow::repositionOrnaments() {
