@@ -51,6 +51,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         gamewindow.h gamewindow.cpp
         carta.h carta.cpp
         mano.h mano.cpp
+        deck.h deck.cpp
     )
 else()
     if(ANDROID)

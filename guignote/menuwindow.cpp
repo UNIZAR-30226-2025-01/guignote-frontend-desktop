@@ -35,6 +35,7 @@
 //DEBUG
 void MenuWindow::debugButton() {
     // Create a button to open the GameWindow
+
     QPushButton *openGameButton = new QPushButton("Open Game Window", this);
 
     // Set the width of the button to one-tenth of the window's width

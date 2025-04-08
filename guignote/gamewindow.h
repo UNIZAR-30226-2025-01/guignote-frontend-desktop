@@ -7,6 +7,7 @@
 #include <QTransform>  // For QTransform class
 #include "icon.h"
 #include "mano.h"
+#include "deck.h"
 
 class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
@@ -49,6 +50,8 @@ private:
 
     // Game Elements
     QVector<Mano*> manos;
+
+    Deck *deck;
 };
 
 #endif // GAMEWINDOW_H

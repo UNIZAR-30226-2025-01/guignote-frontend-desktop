@@ -3,6 +3,7 @@
 #include "menuwindow.h"
 #include "carta.h"
 #include "mano.h"
+#include "deck.h"
 #include <QLabel>
 #include <QPixmap>
 #include <QSize>
@@ -16,7 +17,7 @@
 GameWindow::GameWindow(int type, int fondo) {
     bg = fondo;
     gameType = type;
-    cardSize = 250;
+    cardSize = 200;
     setBackground();
     setupUI();
     setupGameElements();
@@ -263,6 +264,9 @@ void GameWindow::setupGameElements() {
         manos[2]->añadirCarta(testCard4);
         manos[3]->añadirCarta(testCard5);
     }
+
+    Carta *triunfo = new Carta(this, "3", "Oros", cardSize, 0);
+    deck = new Deck(triunfo, 0, cardSize, this);
 
 }
 
