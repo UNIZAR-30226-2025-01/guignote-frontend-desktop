@@ -6,6 +6,7 @@
 #include <QSize>       // For QSize class
 #include <QTransform>  // For QTransform class
 #include "icon.h"
+#include "mano.h"
 
 class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
@@ -28,6 +29,7 @@ private:
     void resizeEvent(QResizeEvent *event);
     void repositionOrnaments();
     void repositionOptions();
+    void repositionHands();
 
     // Labels to display the corner ornaments
     QLabel *cornerTopLeft;
@@ -44,6 +46,9 @@ private:
     QFrame *optionsBar;
 
     QSize ornamentSize; // Size of the corner ornaments
+
+    // Game Elements
+    QVector<Mano*> manos;
 };
 
 #endif // GAMEWINDOW_H

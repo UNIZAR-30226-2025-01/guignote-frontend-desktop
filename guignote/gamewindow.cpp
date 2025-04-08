@@ -246,27 +246,28 @@ void GameWindow::setBackground() {
 }
 
 void GameWindow::setupGameElements() {
-    Carta *testCard = new Carta(this, "1", "Bastos", cardSize, 0);
-    testCard->show();
-
+    gameType = 2;
+    Carta *testCard1 = new Carta(this, "1", "Bastos", cardSize, 0);
     Carta *testCard2 = new Carta(this, "10", "Oros", cardSize, 1);
-    testCard2->show();
-
-    Mano *mano0 = new Mano(1,0);
-    mano0->añadirCarta(testCard);
-    mano0->añadirCarta(testCard2);
-
-    Mano *mano1 = new Mano(2,1);
-    Mano *mano2 = new Mano(3,2);
-    Mano *mano3 = new Mano(4,3);
-
     Carta *testCard3 = new Carta(this, "0", "Copas", cardSize, 1);
-    Carta *testCard4 = new Carta(this, "0", "Oros", cardSize, 0);
-    Carta *testCard5 = new Carta(this, "0", "Espadas", cardSize, 1);
+    manos.append(new Mano(0, 0));
+    manos.append(new Mano(1, 1));
+    manos[0]->añadirCarta(testCard1);
+    manos[0]->añadirCarta(testCard2);
+    manos[1]->añadirCarta(testCard3);
+    if (gameType == 2) {
+        Carta *testCard4 = new Carta(this, "0", "Oros", cardSize, 0);
+        Carta *testCard5 = new Carta(this, "0", "Espadas", cardSize, 1);
+        manos.append(new Mano(2, 2));
+        manos.append(new Mano(3, 3));
+        manos[2]->añadirCarta(testCard4);
+        manos[3]->añadirCarta(testCard5);
+    }
 
-    mano1->añadirCarta(testCard3);
-    mano2->añadirCarta(testCard4);
-    mano3->añadirCarta(testCard5);
+}
+
+void GameWindow::repositionHands(){
+    for (Mano* mano : manos) mano->mostrarMano();
 }
 
 void GameWindow::repositionOrnaments() {
@@ -294,6 +295,10 @@ void GameWindow::repositionOptions() {
 
     // Place optionsBar at the top-right of the window with a height of 80
     optionsBar->setGeometry(x, 0, windowWidth/8, 80);
+    optionsBar->raise();
+    settings->raise();
+    chat->raise();
+    quit->raise();
 
     // Create a horizontal layout to arrange the icons inside optionsBar
     QHBoxLayout *layout = new QHBoxLayout(optionsBar);
@@ -325,6 +330,7 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     // Simply call QWidget's resizeEvent method
     QWidget::resizeEvent(event);
     repositionOrnaments();
+    repositionHands();
     repositionOptions();
 }
 

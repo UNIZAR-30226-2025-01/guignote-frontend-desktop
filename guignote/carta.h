@@ -18,6 +18,12 @@ public:
     void añadirAMano(Mano* mano, int id);  // puntero
     void eliminarDeMano();
     void setLock(bool lock);
+    QPixmap getImagen() const;
+    void setImagen(const QPixmap &pixmap, int h);
+
+    QPixmap pixmapOrig;
+    QString num;
+    QString suit;
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -31,8 +37,8 @@ private:
     bool arrastrando;
     int ID;
     Mano* mano;  // ✅ puntero a Mano
-    void setImagen(const QPixmap &pixmap, int h);
-    QPixmap selectPixmap(QString num, QString suit, int skin = 0);
+    QPixmap selectPixmap(int skin = 0);
+
 };
 
 #endif // CARTA_H

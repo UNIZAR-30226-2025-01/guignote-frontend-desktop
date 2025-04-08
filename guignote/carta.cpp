@@ -7,23 +7,31 @@
 Carta::Carta(QWidget *parent, QString num, QString suit, int h, int skin)
     : QLabel(parent), arrastrando(false)
 {
+    this->num = num;
+    this->suit = suit;
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_TranslucentBackground);
     setStyleSheet("background: transparent;");
     setMouseTracking(true);
 
-    QPixmap img = selectPixmap(num, suit, skin);
+    QPixmap img = selectPixmap(skin);
     setImagen(img, h);
 
     ID = -1;
     this->locked = true;
+
+    pixmapOrig = this->pixmap(); // Una sola vez al inicio
 }
 
 void Carta::setLock(bool lock){
     locked=lock;
 }
 
-QPixmap Carta::selectPixmap(QString num, QString suit, int skin){
+QPixmap Carta::getImagen() const {
+    return imagen;
+}
+
+QPixmap Carta::selectPixmap(int skin){
     QString ruta = ":/decks/";
     //Seleccionamos la skin
     switch (skin) {
@@ -39,12 +47,14 @@ QPixmap Carta::selectPixmap(QString num, QString suit, int skin){
     if (num == "0"){
         ruta+="Back";
     } else {
-        ruta+=num;
-        ruta+=suit;
+        ruta+=this->num;
+        ruta+=this->suit;
     }
 
     //Extension de archivo
     ruta+=".png";
+
+    qDebug() << "ruta: " << ruta;
 
     QPixmap pixmap(ruta);
     return pixmap;
