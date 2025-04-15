@@ -99,29 +99,33 @@ void Posicion::mostrarPosicion()
 
 void Posicion::dragEnterEvent(QDragEnterEvent *event)
 {
-    event->acceptProposedAction();  // ✅ Aceptamos cualquier tipo de arrastre por ahora
-    qDebug() << "dragEnterEvent";
+    event->acceptProposedAction();  // ✅ Aceptamos cualquier tipo de arrastre
+
 }
 
 void Posicion::dropEvent(QDropEvent *event)
 {
-    qDebug() << "dropEvent ACTIVADO";
     QString id = event->mimeData()->text();
-    Carta* carta = gw->getCartaPorId(id);
 
-    if (carta && !carta->isHidden() && !Lock) {
-        carta->eliminarDeMano();
-        carta->setParent(this);
-        carta->move(0, 0);
-        carta->show();
-        carta->raise();
 
-        cartaActual = carta;
+    if (!Lock && gw && cartaActual == nullptr) {
+        Carta* carta = gw->getCartaPorId(id);
+        if (carta) {
+            carta->eliminarDeMano();
+            carta->setParent(this);
+            int x = (width() - carta->width()) / 2;
+            int y = (height() - carta->height()) / 2;
+            carta->move(x, y);
+            carta->show();
+            carta->raise();
 
-        qDebug() << "Carta jugada" << carta->num << carta->suit;
-        event->acceptProposedAction();
+            cartaActual = carta;
+
+            event->acceptProposedAction();
+        }
     } else {
         event->ignore();
     }
 }
+
 
