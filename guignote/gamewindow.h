@@ -8,12 +8,16 @@
 #include "icon.h"
 #include "mano.h"
 #include "deck.h"
+#include "posicion.h"
+
 
 class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
 public:
     GameWindow(int type, int fondo);
+    void addCartaPorId(Carta *c);
+    Carta* getCartaPorId(QString id);
 
 private:
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
@@ -50,6 +54,8 @@ private:
 
     // Game Elements
     QVector<Mano*> manos;
+    QVector<Posicion*> posiciones;
+    static QMap<QString, Carta*> cartasPorId;
 
     Deck *deck;
 };

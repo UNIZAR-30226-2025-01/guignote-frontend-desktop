@@ -4,16 +4,16 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QPoint>
-
 // ✅ Solo una declaración adelantada
 class Mano;
+class GameWindow;
 
 class Carta : public QLabel
 {
     Q_OBJECT
 
 public:
-    explicit Carta(QWidget *parent = nullptr, QString num = "0", QString suit = "", int h = 100, int skin = 0);
+    explicit Carta(GameWindow *gw = nullptr, QWidget *parent = nullptr, QString num = "0", QString suit = "", int h = 100, int skin = 0);
 
     void añadirAMano(Mano* mano, int id);  // puntero
     void eliminarDeMano();
@@ -22,6 +22,7 @@ public:
     void setImagen(const QPixmap &pixmap, int h);
 
     QPixmap pixmapOrig;
+    QString idGlobal;  // o nombreUnico
     QString num;
     QString suit;
 

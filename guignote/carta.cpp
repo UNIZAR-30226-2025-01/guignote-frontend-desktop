@@ -1,10 +1,13 @@
 #include "carta.h"
 #include "mano.h"
+#include "gamewindow.h"
 #include <QPainter>
 #include <QMouseEvent>
 #include <QDebug>
+#include <QDrag>
+#include <QMimeData>
 
-Carta::Carta(QWidget *parent, QString num, QString suit, int h, int skin)
+Carta::Carta(GameWindow *gw, QWidget *parent, QString num, QString suit, int h, int skin)
     : QLabel(parent), arrastrando(false)
 {
     this->num = num;
@@ -21,6 +24,9 @@ Carta::Carta(QWidget *parent, QString num, QString suit, int h, int skin)
     this->locked = true;
 
     pixmapOrig = this->pixmap(); // Una sola vez al inicio
+    this->idGlobal = num + suit;  // Ej: "1Oros"
+
+    gw->addCartaPorId(this);
 }
 
 void Carta::setLock(bool lock){
@@ -88,8 +94,25 @@ void Carta::mousePressEvent(QMouseEvent *event)
 
 void Carta::mouseMoveEvent(QMouseEvent *event)
 {
-    if (arrastrando && (event->buttons() & Qt::LeftButton) && !locked) {
-        move(mapToParent(event->pos() - offsetArrastre));
+    if (!locked && (event->buttons() & Qt::LeftButton)) {
+        if ((event->pos() - offsetArrastre).manhattanLength() < 10)
+            return;
+
+        QMimeData *mimeData = new QMimeData;
+        mimeData->setText(idGlobal);
+
+        QDrag *drag = new QDrag(this);
+        drag->setMimeData(mimeData);
+        drag->setPixmap(this->pixmap());
+        drag->setHotSpot(event->pos());
+
+        this->hide();
+
+        Qt::DropAction action = drag->exec(Qt::MoveAction);
+
+        if (action == Qt::IgnoreAction) {
+            this->show();  // No se soltó en lugar válido
+        }
     }
 }
 

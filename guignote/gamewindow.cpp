@@ -4,6 +4,7 @@
 #include "carta.h"
 #include "mano.h"
 #include "deck.h"
+#include "posicion.h"
 #include <QLabel>
 #include <QPixmap>
 #include <QSize>
@@ -13,11 +14,20 @@
 #include <QPushButton>
 #include <QTimer>
 
+QMap<QString, Carta*> GameWindow::cartasPorId;
+
+void GameWindow::addCartaPorId(Carta* c){
+    cartasPorId[c->idGlobal] = c;
+}
+
+Carta* GameWindow::getCartaPorId(QString id){
+    return cartasPorId.value(id, nullptr);
+}
 
 GameWindow::GameWindow(int type, int fondo) {
     bg = fondo;
     gameType = type;
-    cardSize = 200;
+    cardSize = 150;
     setBackground();
     setupUI();
     setupGameElements();
@@ -248,24 +258,30 @@ void GameWindow::setBackground() {
 
 void GameWindow::setupGameElements() {
     gameType = 2;
-    Carta *testCard1 = new Carta(this, "1", "Bastos", cardSize, 0);
-    Carta *testCard2 = new Carta(this, "10", "Oros", cardSize, 1);
-    Carta *testCard3 = new Carta(this, "0", "Copas", cardSize, 1);
+    Carta *testCard1 = new Carta(this, this, "1", "Bastos", cardSize, 0);
+    Carta *testCard2 = new Carta(this, this, "10", "Oros", cardSize, 1);
+    Carta *testCard3 = new Carta(this, this, "0", "Copas", cardSize, 1);
     manos.append(new Mano(0, 0));
     manos.append(new Mano(1, 1));
     manos[0]->añadirCarta(testCard1);
     manos[0]->añadirCarta(testCard2);
     manos[1]->añadirCarta(testCard3);
+
+    posiciones.append(new Posicion(this, this, cardSize, 0));
+    posiciones.append(new Posicion(this, this, cardSize, 1));
+
     if (gameType == 2) {
-        Carta *testCard4 = new Carta(this, "0", "Oros", cardSize, 0);
-        Carta *testCard5 = new Carta(this, "0", "Espadas", cardSize, 1);
+        Carta *testCard4 = new Carta(this, this, "0", "Oros", cardSize, 0);
+        Carta *testCard5 = new Carta(this, this, "0", "Espadas", cardSize, 1);
         manos.append(new Mano(2, 2));
         manos.append(new Mano(3, 3));
         manos[2]->añadirCarta(testCard4);
         manos[3]->añadirCarta(testCard5);
+        posiciones.append(new Posicion(this, this, cardSize, 2));
+        posiciones.append(new Posicion(this, this, cardSize, 3));
     }
 
-    Carta *triunfo = new Carta(this, "3", "Oros", cardSize, 0);
+    Carta *triunfo = new Carta(this, this, "3", "Oros", cardSize, 0);
     deck = new Deck(triunfo, 0, cardSize, this);
 }
 
@@ -336,6 +352,10 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     repositionHands();
     repositionOptions();
     deck->actualizarVisual();
+
+    for (int i = 0; i < posiciones.size(); ++i) {
+        posiciones[i]->mostrarPosicion();
+    }
 }
 
 

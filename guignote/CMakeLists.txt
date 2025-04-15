@@ -52,6 +52,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         carta.h carta.cpp
         mano.h mano.cpp
         deck.h deck.cpp
+        posicion.h posicion.cpp
     )
 else()
     if(ANDROID)
