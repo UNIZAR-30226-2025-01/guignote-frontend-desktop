@@ -267,7 +267,6 @@ void GameWindow::setupGameElements() {
 
     Carta *triunfo = new Carta(this, "3", "Oros", cardSize, 0);
     deck = new Deck(triunfo, 0, cardSize, this);
-
 }
 
 void GameWindow::repositionHands(){
@@ -336,6 +335,7 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     repositionOrnaments();
     repositionHands();
     repositionOptions();
+    deck->actualizarVisual();
 }
 
 
