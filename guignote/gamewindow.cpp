@@ -24,7 +24,7 @@ Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
-GameWindow::GameWindow(int type, int fondo) {
+GameWindow::GameWindow(int type, int fondo, QJsonObject msg) {
     bg = fondo;
     gameType = type;
     cardSize = 175;

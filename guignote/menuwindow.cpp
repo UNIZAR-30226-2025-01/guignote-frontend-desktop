@@ -25,46 +25,15 @@
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QFile>
 #include <QStandardPaths>
 #include <QSettings>
 #include <QDebug>
 #include <QPropertyAnimation>
 #include <QGraphicsOpacityEffect>
-
-//DEBUG
-void MenuWindow::debugButton() {
-    // Create a button to open the GameWindow
-
-    QPushButton *openGameButton = new QPushButton("Open Game Window", this);
-
-    // Set the width of the button to one-tenth of the window's width
-    int buttonWidth = this->width() / 10;
-    openGameButton->setFixedWidth(buttonWidth);
-
-    // Create a layout and add the button
-    QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->addWidget(openGameButton);
-    setLayout(layout);  // Set the layout for the menu window
-
-    // Connect the button click to the functionality
-    connect(openGameButton, &QPushButton::clicked, this, [this]() {
-
-        // Get the current size of MenuWindow
-        QSize windowSize = this->size();  // Get the size of MenuWindow
-
-        // Create and show the GameWindow with the same size as MenuWindow
-        GameWindow *gameWindow = new GameWindow(0, 1);
-        gameWindow->resize(windowSize);  // Set the size of GameWindow to match MenuWindow
-        gameWindow->show();
-
-        // Close the current window (MenuWindow)
-        this->close();
-    });
-}
-
-
-
+#include <QWebSocket>
+#include <QUrl>
 
 // Función auxiliar para crear un diálogo modal de sesión expirada.
 static QDialog* createExpiredDialog(QWidget *parent) {
@@ -117,6 +86,123 @@ static QDialog* createExpiredDialog(QWidget *parent) {
     return expiredDialog;
 }
 
+void MenuWindow::manejarMensaje(const QString &mensaje) {
+    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
+    if (!doc.isObject()) {
+        qWarning() << "❌ Mensaje no es JSON válido.";
+        return;
+    }
+
+    QJsonObject root = doc.object();
+    QString tipo = root.value("type").toString();
+    QJsonObject data = root.value("data").toObject();
+
+    if (tipo == "player_joined") {
+        QString nombre = data["usuario"].toObject()["nombre"].toString();
+        int id = data["usuario"].toObject()["id"].toInt();
+        int chatId = data["chat_id"].toInt();
+
+        qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
+        // Actualizá la interfaz si querés mostrar quién se unió
+    }
+
+    else if (tipo == "start_game") {
+        int mazoRestante = data["mazo_restante"].toInt();
+        bool faseArrastre = data["fase_arrastre"].toBool();
+        int chatId = data["chat_id"].toInt();
+
+        QJsonObject cartaTriunfo = data["carta_triunfo"].toObject();
+        QString paloTriunfo = cartaTriunfo["palo"].toString();
+        int valorTriunfo = cartaTriunfo["valor"].toInt();
+
+        QJsonArray cartasJugador = data["mis_cartas"].toArray();
+        QJsonArray jugadores = data["jugadores"].toArray();
+
+        qDebug() << "🎮 Inicio de partida";
+        qDebug() << "🃏 Triunfo:" << paloTriunfo << valorTriunfo;
+        qDebug() << "📦 Cartas en mazo:" << mazoRestante;
+        qDebug() << "💬 Chat ID:" << chatId;
+
+        int numJugadores = jugadores.size();
+
+        int type = -1;
+
+        switch (numJugadores) {
+        case 2:
+            type = 1;
+            break;
+        case 4:
+            type = 2;
+            break;
+        default:
+            break;
+        }
+
+        // Get the current size of MenuWindow
+        QSize windowSize = this->size();  // Get the size of MenuWindow
+
+        // Create and show the GameWindow with the same size as MenuWindow
+        GameWindow *gameWindow = new GameWindow(type, 1, data);
+        gameWindow->resize(windowSize);  // Set the size of GameWindow to match MenuWindow
+        gameWindow->show();
+
+        // Close the current window (MenuWindow)
+        this->close();
+
+        // Procesá cartasJugador y jugadores según tu lógica de juego
+    }
+
+    else {
+        qDebug() << "⚠️ Tipo de mensaje no reconocido:" << tipo;
+    }
+}
+
+void MenuWindow::jugarPartida(const QString &token, int capacidad) {
+    if (webSocket != nullptr) {
+        qDebug() << "Spam Protection";
+    } else {
+
+        qDebug() << "creamos socket";
+
+        webSocket = new QWebSocket();
+
+        // Conexión exitosa
+        QObject::connect(webSocket, &QWebSocket::connected, [this]() {
+            qDebug() << "✅ WebSocket conectado correctamente.";
+        });
+
+        // Recepción de mensajes
+        QObject::connect(webSocket, &QWebSocket::textMessageReceived, [this](const QString &mensaje) {
+            manejarMensaje(mensaje);
+        });
+
+        // En caso de error
+        QObject::connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
+            qDebug() << "❌ Error en WebSocket:" << error;
+        });
+
+        // Construcción de la URL con los parámetros
+        QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
+                          .arg(token)
+                          .arg(capacidad);
+
+        qDebug() << "🌐 Conectando a:" << url;
+
+        webSocket->open(QUrl(url));
+
+        // ✅ Mostrar mensaje "Esperando en cola..."
+        QLabel *mensajeCola = new QLabel("Esperando en cola...", this);
+        mensajeCola->setStyleSheet("color: white; font-size: 24px; background-color: transparent;");
+        mensajeCola->adjustSize();
+
+        int x = (this->width() - mensajeCola->width()) / 2;
+        int y = this->height() - mensajeCola->height() - 80; // 80px desde el borde inferior
+        mensajeCola->move(x, y);
+        mensajeCola->show();
+        mensajeCola->raise(); // Asegura que esté por encima
+    }
+}
+
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
     QWidget(parent),
@@ -134,6 +220,10 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // Activa el relleno de fondo desde la hoja de estilo
     this->setAttribute(Qt::WA_StyledBackground, true);
 
+    token = loadAuthToken();
+    qDebug() << "Token recibido: " + token;
+    webSocket = nullptr;
+
     // ------------- MÚSICA -------------
     backgroundPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
@@ -148,11 +238,11 @@ MenuWindow::MenuWindow(QWidget *parent) :
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
     // ------------- EVENTOS DE CLICK EN CARTAS -------------
-    connect(boton1v1, &ImageButton::clicked, this, []() {
-        qDebug() << "Botón 1v1 presionado";
+    connect(boton1v1, &ImageButton::clicked, this, [this]() {
+        jugarPartida(token, 2);
     });
-    connect(boton2v2, &ImageButton::clicked, this, []() {
-        qDebug() << "Botón 2v2 presionado";
+    connect(boton2v2, &ImageButton::clicked, this, [this]() {
+        jugarPartida(token, 4);
     });
 
     // ------------- BARRAS (BARS) -------------
@@ -175,7 +265,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
     usrLabel = new QLabel(this);
     QTimer::singleShot(1000, this, [this]() {
         // Se carga el token desde el archivo de configuración
-        QString token = loadAuthToken();
         if (token.isEmpty()) {
             usrLabel->setText("ERROR");
         } else {
@@ -401,9 +490,6 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     repositionOrnaments();
     getSettings();
-
-    //DEBUG
-    debugButton();
 }
 
 // Función para extraer el token de autenticación desde el archivo .conf

@@ -18,7 +18,7 @@ class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
 public:
-    GameWindow(int type, int fondo);
+    GameWindow(int type, int fondo, QJsonObject msg);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
 
