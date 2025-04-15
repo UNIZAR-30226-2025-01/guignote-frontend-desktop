@@ -3,9 +3,10 @@
 #include <QApplication>
 #include "gamewindow.h"
 
-Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos)
+Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos, QString token)
     : QLabel(parent), cartaActual(nullptr)
 {
+    this->token = token;
     this->alturaCarta = h;
     this->anchuraCarta = static_cast<int>(h * 0.7);  // Aproximadamente proporción carta
     this->gw = gw;
@@ -42,7 +43,7 @@ void Posicion::mostrarPosicion()
     QWidget *contenedor = parentWidget();
     if (!contenedor) return;
 
-    int espacioDesdeBorde = 200;
+    int espacioDesdeBorde = 225;
     int espacioDesdeBordeLados = 300;
     int espacioEntreZonas = 30;
 

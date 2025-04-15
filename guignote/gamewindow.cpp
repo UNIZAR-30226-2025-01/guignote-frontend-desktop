@@ -27,7 +27,8 @@ Carta* GameWindow::getCartaPorId(QString id){
 GameWindow::GameWindow(int type, int fondo) {
     bg = fondo;
     gameType = type;
-    cardSize = 150;
+    cardSize = 175;
+    token = loadAuthToken();
     setBackground();
     setupUI();
     setupGameElements();
@@ -257,7 +258,7 @@ void GameWindow::setBackground() {
 }
 
 void GameWindow::setupGameElements() {
-    gameType = 2;
+    gameType = 1;
     Carta *testCard1 = new Carta(this, this, "1", "Bastos", cardSize, 0);
     Carta *testCard2 = new Carta(this, this, "10", "Oros", cardSize, 1);
     Carta *testCard3 = new Carta(this, this, "0", "Copas", cardSize, 1);
@@ -267,8 +268,8 @@ void GameWindow::setupGameElements() {
     manos[0]->añadirCarta(testCard2);
     manos[1]->añadirCarta(testCard3);
 
-    posiciones.append(new Posicion(this, this, cardSize, 0));
-    posiciones.append(new Posicion(this, this, cardSize, 1));
+    posiciones.append(new Posicion(this, this, cardSize, 0, token));
+    posiciones.append(new Posicion(this, this, cardSize, 1, token));
 
     if (gameType == 2) {
         Carta *testCard4 = new Carta(this, this, "0", "Oros", cardSize, 0);
@@ -277,12 +278,12 @@ void GameWindow::setupGameElements() {
         manos.append(new Mano(3, 3));
         manos[2]->añadirCarta(testCard4);
         manos[3]->añadirCarta(testCard5);
-        posiciones.append(new Posicion(this, this, cardSize, 2));
-        posiciones.append(new Posicion(this, this, cardSize, 3));
+        posiciones.append(new Posicion(this, this, cardSize, 2, token));
+        posiciones.append(new Posicion(this, this, cardSize, 3, token));
     }
 
     Carta *triunfo = new Carta(this, this, "3", "Oros", cardSize, 0);
-    deck = new Deck(triunfo, 0, cardSize, this);
+    deck = new Deck(triunfo, 0, cardSize, this, token);
 }
 
 void GameWindow::repositionHands(){
@@ -342,8 +343,6 @@ void GameWindow::repositionOptions() {
     layout->setAlignment(Qt::AlignCenter);  // Align icons in the center horizontally
 }
 
-
-
 // Función para recolocar y reposicionar todos los elementos
 void GameWindow::resizeEvent(QResizeEvent *event) {
     // Simply call QWidget's resizeEvent method
@@ -356,6 +355,75 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     for (int i = 0; i < posiciones.size(); ++i) {
         posiciones[i]->mostrarPosicion();
     }
+}
+
+// Función auxiliar para crear un diálogo modal con mensaje personalizado.
+// Si exitApp es verdadero, al cerrar se finaliza la aplicación.
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
+    QDialog *dialog = new QDialog(parent);
+    dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    dialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(dialog);
+    shadow->setBlurRadius(10);
+    shadow->setColor(QColor(0, 0, 0, 80));
+    shadow->setOffset(4, 4);
+    dialog->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QLabel *label = new QLabel(message, dialog);
+    label->setWordWrap(true);
+    label->setStyleSheet("color: white; font-size: 16px;");
+    label->setAlignment(Qt::AlignCenter);
+    layout->addWidget(label);
+
+    QPushButton *okButton = new QPushButton("OK", dialog);
+    okButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px;"
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    okButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(okButton);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    QObject::connect(okButton, &QPushButton::clicked, [dialog, exitApp]() {
+        dialog->close();
+        if (exitApp)
+            qApp->quit();
+    });
+
+    dialog->adjustSize();
+    dialog->move(parent->geometry().center() - dialog->rect().center());
+    return dialog;
+}
+
+// Función para extraer el token de autenticación desde el archivo .conf
+QString GameWindow::loadAuthToken() {
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    QFile configFile(configPath);
+    if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
+        return "";
+    }
+    QString token;
+    while (!configFile.atEnd()) {
+        QString line = configFile.readLine().trimmed();
+        if (line.startsWith("token=")) {
+            token = line.mid(QString("token=").length()).trimmed();
+            break;
+        }
+    }
+    configFile.close();
+    if (token.isEmpty()) {
+        createDialog(this, "No se encontró el token en el archivo de configuración.")->show();
+    }
+    return token;
 }
 
 

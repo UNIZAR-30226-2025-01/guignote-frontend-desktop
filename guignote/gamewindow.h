@@ -5,6 +5,9 @@
 #include <QPixmap>     // For QPixmap class
 #include <QSize>       // For QSize class
 #include <QTransform>  // For QTransform class
+#include <QNetworkAccessManager>
+#include <QCloseEvent>
+#include <QJsonObject>
 #include "icon.h"
 #include "mano.h"
 #include "deck.h"
@@ -23,6 +26,7 @@ private:
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
     int cardSize;
+    QString token;
 
     // 0 -> 1v1 Ranked
     // 1 -> 1v1 Friendly
@@ -35,6 +39,7 @@ private:
     void repositionOrnaments();
     void repositionOptions();
     void repositionHands();
+    QString loadAuthToken();
 
     // Labels to display the corner ornaments
     QLabel *cornerTopLeft;

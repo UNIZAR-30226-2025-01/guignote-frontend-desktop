@@ -14,7 +14,7 @@ class Deck : public QWidget
     Q_OBJECT
 
 public:
-    explicit Deck(Carta* triunfo, int skin, int cardSize, QWidget *parent = nullptr);
+    explicit Deck(Carta* triunfo, int skin, int cardSize, QWidget *parent = nullptr, QString token = "");
     void actualizarVisual();
 
 protected:
@@ -22,6 +22,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
+    QString token;
     Carta* triunfo;
     int skin;
     int num;

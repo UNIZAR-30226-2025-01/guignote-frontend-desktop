@@ -14,7 +14,7 @@ class Posicion : public QLabel
     Q_OBJECT
 
 public:
-    explicit Posicion(GameWindow *gw, QWidget *parent = nullptr, int h = 100, int pos = 0);
+    explicit Posicion(GameWindow *gw, QWidget *parent = nullptr, int h = 100, int pos = 0, QString token = "");
     void mostrarPosicion();
 
 protected:
@@ -22,6 +22,7 @@ protected:
     void dropEvent(QDropEvent *event) override;
 
 private:
+    QString token;
     GameWindow *gw;
     int pos;
     int alturaCarta;
