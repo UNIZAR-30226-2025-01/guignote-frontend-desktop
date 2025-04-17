@@ -17,6 +17,10 @@ class Posicion : public QLabel
 public:
     explicit Posicion(GameWindow *gw, QWidget *parent = nullptr, int h = 100, int pos = 0, QString token = "", QWebSocket *ws = nullptr);
     void mostrarPosicion();
+    int player_id;
+    void setCard(Carta* carta);
+    void removeCard();
+    void setLock(bool l);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;

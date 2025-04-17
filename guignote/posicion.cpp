@@ -31,11 +31,7 @@ Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos, QString toke
 
     this->pos = pos;
 
-    if(pos != 0){
-        Lock = true;
-    } else {
-        Lock = false;
-    }
+    Lock = true;
 
     this->mostrarPosicion();
 }
@@ -110,7 +106,6 @@ void Posicion::dropEvent(QDropEvent *event)
 {
     QString id = event->mimeData()->text();
 
-
     if (!Lock && gw && cartaActual == nullptr) {
         Carta* carta = gw->getCartaPorId(id);
         if (carta) {
@@ -145,8 +140,6 @@ void Posicion::jugarCarta() {
     QJsonDocument doc(mensaje);
     QString jsonString = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
 
-    qDebug() << "Jugamos Carta: " << cartaActual->num.toInt() << " de " << cartaActual->suit;
-
     if (!ws) {
         qWarning() << "❌ WebSocket no está inicializado.";
         return;
@@ -158,4 +151,27 @@ void Posicion::jugarCarta() {
     }
 
     ws->sendTextMessage(jsonString);
+}
+
+void Posicion::setCard(Carta *carta) {
+    carta->setParent(this);
+    int x = (width() - carta->width()) / 2;
+    int y = (height() - carta->height()) / 2;
+    carta->move(x, y);
+    carta->show();
+    carta->raise();
+
+    cartaActual = carta;
+}
+
+void Posicion::removeCard(){
+    if(cartaActual){
+        cartaActual->hide();
+        cartaActual->deleteLater();
+        cartaActual = nullptr;
+    }
+}
+
+void Posicion::setLock(bool l){
+    Lock = l;
 }

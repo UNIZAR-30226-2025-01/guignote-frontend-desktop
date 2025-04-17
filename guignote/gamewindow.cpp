@@ -450,6 +450,7 @@ void GameWindow::setupGameState(QJsonObject s0){
 
     // Inicializamos mi mano
     manos[0]->player_id = this->player_id;
+    posiciones[0]->player_id = this->player_id;
 
     QJsonArray misCartasArray = s0.value("mis_cartas").toArray();
     QString val;
@@ -488,6 +489,7 @@ void GameWindow::setupGameState(QJsonObject s0){
             }
 
             manos[pos]->player_id = id;
+            this->posiciones[pos]->player_id = id;
             for(int j = 0; j < numCartas; j++){
                 Carta* back = new Carta(this, this, "0", "", cardSize, 0);
                 manos[pos]->añadirCarta(back);
@@ -511,6 +513,15 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         QString nombre = data["jugador"].toObject()["nombre"].toString();
         int turnoIndex = data["turno_index"].toInt();
         qDebug() << "Turno de" << nombre << "(ID:" << jugadorId << ") - Index:" << turnoIndex;
+
+        // Permitimos jugar cartas solo en tu turno
+        if(jugadorId == player_id){
+            posiciones[0]->setLock(false);
+            qDebug() << "UnLocked";
+        } else {
+            posiciones[0]->setLock(true);
+            qDebug() << "Locked";
+        }
     }
     else if (type == "card_played") {
         int jugadorId = data["jugador"].toObject()["id"].toInt();
@@ -526,6 +537,14 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         int puntos1 = data["puntos_equipo_1"].toInt();
         int puntos2 = data["puntos_equipo_2"].toInt();
         qDebug() << "Ganador de la ronda:" << ganador << "- Puntos:" << puntos << "→ E1:" << puntos1 << "E2:" << puntos2;
+
+        for (Posicion* pos : posiciones) {
+            if (pos) {
+                // Usás el puntero directamente
+                pos->removeCard();  // por ejemplo
+            }
+        }
+
     }
     else if (type == "phase_update") {
         QString msg = data.value("message").toString();
