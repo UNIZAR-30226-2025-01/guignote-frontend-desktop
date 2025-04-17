@@ -7,6 +7,7 @@
 #include <QDragEnterEvent>
 #include <QMimeData>
 #include <QDebug>
+#include <QtWebSockets>
 #include "carta.h"
 
 class Posicion : public QLabel
@@ -14,7 +15,7 @@ class Posicion : public QLabel
     Q_OBJECT
 
 public:
-    explicit Posicion(GameWindow *gw, QWidget *parent = nullptr, int h = 100, int pos = 0, QString token = "");
+    explicit Posicion(GameWindow *gw, QWidget *parent = nullptr, int h = 100, int pos = 0, QString token = "", QWebSocket *ws = nullptr);
     void mostrarPosicion();
 
 protected:
@@ -22,6 +23,7 @@ protected:
     void dropEvent(QDropEvent *event) override;
 
 private:
+    QWebSocket *ws;
     QString token;
     GameWindow *gw;
     int pos;
@@ -29,8 +31,9 @@ private:
     int anchuraCarta;
     bool Lock;
     Carta* cartaActual;
-
     QPixmap fondoBase;
+
+    void jugarCarta();
 };
 
 #endif // POSICION_H

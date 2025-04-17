@@ -1,15 +1,17 @@
 #include "posicion.h"
 #include <QPainter>
 #include <QApplication>
+#include <QtWebSockets>
 #include "gamewindow.h"
 
-Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos, QString token)
+Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos, QString token, QWebSocket *ws)
     : QLabel(parent), cartaActual(nullptr)
 {
     this->token = token;
     this->alturaCarta = h;
     this->anchuraCarta = static_cast<int>(h * 0.7);  // Aproximadamente proporción carta
     this->gw = gw;
+    this->ws = ws;
     setFixedSize(anchuraCarta, alturaCarta);
 
     // Estilo visual: rectángulo gris semitransparente
@@ -121,6 +123,8 @@ void Posicion::dropEvent(QDropEvent *event)
             carta->raise();
 
             cartaActual = carta;
+            // Mandar mensaje por socket
+            jugarCarta();
 
             event->acceptProposedAction();
         }
@@ -129,4 +133,29 @@ void Posicion::dropEvent(QDropEvent *event)
     }
 }
 
+void Posicion::jugarCarta() {
+    QJsonObject carta;
+    carta["palo"] = cartaActual->suit;
+    carta["valor"] = cartaActual->num.toInt();
 
+    QJsonObject mensaje;
+    mensaje["accion"] = "jugar_carta";
+    mensaje["carta"] = carta;
+
+    QJsonDocument doc(mensaje);
+    QString jsonString = QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+
+    qDebug() << "Jugamos Carta: " << cartaActual->num.toInt() << " de " << cartaActual->suit;
+
+    if (!ws) {
+        qWarning() << "❌ WebSocket no está inicializado.";
+        return;
+    }
+
+    if (ws->state() != QAbstractSocket::ConnectedState) {
+        qWarning() << "❌ WebSocket no está conectado. Estado:" << ws->state();
+        return;
+    }
+
+    ws->sendTextMessage(jsonString);
+}

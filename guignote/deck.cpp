@@ -114,12 +114,46 @@ void Deck::resizeEvent(QResizeEvent *event)
     actualizarVisual();
 }
 
-void Deck::mousePressEvent(QMouseEvent *event)
+void Deck::cartaRobada(){
+    num--;
+    contador->setText(QString::number(num));
+    qDebug() << "Se hizo clic en el mazo. Cartas restantes:" << num;
+}
+
+void Deck::setTriunfo(Carta* nuevaTriunfo)
 {
-    if (event->button() == Qt::LeftButton && num > 0) {
-        num--;
-        contador->setText(QString::number(num));
-        qDebug() << "Se hizo clic en el mazo. Cartas restantes:" << num;
-        actualizarVisual();
+    if (triunfo) {
+        triunfo->hide();
+        triunfo->setParent(nullptr);  // Desasocia de este widget
+        triunfo = nullptr;
     }
+
+    if (nuevaTriunfo) {
+        triunfo = nuevaTriunfo;
+
+        QPixmap original = triunfo->pixmapOrig;
+        qDebug() << "pixmapOrig válido?" << !triunfo->pixmapOrig.isNull();
+        QTransform rotacion;
+        rotacion.rotate(90);
+        QPixmap rotada = original.transformed(rotacion, Qt::SmoothTransformation);
+
+        triunfo->setPixmap(rotada);
+        triunfo->setFixedSize(rotada.size());
+        triunfo->setParent(this);
+        triunfo->lower();
+        triunfo->show();
+
+        // Recalcular tamaño del Deck para que entre la carta triunfo
+        int anchoDeck = fondo->width() + triunfo->width();
+        int altoDeck = std::max(fondo->height(), triunfo->height());
+        int altoTotal = altoDeck + contador->height();
+        setFixedSize(anchoDeck, altoTotal);
+    }
+    actualizarVisual();
+}
+
+void Deck::setNum(int n){
+    num = n;
+    contador->setText(QString::number(num));
+    actualizarVisual();
 }

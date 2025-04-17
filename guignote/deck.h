@@ -16,9 +16,11 @@ class Deck : public QWidget
 public:
     explicit Deck(Carta* triunfo, int skin, int cardSize, QWidget *parent = nullptr, QString token = "");
     void actualizarVisual();
+    void setTriunfo(Carta* nuevaTriunfo);
+    void setNum(int n);
+    void cartaRobada();
 
 protected:
-    void mousePressEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
 private:

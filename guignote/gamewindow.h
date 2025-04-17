@@ -8,6 +8,7 @@
 #include <QNetworkAccessManager>
 #include <QCloseEvent>
 #include <QJsonObject>
+#include <QtWebSockets>
 #include "icon.h"
 #include "mano.h"
 #include "deck.h"
@@ -18,7 +19,7 @@ class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
 public:
-    GameWindow(int type, int fondo, QJsonObject msg);
+    GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket *ws);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
 
@@ -26,7 +27,9 @@ private:
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
     int cardSize;
+    int player_id;
     QString token;
+    QWebSocket *ws;
 
     // 0 -> 1v1 Ranked
     // 1 -> 1v1 Friendly
@@ -34,12 +37,15 @@ private:
 
     void setBackground(); // Function to set the background based on the bg value
     void setupUI();
-    void setupGameElements();
+    void setupGameElements(QJsonObject msg);
     void resizeEvent(QResizeEvent *event);
     void repositionOrnaments();
     void repositionOptions();
     void repositionHands();
     QString loadAuthToken();
+    void getID();
+    void getUsr();
+    void recibirMensajes(const QString &mensaje);
 
     // Labels to display the corner ornaments
     QLabel *cornerTopLeft;
@@ -61,8 +67,10 @@ private:
     QVector<Mano*> manos;
     QVector<Posicion*> posiciones;
     static QMap<QString, Carta*> cartasPorId;
-
     Deck *deck;
+
+    // Conexión Backend
+    void setupGameState(QJsonObject s0);
 };
 
 #endif // GAMEWINDOW_H

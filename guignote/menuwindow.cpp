@@ -110,6 +110,10 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
         // Actualizá la interfaz si querés mostrar quién se unió
 
+        if(nombre == usr){
+            this->id = id;
+        }
+
         if (mensajeCola) {
             QString nuevoTexto = QString("Esperando en cola... (%1/%2)")
             .arg(jugadoresCola)
@@ -161,7 +165,7 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         QSize windowSize = this->size();  // Get the size of MenuWindow
 
         // Create and show the GameWindow with the same size as MenuWindow
-        GameWindow *gameWindow = new GameWindow(type, 1, data);
+        GameWindow *gameWindow = new GameWindow(type, 1, data, id, webSocket);
         gameWindow->resize(windowSize);  // Set the size of GameWindow to match MenuWindow
         gameWindow->show();
 
@@ -169,10 +173,6 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         this->close();
 
         // Procesá cartasJugador y jugadores según tu lógica de juego
-    }
-
-    else {
-        qDebug() << "⚠️ Tipo de mensaje no reconocido:" << tipo;
     }
 }
 
@@ -309,6 +309,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
                     // Se extrae el nombre del usuario y otros datos
                     QString nombre = jsonObj.value("nombre").toString();
+                    this->usr = nombre;
                     int ELO = 0;            // Actualiza si dispones de este dato
                     QString rank = "Rango"; // Actualiza si se recibe el rango
 

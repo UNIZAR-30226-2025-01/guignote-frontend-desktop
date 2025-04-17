@@ -13,6 +13,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QPushButton>
 #include <QTimer>
+#include <QtWebSockets>
 
 QMap<QString, Carta*> GameWindow::cartasPorId;
 
@@ -24,14 +25,17 @@ Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
-GameWindow::GameWindow(int type, int fondo, QJsonObject msg) {
+GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket *ws) {
     bg = fondo;
     gameType = type;
+    player_id=id;
     cardSize = 175;
+    this->ws = ws;
+    QObject::connect(ws, &QWebSocket::textMessageReceived, this, &GameWindow::recibirMensajes);
     token = loadAuthToken();
     setBackground();
     setupUI();
-    setupGameElements();
+    setupGameElements(msg);
 }
 
 void GameWindow::setupUI() {
@@ -257,33 +261,21 @@ void GameWindow::setBackground() {
         }
 }
 
-void GameWindow::setupGameElements() {
-    gameType = 1;
-    Carta *testCard1 = new Carta(this, this, "1", "Bastos", cardSize, 0);
-    Carta *testCard2 = new Carta(this, this, "10", "Oros", cardSize, 1);
-    Carta *testCard3 = new Carta(this, this, "0", "Copas", cardSize, 1);
+void GameWindow::setupGameElements(QJsonObject msg) {
     manos.append(new Mano(0, 0));
     manos.append(new Mano(1, 1));
-    manos[0]->añadirCarta(testCard1);
-    manos[0]->añadirCarta(testCard2);
-    manos[1]->añadirCarta(testCard3);
-
-    posiciones.append(new Posicion(this, this, cardSize, 0, token));
-    posiciones.append(new Posicion(this, this, cardSize, 1, token));
+    posiciones.append(new Posicion(this, this, cardSize, 0, token, ws));
+    posiciones.append(new Posicion(this, this, cardSize, 1, token, ws));
 
     if (gameType == 2) {
-        Carta *testCard4 = new Carta(this, this, "0", "Oros", cardSize, 0);
-        Carta *testCard5 = new Carta(this, this, "0", "Espadas", cardSize, 1);
         manos.append(new Mano(2, 2));
         manos.append(new Mano(3, 3));
-        manos[2]->añadirCarta(testCard4);
-        manos[3]->añadirCarta(testCard5);
-        posiciones.append(new Posicion(this, this, cardSize, 2, token));
-        posiciones.append(new Posicion(this, this, cardSize, 3, token));
+        posiciones.append(new Posicion(this, this, cardSize, 2, token, ws));
+        posiciones.append(new Posicion(this, this, cardSize, 3, token, ws));
     }
+    deck = new Deck(nullptr, 0, cardSize, this, token);
 
-    Carta *triunfo = new Carta(this, this, "3", "Oros", cardSize, 0);
-    deck = new Deck(triunfo, 0, cardSize, this, token);
+    setupGameState(msg);
 }
 
 void GameWindow::repositionHands(){
@@ -357,6 +349,8 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     }
 }
 
+// FUNCIONES PARA COMUNICARSE CON BACKEND Y JUGAR PARTIDAS
+
 // Función auxiliar para crear un diálogo modal con mensaje personalizado.
 // Si exitApp es verdadero, al cerrar se finaliza la aplicación.
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
@@ -426,5 +420,135 @@ QString GameWindow::loadAuthToken() {
     return token;
 }
 
+/* Setup:
+ * Deck:
+ *  numCartas
+ *  cartaTriunfo
+ * Mano Mia:
+ *  Asignar my id
+ *  Añadir mis cartas a la mano
+ * Mano Resto:
+ *  Añadir sus ids
+ *  Añadir n backs a la mano
+ */
+void GameWindow::setupGameState(QJsonObject s0){
 
+    // Comprobamos que tenemos el id
 
+    // Inicializamos deck
+    int mazoRestante = s0.value("mazo_restante").toInt();
+    QJsonObject cartaTriunfo = s0.value("carta_triunfo").toObject();
+    QString palo = cartaTriunfo.value("palo").toString();
+    QString valor = QString::number(cartaTriunfo.value("valor").toInt());
+
+    qDebug() << "Valor Triunfo " << valor;
+    qDebug() << "Palo Triunfo " << palo;
+
+    deck->setNum(mazoRestante);
+    Carta *cartaT = new Carta (this, this, valor, palo, cardSize, 0);
+    deck->setTriunfo(cartaT);
+
+    // Inicializamos mi mano
+    manos[0]->player_id = this->player_id;
+
+    QJsonArray misCartasArray = s0.value("mis_cartas").toArray();
+    QString val;
+    for (const QJsonValue& cartaVal : misCartasArray) {
+        QJsonObject cartaObj = cartaVal.toObject();
+        QString palo = cartaObj.value("palo").toString();
+        val = QString::number(cartaObj.value("valor").toInt());
+
+        // Aquí puedes crear una instancia de tu clase Carta
+        Carta* carta = new Carta(this, this, val, palo, cardSize, 0);
+
+        // Y agregarla a la mano, por ejemplo:
+        manos[0]->añadirCarta(carta);
+    }
+
+    // Inicializamos Resto de Jugadores
+    QJsonArray jugadoresArray = s0.value("jugadores").toArray();
+
+    int i = 0;
+    int posiciones[] = {2, 1, 3};
+    int pos;
+
+    for (const QJsonValue& jugadorVal : jugadoresArray) {
+        QJsonObject jugadorObj = jugadorVal.toObject();
+
+        int id = jugadorObj.value("id").toInt();
+        QString nombre = jugadorObj.value("nombre").toString();
+        int equipo = jugadorObj.value("equipo").toInt();
+        int numCartas = jugadorObj.value("num_cartas").toInt();
+        if (id != player_id) {
+
+            if(gameType == 2){
+                pos = posiciones[i];
+            } else {
+                pos = 1;
+            }
+
+            manos[pos]->player_id = id;
+            for(int j = 0; j < numCartas; j++){
+                Carta* back = new Carta(this, this, "0", "", cardSize, 0);
+                manos[pos]->añadirCarta(back);
+            }
+            i++;
+        }
+    }
+}
+
+void GameWindow::recibirMensajes(const QString &mensaje) {
+    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
+    if (!doc.isObject()) return;
+
+    QJsonObject obj = doc.object();
+    QString type = obj.value("type").toString();
+    QJsonObject data = obj.value("data").toObject();
+
+    if (type == "turn_update") {
+        QString msg = data.value("message").toString();
+        int jugadorId = data["jugador"].toObject()["id"].toInt();
+        QString nombre = data["jugador"].toObject()["nombre"].toString();
+        int turnoIndex = data["turno_index"].toInt();
+        qDebug() << "Turno de" << nombre << "(ID:" << jugadorId << ") - Index:" << turnoIndex;
+    }
+    else if (type == "card_played") {
+        int jugadorId = data["jugador"].toObject()["id"].toInt();
+        QString nombre = data["jugador"].toObject()["nombre"].toString();
+        bool automatica = data["automatica"].toBool();
+        QString palo = data["carta"].toObject()["palo"].toString();
+        int valor = data["carta"].toObject()["valor"].toInt();
+        qDebug() << nombre << "jugó" << valor << "de" << palo << (automatica ? "(automática)" : "");
+    }
+    else if (type == "round_result") {
+        QString ganador = data["ganador"].toObject()["nombre"].toString();
+        int puntos = data["puntos_baza"].toInt();
+        int puntos1 = data["puntos_equipo_1"].toInt();
+        int puntos2 = data["puntos_equipo_2"].toInt();
+        qDebug() << "Ganador de la ronda:" << ganador << "- Puntos:" << puntos << "→ E1:" << puntos1 << "E2:" << puntos2;
+    }
+    else if (type == "phase_update") {
+        QString msg = data.value("message").toString();
+        qDebug() << "[Fase de arrastre]" << msg;
+    }
+    else if (type == "card_drawn") {
+        QString palo = data["carta"].toObject()["palo"].toString();
+        int valor = data["carta"].toObject()["valor"].toInt();
+        qDebug() << "Robaste una carta:" << valor << "de" << palo;
+    }
+    else if (type == "player_left") {
+        QString msg = data["message"].toString();
+        QString nombre = data["usuario"].toObject()["nombre"].toString();
+        qDebug() << nombre << "se desconectó." << msg;
+    }
+    else if (type == "end_game") {
+        QString msg = data["message"].toString();
+        int ganadorEquipo = data["ganador_equipo"].toInt();
+        int puntos1 = data["puntos_equipo_1"].toInt();
+        int puntos2 = data["puntos_equipo_2"].toInt();
+        qDebug() << "🏁 Fin del juego:" << msg << "Ganador: Equipo" << ganadorEquipo << "→ E1:" << puntos1 << "E2:" << puntos2;
+    }
+    else {
+        qDebug() << "Mensaje desconocido:" << mensaje;
+    }
+}
