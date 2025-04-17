@@ -78,6 +78,9 @@ private:
 
     QWebSocket *webSocket;
     void jugarPartida(const QString &token, int capacidad = 2);
+    QLabel *mensajeCola = nullptr;
+    int jugadoresCola;
+    int jugadoresMax;
     void manejarMensaje(const QString &mensaje);
 };
 

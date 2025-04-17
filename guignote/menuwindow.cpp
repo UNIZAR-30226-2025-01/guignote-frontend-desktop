@@ -101,9 +101,28 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         QString nombre = data["usuario"].toObject()["nombre"].toString();
         int id = data["usuario"].toObject()["id"].toInt();
         int chatId = data["chat_id"].toInt();
+        jugadoresCola = data.value("jugadores").toInt();
+        jugadoresMax = data.value("capacidad").toInt();
+
+        qDebug() << "ChatID: " << chatId;
+        qDebug() << "(" << jugadoresCola << "/" << jugadoresMax << ")";
 
         qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
         // Actualizá la interfaz si querés mostrar quién se unió
+
+        if (mensajeCola) {
+            QString nuevoTexto = QString("Esperando en cola... (%1/%2)")
+            .arg(jugadoresCola)
+                .arg(jugadoresMax);
+            mensajeCola->setText(nuevoTexto);
+            mensajeCola->adjustSize();
+
+            // Recalcular posición centrada
+            int x = (this->width() - mensajeCola->width()) / 2;
+            int y = this->height() - mensajeCola->height() - 80;
+            mensajeCola->move(x, y);
+            mensajeCola->raise();
+        }
     }
 
     else if (tipo == "start_game") {
@@ -191,7 +210,10 @@ void MenuWindow::jugarPartida(const QString &token, int capacidad) {
         webSocket->open(QUrl(url));
 
         // ✅ Mostrar mensaje "Esperando en cola..."
-        QLabel *mensajeCola = new QLabel("Esperando en cola...", this);
+        QString msg = QString("Esperando en cola... (") +
+                      QString::number(jugadoresCola) + "/" +
+                      QString::number(jugadoresMax) + ")";
+        mensajeCola = new QLabel(msg, this);
         mensajeCola->setStyleSheet("color: white; font-size: 24px; background-color: transparent;");
         mensajeCola->adjustSize();
 
