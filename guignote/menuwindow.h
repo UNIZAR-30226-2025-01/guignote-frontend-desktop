@@ -11,6 +11,7 @@
 #include <QResizeEvent>
 #include <QEvent>
 #include <QPushButton>
+#include <QWebSocket>
 
 class ImageButton;
 class Icon;
@@ -73,6 +74,16 @@ private:
 
     // Métodos para la conexión con el backend
     QString loadAuthToken();
+    QString token;
+
+    QWebSocket *webSocket;
+    void jugarPartida(const QString &token, int capacidad = 2);
+    QLabel *mensajeCola = nullptr;
+    int jugadoresCola = 0;
+    int jugadoresMax = 0;
+    void manejarMensaje(const QString &mensaje);
+    QString usr;
+    int id;
 };
 
 #endif // MENUWINDOW_H

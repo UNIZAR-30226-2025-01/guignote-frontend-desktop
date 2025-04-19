@@ -48,6 +48,11 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         loadingwindow.h loadingwindow.cpp
         friendsmessagewindow.h friendsmessagewindow.cpp
         rankingwindow.h rankingwindow.cpp
+        gamewindow.h gamewindow.cpp
+        carta.h carta.cpp
+        mano.h mano.cpp
+        deck.h deck.cpp
+        posicion.h posicion.cpp
     )
 else()
     if(ANDROID)
