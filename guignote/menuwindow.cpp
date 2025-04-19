@@ -130,6 +130,12 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
     }
 
     else if (tipo == "start_game") {
+        // — cerrar cuadro “Buscando oponente” si está abierto —
+        if (searchingDialog) {
+            searchingDialog->close();
+            searchingDialog->deleteLater();
+            searchingDialog = nullptr;
+        }
         int mazoRestante = data["mazo_restante"].toInt();
         bool faseArrastre = data["fase_arrastre"].toBool();
         int chatId = data["chat_id"].toInt();
@@ -184,46 +190,112 @@ void MenuWindow::jugarPartida(const QString &token, int capacidad) {
         qDebug() << "creamos socket";
 
         webSocket = new QWebSocket();
+        // ... (conexiones del websocket)
 
-        // Conexión exitosa
-        QObject::connect(webSocket, &QWebSocket::connected, [this]() {
-            qDebug() << "✅ WebSocket conectado correctamente.";
-        });
-
-        // Recepción de mensajes
-        QObject::connect(webSocket, &QWebSocket::textMessageReceived, [this](const QString &mensaje) {
-            manejarMensaje(mensaje);
-        });
-
-        // En caso de error
-        QObject::connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
-            qDebug() << "❌ Error en WebSocket:" << error;
-        });
-
-        // Construcción de la URL con los parámetros
         QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
                           .arg(token)
                           .arg(capacidad);
-
         qDebug() << "🌐 Conectando a:" << url;
-
         webSocket->open(QUrl(url));
 
-        // ✅ Mostrar mensaje "Esperando en cola..."
-        QString msg = QString("Esperando en cola... (") +
-                      QString::number(jugadoresCola) + "/" +
-                      QString::number(jugadoresMax) + ")";
-        mensajeCola = new QLabel(msg, this);
-        mensajeCola->setStyleSheet("color: white; font-size: 24px; background-color: transparent;");
-        mensajeCola->adjustSize();
+        // ————————————— Mostrar cuadro modal mientras busca partida —————————————
+        if (searchingDialog) {
+            searchingDialog->deleteLater();
+        }
+        searchingDialog = new QDialog(this);
+        searchingDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+        searchingDialog->setModal(true);
+        searchingDialog->setStyleSheet(
+            "QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }"
+            );
 
-        int x = (this->width() - mensajeCola->width()) / 2;
-        int y = this->height() - mensajeCola->height() - 80; // 80px desde el borde inferior
-        mensajeCola->move(x, y);
-        mensajeCola->show();
-        mensajeCola->raise(); // Asegura que esté por encima
+        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(searchingDialog);
+        dialogShadow->setBlurRadius(10);
+        dialogShadow->setColor(QColor(0, 0, 0, 80));
+        dialogShadow->setOffset(4, 4);
+        searchingDialog->setGraphicsEffect(dialogShadow);
+
+        QVBoxLayout *searchLayout = new QVBoxLayout(searchingDialog);
+
+        // Etiqueta principal más grande, sin fondo y con “...”
+        QLabel *searchLabel = new QLabel("Buscando oponente...", searchingDialog);
+        searchLabel->setStyleSheet(
+            "color: white;"
+            "font-size: 28px;"
+            "background: transparent;"
+            );
+        searchLabel->setAlignment(Qt::AlignCenter);
+        searchLayout->addWidget(searchLabel);
+
+        // Candados en fila, fondo transparente
+        QHBoxLayout *iconsLayout = new QHBoxLayout();
+        iconsLayout->setSpacing(15);
+        iconsLayout->setAlignment(Qt::AlignCenter);
+        QVector<QLabel*> lockIcons;
+        for (int i = 0; i < 3; ++i) {
+            QLabel *icon = new QLabel(searchingDialog);
+            icon->setStyleSheet("background: transparent;");
+            icon->setPixmap(
+                QPixmap(":/icons/padlock.png")
+                    .scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                );
+            iconsLayout->addWidget(icon);
+            lockIcons.append(icon);
+        }
+        searchLayout->addLayout(iconsLayout);
+
+        // Botón “Cancelar”
+        QPushButton *cancelButton = new QPushButton("Cancelar", searchingDialog);
+        cancelButton->setStyleSheet(
+            "QPushButton {"
+            "  background-color: #c2c2c3;"
+            "  color: #171718;"
+            "  border-radius: 15px;"
+            "  font-size: 20px;"
+            "  font-weight: bold;"
+            "  padding: 12px 25px;"
+            "}"
+            "QPushButton:hover { background-color: #9b9b9b; }"
+            );
+        cancelButton->setFixedSize(140, 45);
+        searchLayout->addWidget(cancelButton, 0, Qt::AlignCenter);
+
+        searchingDialog->adjustSize();
+        searchingDialog->move(this->geometry().center() - searchingDialog->rect().center());
+        searchingDialog->show();
+
+        // Conecta “Cancelar” para cerrar diálogo y socket
+        connect(cancelButton, &QPushButton::clicked, [this]() {
+            if (webSocket) {
+                webSocket->close();
+                webSocket->deleteLater();
+                webSocket = nullptr;
+            }
+            if (searchingDialog) {
+                searchingDialog->close();
+                searchingDialog->deleteLater();
+                searchingDialog = nullptr;
+            }
+        });
+
+        // Animación de giro para los candados
+        QTimer *rotateTimer = new QTimer(searchingDialog);
+        connect(rotateTimer, &QTimer::timeout, [lockIcons]() {
+            static int angle = 0;
+            angle = (angle + 10) % 360;
+            for (QLabel *icon : lockIcons) {
+                QPixmap orig(":/images/app_logo_white.png");
+                QTransform tr; tr.rotate(angle);
+                icon->setPixmap(
+                    orig.transformed(tr, Qt::SmoothTransformation)
+                        .scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                    );
+            }
+        });
+        rotateTimer->start(200);
     }
 }
+
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(QWidget *parent) :
