@@ -17,7 +17,6 @@
 #include <QMessageBox>
 #include "friendswindow.h"
 #include "myprofilewindow.h"
-#include "userprofilewindow.h"
 #include "rankingwindow.h"
 #include <QGraphicsDropShadowEffect>
 #include <QTimer>
@@ -34,6 +33,7 @@
 #include <QGraphicsOpacityEffect>
 #include <QWebSocket>
 #include <QUrl>
+#include <QWebSocketProtocol>
 
 // Función auxiliar para crear un diálogo modal de sesión expirada.
 static QDialog* createExpiredDialog(QWidget *parent) {
@@ -107,8 +107,14 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         qDebug() << "ChatID: " << chatId;
         qDebug() << "(" << jugadoresCola << "/" << jugadoresMax << ")";
 
+        // Actualizamos el contador en el diálogo
+        if (searchingDialog && countLabel) {
+            countLabel->setText(
+                QString("(%1/%2)").arg(jugadoresCola).arg(jugadoresMax)
+                );
+        }
+
         qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
-        // Actualizá la interfaz si querés mostrar quién se unió
 
         if(nombre == usr){
             this->id = id;
@@ -170,131 +176,158 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         // Get the current size of MenuWindow
         QSize windowSize = this->size();  // Get the size of MenuWindow
 
-        // Create and show the GameWindow with the same size as MenuWindow
+        // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
         GameWindow *gameWindow = new GameWindow(type, 1, data, id, webSocket);
-        gameWindow->resize(windowSize);  // Set the size of GameWindow to match MenuWindow
+        // Le damos la misma posición y tamaño que el MenuWindow
+        gameWindow->setGeometry(this->geometry());
         gameWindow->show();
 
-        // Close the current window (MenuWindow)
-        this->close();
-
-        // Procesá cartasJugador y jugadores según tu lógica de juego
+        QWidget *top = this->window();
+        top->close();
     }
 }
 
 void MenuWindow::jugarPartida(const QString &token, int capacidad) {
     if (webSocket != nullptr) {
         qDebug() << "Spam Protection";
-    } else {
-
-        qDebug() << "creamos socket";
-
-        webSocket = new QWebSocket();
-        // ... (conexiones del websocket)
-
-        QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
-                          .arg(token)
-                          .arg(capacidad);
-        qDebug() << "🌐 Conectando a:" << url;
-        webSocket->open(QUrl(url));
-
-        // ————————————— Mostrar cuadro modal mientras busca partida —————————————
-        if (searchingDialog) {
-            searchingDialog->deleteLater();
-        }
-        searchingDialog = new QDialog(this);
-        searchingDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-        searchingDialog->setModal(true);
-        searchingDialog->setStyleSheet(
-            "QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }"
-            );
-
-        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(searchingDialog);
-        dialogShadow->setBlurRadius(10);
-        dialogShadow->setColor(QColor(0, 0, 0, 80));
-        dialogShadow->setOffset(4, 4);
-        searchingDialog->setGraphicsEffect(dialogShadow);
-
-        QVBoxLayout *searchLayout = new QVBoxLayout(searchingDialog);
-
-        // Etiqueta principal más grande, sin fondo y con “...”
-        QLabel *searchLabel = new QLabel("Buscando oponente...", searchingDialog);
-        searchLabel->setStyleSheet(
-            "color: white;"
-            "font-size: 28px;"
-            "background: transparent;"
-            );
-        searchLabel->setAlignment(Qt::AlignCenter);
-        searchLayout->addWidget(searchLabel);
-
-        // Candados en fila, fondo transparente
-        QHBoxLayout *iconsLayout = new QHBoxLayout();
-        iconsLayout->setSpacing(15);
-        iconsLayout->setAlignment(Qt::AlignCenter);
-        QVector<QLabel*> lockIcons;
-        for (int i = 0; i < 3; ++i) {
-            QLabel *icon = new QLabel(searchingDialog);
-            icon->setStyleSheet("background: transparent;");
-            icon->setPixmap(
-                QPixmap(":/icons/padlock.png")
-                    .scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
-                );
-            iconsLayout->addWidget(icon);
-            lockIcons.append(icon);
-        }
-        searchLayout->addLayout(iconsLayout);
-
-        // Botón “Cancelar”
-        QPushButton *cancelButton = new QPushButton("Cancelar", searchingDialog);
-        cancelButton->setStyleSheet(
-            "QPushButton {"
-            "  background-color: #c2c2c3;"
-            "  color: #171718;"
-            "  border-radius: 15px;"
-            "  font-size: 20px;"
-            "  font-weight: bold;"
-            "  padding: 12px 25px;"
-            "}"
-            "QPushButton:hover { background-color: #9b9b9b; }"
-            );
-        cancelButton->setFixedSize(140, 45);
-        searchLayout->addWidget(cancelButton, 0, Qt::AlignCenter);
-
-        searchingDialog->adjustSize();
-        searchingDialog->move(this->geometry().center() - searchingDialog->rect().center());
-        searchingDialog->show();
-
-        // Conecta “Cancelar” para cerrar diálogo y socket
-        connect(cancelButton, &QPushButton::clicked, [this]() {
-            if (webSocket) {
-                webSocket->close();
-                webSocket->deleteLater();
-                webSocket = nullptr;
-            }
-            if (searchingDialog) {
-                searchingDialog->close();
-                searchingDialog->deleteLater();
-                searchingDialog = nullptr;
-            }
-        });
-
-        // Animación de giro para los candados
-        QTimer *rotateTimer = new QTimer(searchingDialog);
-        connect(rotateTimer, &QTimer::timeout, [lockIcons]() {
-            static int angle = 0;
-            angle = (angle + 10) % 360;
-            for (QLabel *icon : lockIcons) {
-                QPixmap orig(":/images/app_logo_white.png");
-                QTransform tr; tr.rotate(angle);
-                icon->setPixmap(
-                    orig.transformed(tr, Qt::SmoothTransformation)
-                        .scaled(50, 50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
-                    );
-            }
-        });
-        rotateTimer->start(200);
+        return;
     }
+
+    // Inicializamos contadores
+    jugadoresCola = 1;
+    jugadoresMax  = capacidad;
+
+    qDebug() << "creamos socket";
+    webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+    // ❇️ conexión original ❇️
+    connect(webSocket, &QWebSocket::connected, [this]() {
+        qDebug() << "WebSocket conectado correctamente.";
+    });
+
+    connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
+        qDebug() << "Error en WebSocket:" << error;
+    });
+    connect(webSocket, &QWebSocket::textMessageReceived,
+            this, &MenuWindow::manejarMensaje);
+
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
+                      .arg(token)
+                      .arg(capacidad);
+    qDebug() << "Conectando a:" << url;
+    webSocket->open(QUrl(url));
+
+
+    // ————————————— Mostrar cuadro modal mientras busca partida —————————————
+    if (searchingDialog) {
+        searchingDialog->deleteLater();
+    }
+    searchingDialog = new QDialog(this);
+    searchingDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    searchingDialog->setModal(true);
+    searchingDialog->setStyleSheet(
+        "QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }"
+        );
+
+    // sombra
+    QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(searchingDialog);
+    dialogShadow->setBlurRadius(10);
+    dialogShadow->setColor(QColor(0,0,0,80));
+    dialogShadow->setOffset(4,4);
+    searchingDialog->setGraphicsEffect(dialogShadow);
+
+    QVBoxLayout *searchLayout = new QVBoxLayout(searchingDialog);
+
+    // título grande
+    QLabel *searchLabel = new QLabel("Buscando oponente...", searchingDialog);
+    searchLabel->setStyleSheet(
+        "color: white;"
+        "font-size: 28px;"
+        "background: transparent;"
+        );
+    searchLabel->setAlignment(Qt::AlignCenter);
+    searchLayout->addWidget(searchLabel);
+
+    // contador (1/Capacidad)
+    countLabel = new QLabel(
+        QString("(%1/%2)").arg(jugadoresCola).arg(jugadoresMax),
+        searchingDialog
+        );
+    countLabel->setStyleSheet("color: white; font-size: 20px; background: transparent;");
+    countLabel->setAlignment(Qt::AlignCenter);
+    searchLayout->addWidget(countLabel);
+
+    // candados giratorios
+    QHBoxLayout *iconsLayout = new QHBoxLayout();
+    iconsLayout->setSpacing(15);
+    iconsLayout->setAlignment(Qt::AlignCenter);
+
+    QVector<QLabel*> lockIcons;
+    for (int i = 0; i < 3; ++i) {
+        QLabel *icon = new QLabel(searchingDialog);
+        icon->setStyleSheet("background: transparent;");
+        icon->setPixmap(
+            QPixmap(":/images/app_logo_white.png")
+                .scaled(50,50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            );
+        iconsLayout->addWidget(icon);
+        lockIcons.append(icon);
+    }
+    searchLayout->addLayout(iconsLayout);
+
+    // botón cancelar
+    QPushButton *cancelButton = new QPushButton("Cancelar", searchingDialog);
+    cancelButton->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #c2c2c3;"
+        "  color: #171718;"
+        "  border-radius: 15px;"
+        "  font-size: 20px;"
+        "  font-weight: bold;"
+        "  padding: 12px 25px;"
+        "}"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    cancelButton->setFixedSize(140,45);
+    searchLayout->addWidget(cancelButton, 0, Qt::AlignCenter);
+
+    searchingDialog->adjustSize();
+    searchingDialog->move(this->geometry().center() - searchingDialog->rect().center());
+    searchingDialog->show();
+
+    // cerrar socket y diálogo al cancelar
+    connect(cancelButton, &QPushButton::clicked, [this]() {
+        if (webSocket) {
+            webSocket->close();
+            webSocket->deleteLater();
+            webSocket = nullptr;
+        }
+        if (searchingDialog) {
+            searchingDialog->close();
+            searchingDialog->deleteLater();
+            searchingDialog = nullptr;
+        }
+    });
+
+    // animación de giro (más lenta)
+    QTimer *rotateTimer = new QTimer(searchingDialog);
+    connect(rotateTimer, &QTimer::timeout, [lockIcons]() {
+        static int angle = 0;
+        angle = (angle + 10) % 360;
+        for (QLabel *icon : lockIcons) {
+            QPixmap orig(":/images/app_logo_white.png");
+            QTransform tr; tr.rotate(angle);
+            icon->setPixmap(
+                orig.transformed(tr, Qt::SmoothTransformation)
+                    .scaled(50,50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                );
+        }
+    });
+    rotateTimer->start(100);
+       // ——————————————————————————————————————————————————————————
+
 }
+
 
 
 // Constructor de la clase MenuWindow

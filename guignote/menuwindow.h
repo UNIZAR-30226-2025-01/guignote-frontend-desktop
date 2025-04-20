@@ -85,6 +85,9 @@ private:
     void manejarMensaje(const QString &mensaje);
     QString usr;
     int id;
+
+    QLabel* countLabel = nullptr;
+
 };
 
 #endif // MENUWINDOW_H
