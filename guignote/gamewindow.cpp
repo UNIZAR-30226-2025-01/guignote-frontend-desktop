@@ -105,16 +105,19 @@ void GameWindow::setupUI() {
         dialogButtonLayout->addWidget(yesButton);
         dialogButtonLayout->addWidget(noButton);
         dialogLayout->addLayout(dialogButtonLayout);
-        connect(yesButton, &QPushButton::clicked, [=]() {
-            // Get the current size of MenuWindow
-            QSize windowSize = this->size();  // Get the size of MenuWindow
+        connect(yesButton, &QPushButton::clicked, [this, confirmDialog]() {
+            // cerramos el diálogo de confirmación
+            confirmDialog->close();
 
-            // Create and show the GameWindow with the same size as MenuWindow
+            // creamos y mostramos el menú raíz
+            QSize windowSize = this->size();
             MenuWindow *menuWindow = new MenuWindow();
-            menuWindow->resize(windowSize);  // Set the size of GameWindow to match MenuWindow
+            menuWindow->resize(windowSize);
             menuWindow->show();
+            menuWindow->raise();
+            menuWindow->activateWindow();
 
-            // Close the current window (MenuWindow)
+            // cerramos el GameWindow
             this->close();
         });
         connect(noButton, &QPushButton::clicked, [=]() {
