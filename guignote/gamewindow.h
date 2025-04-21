@@ -26,6 +26,8 @@ public:
     Carta* getCartaPorId(QString id);
 
 private:
+    QMap<int,int> playerPosMap;
+    bool arrastre = false;
     QTimer *hideOptionsTimer = nullptr;
     bool isMouseOverOptions = false;
     QString gameID;
@@ -94,6 +96,18 @@ private:
 
     void mostrarTurno(const QString &texto, bool miTurno);
     void ocultarTurno();
+    QFrame*   scoreFrame;
+    QLabel*   lblPlayerName;
+    QLabel*   lblOpponentName;
+    QLabel*   lblScore;
+    QLabel*   lblLastRound;
+
+    int       scoreSelf = 0;
+    int       scoreOpp  = 0;
+    QString   opponentName;
+
+    void      updateScoreLabel();
+
 };
 
 #endif // GAMEWINDOW_H

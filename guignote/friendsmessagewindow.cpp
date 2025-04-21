@@ -32,24 +32,21 @@ FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString 
 
 void FriendsMessageWindow::setupWebSocketConnection()
 {
-    // Crear el QWebSocket
     webSocket = new QWebSocket();
 
-    // Construir la URL con los parámetros necesarios
-    QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
+    QString urlString = QString("ws://188.165.76.134:8000/ws/chat_partida/%1/?token=%2")
                             .arg(friendID)
                             .arg(loadAuthToken());
     QUrl url(urlString);
 
-    // Abrir la conexión WebSocket
     webSocket->open(url);
 
-    // Conectar señales a sus respectivos slots
     connect(webSocket, &QWebSocket::connected, this, &FriendsMessageWindow::onConnected);
     connect(webSocket, &QWebSocket::disconnected, this, &FriendsMessageWindow::onDisconnected);
     connect(webSocket, &QWebSocket::textMessageReceived,
             this, &FriendsMessageWindow::onTextMessageReceived);
 }
+
 
 
 void FriendsMessageWindow::onConnected()
@@ -66,8 +63,63 @@ void FriendsMessageWindow::onDisconnected()
 
 void FriendsMessageWindow::onTextMessageReceived(const QString &message)
 {
-    loadMessages(); // Actualiza la lista de mensajes
+    QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
+    if (!doc.isObject()) {
+        qDebug() << "Mensaje recibido inválido.";
+        return;
+    }
+
+    QJsonObject obj = doc.object();
+    if (obj.contains("error")) {
+        qDebug() << "Error recibido:" << obj["error"].toString();
+        return;
+    }
+
+    QString contenido = obj["contenido"].toString();
+    QJsonObject emisor = obj["emisor"].toObject();
+    int emisorId = emisor["id"].toInt();
+
+    // Crear y añadir el mensaje directamente a la lista
+    addMessageToList(contenido, emisorId);
 }
+
+void FriendsMessageWindow::addMessageToList(const QString &contenido, int emisorId)
+{
+    QLabel *messageLabel = new QLabel(contenido);
+    messageLabel->setWordWrap(true);
+    messageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    messageLabel->setAlignment(Qt::AlignLeft);
+
+    QWidget *messageContainer = new QWidget();
+    QVBoxLayout *containerLayout = new QVBoxLayout(messageContainer);
+    containerLayout->setContentsMargins(5, 5, 5, 5);
+    containerLayout->addWidget(messageLabel);
+
+    QListWidgetItem *item = new QListWidgetItem();
+    messagesListWidget->addItem(item);
+    messagesListWidget->setItemWidget(item, messageContainer);
+    messagesListWidget->setSelectionMode(QAbstractItemView::NoSelection);
+
+    QTimer::singleShot(0, this, [=]() {
+        adjustMessageSize(item, messageLabel);
+        messagesListWidget->scrollToBottom();
+    });
+
+    if (QString::number(emisorId) == usr) {
+        messageLabel->setStyleSheet(
+            "background-color: #2196F3; color: white; padding: 8px; font-size: 16px;"
+            "border-radius: 10px; min-width: 100px; max-width: 400px;"
+            );
+        containerLayout->setAlignment(Qt::AlignRight);
+    } else {
+        messageLabel->setStyleSheet(
+            "background-color: white; color: black; padding: 8px; font-size: 16px;"
+            "border-radius: 10px; min-width: 100px; max-width: 400px;"
+            );
+        containerLayout->setAlignment(Qt::AlignLeft);
+    }
+}
+
 
 void FriendsMessageWindow::setupUI()
 {
@@ -121,58 +173,40 @@ void FriendsMessageWindow::setupUI()
 
 void FriendsMessageWindow::sendMessage()
 {
-    // Obtener el texto ingresado en el campo de entrada
     QString message = messageInput->text().trimmed();
     messageInput->clear();
 
-    // Verificar que el mensaje no esté vacío
     if (message.isEmpty()) {
         qDebug() << "Intento de enviar mensaje vacío.";
         return;
     }
 
-    // Cargar el token de autenticación desde el archivo de configuración
-    QString token = loadAuthToken();
-    if (token.isEmpty()) {
-        qDebug() << "No se pudo obtener el token de autenticación.";
-        return;
-    }
-
-    // Crear la URL del WebSocket con el receptor ID y el token
-    QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
-                            .arg(friendID)
-                            .arg(token);
-    QUrl url(urlString);
-
-    // Si no hay conexión activa, establecer la conexión WebSocket
     if (!webSocket->isValid()) {
-        webSocket->open(url);
+        setupWebSocketConnection();
     }
 
-    // Crear el mensaje en formato JSON
     QJsonObject json;
     json["contenido"] = message;
 
-    // Convertir el mensaje a QByteArray
     QJsonDocument doc(json);
     QByteArray jsonData = doc.toJson();
 
-    // Enviar el mensaje por el WebSocket
     webSocket->sendTextMessage(QString::fromUtf8(jsonData));
 
     qDebug() << "Mensaje enviado:" << message;
 }
 
 
+
 void FriendsMessageWindow::loadMessages()
 {
     QString token = loadAuthToken();
     if (token.isEmpty()) {
-        qDebug() << "No se pudo obtener el token de autenticación.";
+        qDebug() << "Token inválido.";
         return;
     }
 
-    QUrl url(QString("http://188.165.76.134:8000/mensajes/obtener/?receptor_id=%1").arg(friendID));
+    QUrl url(QString("http://188.165.76.134:8000/chat_partida/obtener/?chat_id=%1").arg(friendID));
     QNetworkRequest request(url);
     request.setRawHeader("Auth", token.toUtf8());
 
@@ -185,13 +219,13 @@ void FriendsMessageWindow::loadMessages()
             QJsonDocument doc = QJsonDocument::fromJson(responseData);
 
             if (!doc.isObject()) {
-                qDebug() << "Error: Respuesta del servidor no es un JSON válido.";
+                qDebug() << "JSON no válido.";
                 return;
             }
 
             QJsonObject jsonResponse = doc.object();
             if (!jsonResponse.contains("mensajes")) {
-                qDebug() << "No se encontraron mensajes en la respuesta.";
+                qDebug() << "No hay mensajes.";
                 return;
             }
 
@@ -199,56 +233,11 @@ void FriendsMessageWindow::loadMessages()
             messagesListWidget->clear();
 
             for (int i = messagesArray.size() - 1; i >= 0; --i) {
-                if (!messagesArray[i].isObject()) continue;
+                QJsonObject msgObj = messagesArray[i].toObject();
+                QString contenido = msgObj["contenido"].toString();
+                int senderId = msgObj["emisor"].toInt();
 
-                QJsonObject messageObject = messagesArray[i].toObject();
-                QString senderId = QString::number(messageObject["emisor"].toInt());
-                QString content = messageObject["contenido"].toString();
-
-                QLabel *messageLabel = new QLabel(content);
-                messageLabel->setWordWrap(true);
-                messageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-                messageLabel->setAlignment(Qt::AlignLeft);
-
-                // Crear un contenedor para el mensaje
-                QWidget *messageContainer = new QWidget();
-                messageContainer->setStyleSheet("border: none; background: transparent;");
-
-                // Agregar un layout al contenedor del mensaje
-                QVBoxLayout *containerLayout = new QVBoxLayout(messageContainer);
-                containerLayout->setContentsMargins(5, 5, 5, 5);
-                containerLayout->setSpacing(5);
-                containerLayout->addWidget(messageLabel);
-
-                // Crear y agregar el item a la lista
-                QListWidgetItem *item = new QListWidgetItem();
-                messagesListWidget->addItem(item);
-                messagesListWidget->setItemWidget(item, messageContainer);
-                messagesListWidget->setSelectionMode(QAbstractItemView::NoSelection);
-
-                // Ajustar la altura dinámicamente después del renderizado
-                QTimer::singleShot(0, this, [=]() {
-                    adjustMessageSize(item, messageLabel);
-                    messagesListWidget->scrollToBottom();
-                });
-
-                // Ajustar color y estilo de la burbuja según el emisor
-                if (senderId != friendID) {
-                    messageLabel->setStyleSheet(
-                        "background-color: #2196F3; color: white; padding: 8px; font-size: 16px;"
-                        "border-radius: 10px; min-width: 100px; min-height: 30px; max-width: 400px;"
-                        );
-                    containerLayout->setAlignment(Qt::AlignRight);
-                } else {
-                    messageLabel->setStyleSheet(
-                        "background-color: white; color: black; padding: 8px; font-size: 16px;"
-                        "border-radius: 10px; min-width: 100px; min-height: 30px; max-width: 400px;"
-                        );
-                    containerLayout->setAlignment(Qt::AlignLeft);
-                }
-
-                messagesListWidget->addItem(item);
-                messagesListWidget->setItemWidget(item, messageContainer);
+                addMessageToList(contenido, senderId);
             }
         } else {
             qDebug() << "Error al cargar mensajes:" << reply->errorString();
@@ -257,6 +246,7 @@ void FriendsMessageWindow::loadMessages()
         reply->deleteLater();
     });
 }
+
 
 void FriendsMessageWindow::adjustMessageSize(QListWidgetItem *item, QLabel *messageLabel) {
     messageLabel->adjustSize();

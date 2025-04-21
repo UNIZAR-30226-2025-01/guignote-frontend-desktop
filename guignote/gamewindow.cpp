@@ -251,7 +251,52 @@ void GameWindow::setupUI() {
     turnoLabel->setGeometry(overlay->rect());
     QFont font(fontFamily, 38);
     turnoLabel->setFont(font);
+
+    // ––– Setup del marcador dentro de un frame con layout –––
+    scoreFrame = new QFrame(this);
+    scoreFrame->setStyleSheet("background: rgba(0,0,0,120); border-radius: 8px;");
+    auto *scoreLayout = new QVBoxLayout(scoreFrame);
+    scoreLayout->setSpacing(4);
+    scoreLayout->setContentsMargins(8,8,8,8);
+
+    lblPlayerName   = new QLabel(scoreFrame);
+    lblOpponentName = new QLabel(scoreFrame);
+    lblScore        = new QLabel(scoreFrame);
+    lblLastRound    = new QLabel(scoreFrame);
+
+    // Sólo color y tamaño de fuente
+    QString labelStyle = "color: white; font: bold 16px;";
+    lblPlayerName->setStyleSheet(labelStyle);
+    lblOpponentName->setStyleSheet(labelStyle);
+    lblScore->setStyleSheet(labelStyle);
+    lblLastRound->setStyleSheet(labelStyle);
+
+    scoreLayout->addWidget(lblPlayerName);
+    scoreLayout->addWidget(lblOpponentName);
+    scoreLayout->addWidget(lblScore);
+    scoreLayout->addWidget(lblLastRound);
+
+    scoreFrame->adjustSize();
+    scoreFrame->move(20, 20);
+    scoreFrame->show();
+    scoreFrame->setMinimumWidth(300);
+    scoreFrame->raise();
+    optionsBar->raise();
+
 }
+
+// Helper para refrescar marcador
+void GameWindow::updateScoreLabel() {
+    lblScore->setText(
+        QString("%1: %2   vs   %3: %4")
+            .arg(lblPlayerName->text())
+            .arg(scoreSelf)
+            .arg(lblOpponentName->text())
+            .arg(scoreOpp)
+        );
+    scoreFrame->adjustSize();
+}
+
 
 bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
     if ((watched == optionsBar || watched == optionsIndicator)) {
@@ -275,19 +320,24 @@ bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
 
 void GameWindow::mostrarTurno(const QString &texto, bool /*miTurno*/) {
     turnoLabel->setText(texto);
+
+    overlay->show();
     overlay->raise();
     optionsBar->raise();
+
+
+    scoreFrame->raise();
+
+    fadeOut->stop();
+    fadeIn->start();
 
     for (Carta* carta : manos[0]->cartas)
         carta->raise();
 
-    overlay->show();
-    fadeOut->stop();
-    fadeIn->start();
-
-    // Auto ocultar después de 3 segundos para todos los mensajes
-    QTimer::singleShot(3000, this, &GameWindow::ocultarTurno);
+    QTimer::singleShot(2500, this, &GameWindow::ocultarTurno);
 }
+
+
 
 
 void GameWindow::ocultarTurno() {
@@ -512,6 +562,16 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     for (int i = 0; i < posiciones.size(); ++i) {
         posiciones[i]->mostrarPosicion();
     }
+    // 1) reajusta el overlay y demás…
+    overlay->setGeometry(this->rect());
+    turnoLabel->setGeometry(overlay->rect());
+
+    // 2) reposiciona el marcador
+    scoreFrame->adjustSize();  // para que ajuste altura al texto
+    int x = (width() - scoreFrame->width()) / 2;
+    scoreFrame->move(x, 20);
+    scoreFrame->raise();
+
 }
 
 // FUNCIONES PARA COMUNICARSE CON BACKEND Y JUGAR PARTIDAS
@@ -654,6 +714,8 @@ void GameWindow::setupGameState(QJsonObject s0){
             }
 
             manos[pos]->player_id = id;
+            playerPosMap[id] = pos;
+            playerPosMap[this->player_id] = 0;
             this->posiciones[pos]->player_id = id;
             for(int j = 0; j < numCartas; j++){
                 Carta* back = new Carta(this, this, "0", "", cardSize, 0);
@@ -686,50 +748,128 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     }
 
 
-    else if (type == "card_played") {
-        int jugadorId = data["jugador"].toObject()["id"].toInt();
-        QString nombre = data["jugador"].toObject()["nombre"].toString();
-        bool automatica = data["automatica"].toBool();
-        QString palo = data["carta"].toObject()["palo"].toString();
-        int valor = data["carta"].toObject()["valor"].toInt();
-        qDebug() << nombre << "jugó" << valor << "de" << palo << (automatica ? "(automática)" : "");
-    }
-    else if (type == "round_result") {
-        QString ganador = data["ganador"].toObject()["nombre"].toString();
-        int puntos = data["puntos_baza"].toInt();
-        int puntos1 = data["puntos_equipo_1"].toInt();
-        int puntos2 = data["puntos_equipo_2"].toInt();
-        qDebug() << "Ganador de la ronda:" << ganador << "- Puntos:" << puntos << "→ E1:" << puntos1 << "E2:" << puntos2;
-
-        for (Posicion* pos : posiciones) {
-            if (pos) {
-                // Usás el puntero directamente
-                pos->removeCard();  // por ejemplo
+    else if (type == "start_game") {
+        // inicializo nombres y marcador
+        QJsonArray jugadores = data["jugadores"].toArray();
+        for (auto v : jugadores) {
+            auto obj = v.toObject();
+            int   id   = obj["id"].toInt();
+            auto  name = obj["nombre"].toString();
+            if (id == player_id) {
+                lblPlayerName->setText(name);
+            } else {
+                opponentName = name;
+                lblOpponentName->setText(name);
             }
         }
+        // reset puntuaciones
+        scoreSelf = scoreOpp = 0;
+        updateScoreLabel();
+    }
 
+    else if (type == "card_played") {
+        int jugadorId = data["jugador"].toObject()["id"].toInt();
+        QString palo    = data["carta"].toObject()["palo"].toString();
+        int valor       = data["carta"].toObject()["valor"].toInt();
+
+        int idx = playerPosMap.value(jugadorId, -1);
+        if (idx < 0) return;
+
+        // 1) Para los oponentes: quitar un back de su mano
+        if (idx != 0) {
+            manos[idx]->eliminarCarta(0);
+            // 2) Crear y mostrar la carta real sobre la posición
+            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
+            addCartaPorId(carta);
+            posiciones[idx]->setCard(carta);
+        }
+
+        // Desbloquear la posición siguiente
+        int siguiente = (idx + 1) % posiciones.size();
+        posiciones[siguiente]->setLock(false);
     }
+
+    else if (type == "round_result") {
+        // extraigo datos
+        QString ganador = data["ganador"].toObject()["nombre"].toString();
+        int puntos       = data["puntos_baza"].toInt();
+        // carta ganadora para mostrar
+        // asumimos que la última carta jugada por el ganador está en cartasPorId
+        // podrías almacenar la info del mensaje card_played justo antes, aquí simplificamos:
+        QJsonObject lastCartaObj = data["carta_ganadora"].toObject(); // <--- necesitarías que el backend la envíe
+        QString palo  = lastCartaObj["palo"].toString();
+        int     valor = lastCartaObj["valor"].toInt();
+
+        // 1) limpio la mesa
+        for (Posicion* pos : posiciones) {
+            pos->removeCard();
+        }
+        // 2) actualizo puntuaciones
+        if (ganador == lblPlayerName->text())
+            scoreSelf += puntos;
+        else
+            scoreOpp  += puntos;
+        updateScoreLabel();
+
+        // 3) muestro quién ganó la baza y con qué carta
+        lblLastRound->setText(
+            QString("🏆 %1 gana con %2 de %3 (+%4)")
+                .arg(ganador)
+                .arg(valor)
+                .arg(palo)
+                .arg(puntos)
+        );
+        scoreFrame->adjustSize();
+
+        // opcional: también puedes llamar a mostrarTurno() para efecto overlay
+        mostrarTurno(lblLastRound->text(), false);
+    }
+
     else if (type == "phase_update") {
-        QString msg = data.value("message").toString();
-        qDebug() << "[Fase de arrastre]" << msg;
+        arrastre = true;
+        mostrarTurno(data["message"].toString(), false);
     }
+
     else if (type == "card_drawn") {
         QString palo = data["carta"].toObject()["palo"].toString();
-        int valor = data["carta"].toObject()["valor"].toInt();
-        qDebug() << "Robaste una carta:" << valor << "de" << palo;
+        int valor    = data["carta"].toObject()["valor"].toInt();
+
+        if (data["usuario"].toObject().value("id").toInt() == player_id) {
+            // me toca a mí
+            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
+            addCartaPorId(carta);
+            manos[0]->añadirCarta(carta);
+        } else {
+            // oponente, sólo añadimos reverso
+            int idx = playerPosMap.value(
+                data["usuario"].toObject().value("id").toInt(), -1);
+            if (idx >= 0) {
+                Carta* back = new Carta(this, this, "0", "", cardSize, 0);
+                manos[idx]->añadirCarta(back);
+            }
+        }
+        // Actualizar mazo
+        deck->cartaRobada();
     }
+
     else if (type == "player_left") {
         QString msg = data["message"].toString();
         QString nombre = data["usuario"].toObject()["nombre"].toString();
         qDebug() << nombre << "se desconectó." << msg;
     }
     else if (type == "end_game") {
-        QString msg = data["message"].toString();
-        int ganadorEquipo = data["ganador_equipo"].toInt();
-        int puntos1 = data["puntos_equipo_1"].toInt();
-        int puntos2 = data["puntos_equipo_2"].toInt();
-        qDebug() << "🏁 Fin del juego:" << msg << "Ganador: Equipo" << ganadorEquipo << "→ E1:" << puntos1 << "E2:" << puntos2;
+        QString msg    = data["message"].toString();
+        int ganadorEq  = data["ganador_equipo"].toInt();
+        int p1 = data["puntos_equipo_1"].toInt();
+        int p2 = data["puntos_equipo_2"].toInt();
+
+        QDialog *d = createDialog(this,
+                                  QString("%1\n\nEquipo %2 gana!\nPuntos: E1=%3  E2=%4")
+                                      .arg(msg).arg(ganadorEq).arg(p1).arg(p2),
+                                  false);
+        d->show();
     }
+
     else {
         qDebug() << "Mensaje desconocido:" << mensaje;
     }

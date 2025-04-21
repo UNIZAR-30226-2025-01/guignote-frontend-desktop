@@ -23,7 +23,7 @@ public:
 private:
     QWebSocket *webSocket;
     void onTextMessageReceived(const QString &message);
-
+    void addMessageToList(const QString &contenido, int emisorId);
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
     QPushButton *closeButton;
