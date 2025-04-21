@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QtWebSockets>
 #include <QUuid>
+#include <qgraphicseffect.h>
 #include "icon.h"
 #include "mano.h"
 #include "deck.h"
@@ -83,6 +84,16 @@ private:
     int optionsBarHeight = 80;  // altura fija de la barra
     const int indicatorHeight  = 6;   // alto del indicador
     QLabel   *optionsIndicator = nullptr;
+    QGraphicsOpacityEffect *overlayEffect = nullptr;
+    QPropertyAnimation *fadeIn = nullptr;
+    QPropertyAnimation *fadeOut = nullptr;
+    QWidget *overlay = nullptr;
+    QLabel *turnoLabel = nullptr;
+    QGraphicsOpacityEffect *overlayOpacity = nullptr;
+    QPropertyAnimation *fadeAnimation = nullptr;
+
+    void mostrarTurno(const QString &texto, bool miTurno);
+    void ocultarTurno();
 };
 
 #endif // GAMEWINDOW_H

@@ -52,6 +52,18 @@ GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket 
 }
 
 void GameWindow::setupUI() {
+
+    // Registrar fuente personalizada
+    int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
+    QString fontFamily;
+    if (fontId != -1) {
+        fontFamily = QFontDatabase::applicationFontFamilies(fontId).at(0);
+        qDebug() << "✔ Fuente cargada:" << fontFamily;
+    } else {
+        qWarning() << "❌ No se pudo cargar la fuente Glossy Personaluse.";
+        fontFamily = "Arial";  // Fuente alternativa
+    }
+
     // 1) Barra de opciones y layout
     optionsBar = new QFrame(this);
     optionsBar->setObjectName("optionsBar");
@@ -205,6 +217,40 @@ void GameWindow::setupUI() {
     optionsBar->raise();
     optionsIndicator->raise();
     hideOptionsTimer->start();
+
+    // Capa oscura de overlay
+    overlay = new QWidget(this);
+    overlay->setGeometry(this->rect());
+    overlay->setStyleSheet("background-color: rgba(0, 0, 0, 200);");
+    overlay->hide();
+
+    // Efecto de opacidad + animaciones
+    overlayEffect = new QGraphicsOpacityEffect(overlay);
+    overlay->setGraphicsEffect(overlayEffect);
+    overlayEffect->setOpacity(0.0);
+
+    fadeIn = new QPropertyAnimation(overlayEffect, "opacity", this);
+    fadeIn->setDuration(700);
+    fadeIn->setStartValue(0.0);
+    fadeIn->setEndValue(1.0);
+    fadeIn->setEasingCurve(QEasingCurve::OutQuad);
+
+    fadeOut = new QPropertyAnimation(overlayEffect, "opacity", this);
+    fadeOut->setDuration(500);
+    fadeOut->setStartValue(1.0);
+    fadeOut->setEndValue(0.0);
+    fadeOut->setEasingCurve(QEasingCurve::InOutQuad);
+    connect(fadeOut, &QPropertyAnimation::finished, [this]() {
+        overlay->hide();
+    });
+
+    // Texto centrado
+    turnoLabel = new QLabel(overlay);
+    turnoLabel->setAlignment(Qt::AlignCenter);
+    turnoLabel->setStyleSheet("color: white; font-size: 40px; background: transparent;");
+    turnoLabel->setGeometry(overlay->rect());
+    QFont font(fontFamily, 38);
+    turnoLabel->setFont(font);
 }
 
 bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
@@ -226,6 +272,28 @@ bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
     return QWidget::eventFilter(watched, event);
 }
 
+
+void GameWindow::mostrarTurno(const QString &texto, bool /*miTurno*/) {
+    turnoLabel->setText(texto);
+    overlay->raise();
+    optionsBar->raise();
+
+    for (Carta* carta : manos[0]->cartas)
+        carta->raise();
+
+    overlay->show();
+    fadeOut->stop();
+    fadeIn->start();
+
+    // Auto ocultar después de 3 segundos para todos los mensajes
+    QTimer::singleShot(3000, this, &GameWindow::ocultarTurno);
+}
+
+
+void GameWindow::ocultarTurno() {
+    fadeIn->stop();
+    fadeOut->start();
+}
 
 
 
@@ -438,6 +506,8 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     repositionHands();
     repositionOptions();
     deck->actualizarVisual();
+    overlay->setGeometry(this->rect());
+    turnoLabel->setGeometry(overlay->rect());
 
     for (int i = 0; i < posiciones.size(); ++i) {
         posiciones[i]->mostrarPosicion();
@@ -603,21 +673,19 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     QJsonObject data = obj.value("data").toObject();
 
     if (type == "turn_update") {
-        QString msg = data.value("message").toString();
         int jugadorId = data["jugador"].toObject()["id"].toInt();
         QString nombre = data["jugador"].toObject()["nombre"].toString();
-        int turnoIndex = data["turno_index"].toInt();
-        qDebug() << "Turno de" << nombre << "(ID:" << jugadorId << ") - Index:" << turnoIndex;
 
-        // Permitimos jugar cartas solo en tu turno
-        if(jugadorId == player_id){
+        if (jugadorId == player_id) {
             posiciones[0]->setLock(false);
-            qDebug() << "UnLocked";
+            mostrarTurno("Es tu turno", true);
         } else {
             posiciones[0]->setLock(true);
-            qDebug() << "Locked";
+            mostrarTurno("Es el turno de " + nombre, false);
         }
     }
+
+
     else if (type == "card_played") {
         int jugadorId = data["jugador"].toObject()["id"].toInt();
         QString nombre = data["jugador"].toObject()["nombre"].toString();
