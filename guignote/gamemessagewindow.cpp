@@ -17,7 +17,7 @@
 QMap<QString, QList<QPair<QString,QString>>> GameMessageWindow::chatHistories;
 
 
-GameMessageWindow::GameMessageWindow(QWidget *parent, const QString &gameID, const QString &userID)
+GameMessageWindow::GameMessageWindow(const QString &userKey, QWidget *parent, const QString &gameID, const QString &userID)
     : QWidget(parent), chatID(gameID), userID(userID)
 {
     // Ventana sin borde y estilo
@@ -26,16 +26,16 @@ GameMessageWindow::GameMessageWindow(QWidget *parent, const QString &gameID, con
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(600, 680);
 
-    setupUI();
-    setupWebSocketConnection();
+    setupUI(userKey);
+    setupWebSocketConnection(userKey);
 
     //  — Cargar historial previo si existiera —
     networkManager = new QNetworkAccessManager(this);
-    loadChatHistoryFromServer();
+    loadChatHistoryFromServer(userKey);
 }
 
-void GameMessageWindow::loadChatHistoryFromServer() {
-    QString token = loadAuthToken();
+void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
+    QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {
         qDebug() << "GameMessageWindow: No se puede cargar historial, token vacío.";
         return;
@@ -81,7 +81,7 @@ GameMessageWindow::~GameMessageWindow() {
     delete webSocket;
 }
 
-void GameMessageWindow::setupUI() {
+void GameMessageWindow::setupUI(const QString userKey) {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20,20,20,20);
     mainLayout->setSpacing(15);
@@ -124,7 +124,9 @@ void GameMessageWindow::setupUI() {
         "border-radius: 10px; border: 1px solid #444;"
         );
     messageInput->setFixedHeight(40);
-    connect(messageInput, &QLineEdit::returnPressed, this, &GameMessageWindow::sendMessage);
+    connect(messageInput, &QLineEdit::returnPressed, this, [=]() {
+        this->sendMessage(userKey);
+    });
 
     sendButton = new QPushButton("Enviar", this);
     sendButton->setFixedHeight(40);
@@ -133,16 +135,18 @@ void GameMessageWindow::setupUI() {
         "padding: 8px 15px; border-radius: 10px; }"
         "QPushButton:hover { background-color: #2A5C45; }"
         );
-    connect(sendButton, &QPushButton::clicked, this, &GameMessageWindow::sendMessage);
+    connect(sendButton, &QPushButton::clicked, this, [=]() {
+        this->sendMessage(userKey);
+    });
 
     inputLayout->addWidget(messageInput);
     inputLayout->addWidget(sendButton);
     mainLayout->addLayout(inputLayout);
 }
 
-void GameMessageWindow::setupWebSocketConnection() {
+void GameMessageWindow::setupWebSocketConnection(const QString &userKey) {
     webSocket = new QWebSocket();
-    QString token = loadAuthToken();
+    QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {
         qDebug() << "GameMessageWindow: Token vacío, no se puede conectar WebSocket.";
         return;
@@ -189,7 +193,7 @@ void GameMessageWindow::onTextMessageReceived(const QString &message) {
 }
 
 
-void GameMessageWindow::sendMessage() {
+void GameMessageWindow::sendMessage(const QString &userKey) {
     // 1) Recuperar y validar el texto
     QString text = messageInput->text().trimmed();
     if (text.isEmpty()) {
@@ -203,7 +207,7 @@ void GameMessageWindow::sendMessage() {
     // 3) Enviar el mensaje por WebSocket
     if (!webSocket->isValid()) {
         qDebug() << "GameMessageWindow: WebSocket no válido, reintentando conexión...";
-        setupWebSocketConnection();
+        setupWebSocketConnection(userKey);
     }
     QJsonObject json;
     json["contenido"] = text;
@@ -259,9 +263,9 @@ void GameMessageWindow::appendMessage(const QString &senderId, const QString &co
     });
 }
 
-QString GameMessageWindow::loadAuthToken() {
+QString GameMessageWindow::loadAuthToken(const QString &userkey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userkey);
     QFile f(configPath);
     if (!f.open(QIODevice::ReadOnly|QIODevice::Text)) {
         qDebug() << "GameMessageWindow: No se pudo abrir config.";

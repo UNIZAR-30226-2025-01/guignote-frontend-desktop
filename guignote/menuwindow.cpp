@@ -86,7 +86,7 @@ static QDialog* createExpiredDialog(QWidget *parent) {
     return expiredDialog;
 }
 
-void MenuWindow::manejarMensaje(const QString &mensaje) {
+void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
     QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
     if (!doc.isObject()) {
         qWarning() << "❌ Mensaje no es JSON válido.";
@@ -177,7 +177,7 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
         QSize windowSize = this->size();  // Get the size of MenuWindow
 
         // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
-        GameWindow *gameWindow = new GameWindow(type, 1, data, id, webSocket);
+        GameWindow *gameWindow = new GameWindow(userKey, type, 1, data, id, webSocket);
         // Le damos la misma posición y tamaño que el MenuWindow
         gameWindow->setGeometry(this->geometry());
         gameWindow->show();
@@ -187,7 +187,7 @@ void MenuWindow::manejarMensaje(const QString &mensaje) {
     }
 }
 
-void MenuWindow::jugarPartida(const QString &token, int capacidad) {
+void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int capacidad) {
     if (webSocket != nullptr) {
         qDebug() << "Spam Protection";
         return;
@@ -200,7 +200,7 @@ void MenuWindow::jugarPartida(const QString &token, int capacidad) {
     qDebug() << "creamos socket";
     webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
-    // ❇️ conexión original ❇️
+    // conexión original
     connect(webSocket, &QWebSocket::connected, [this]() {
         qDebug() << "WebSocket conectado correctamente.";
     });
@@ -208,8 +208,10 @@ void MenuWindow::jugarPartida(const QString &token, int capacidad) {
     connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
         qDebug() << "Error en WebSocket:" << error;
     });
-    connect(webSocket, &QWebSocket::textMessageReceived,
-            this, &MenuWindow::manejarMensaje);
+    connect(webSocket, &QWebSocket::textMessageReceived, this, [=](const QString &mensaje) {
+        this->manejarMensaje(userKey, mensaje);
+    });
+
 
     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
                       .arg(token)
@@ -331,7 +333,7 @@ void MenuWindow::jugarPartida(const QString &token, int capacidad) {
 
 
 // Constructor de la clase MenuWindow
-MenuWindow::MenuWindow(QWidget *parent) :
+MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MenuWindow),
     boton1v1(nullptr),
@@ -347,7 +349,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     // Activa el relleno de fondo desde la hoja de estilo
     this->setAttribute(Qt::WA_StyledBackground, true);
 
-    token = loadAuthToken();
+    token = loadAuthToken(userKey);
     qDebug() << "Token recibido: " + token;
     webSocket = nullptr;
 
@@ -365,11 +367,11 @@ MenuWindow::MenuWindow(QWidget *parent) :
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
 
     // ------------- EVENTOS DE CLICK EN CARTAS -------------
-    connect(boton1v1, &ImageButton::clicked, this, [this]() {
-        jugarPartida(token, 2);
+    connect(boton1v1, &ImageButton::clicked, this, [this, userKey]() {
+        jugarPartida(userKey, token, 2);
     });
-    connect(boton2v2, &ImageButton::clicked, this, [this]() {
-        jugarPartida(token, 4);
+    connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
+        jugarPartida( userKey, token, 4);
     });
 
     // ------------- BARRAS (BARS) -------------
@@ -383,7 +385,7 @@ MenuWindow::MenuWindow(QWidget *parent) :
     invisibleButton->setStyleSheet("background: transparent; border: none;");
     invisibleButton->setCursor(Qt::PointingHandCursor);
     connect(invisibleButton, &QPushButton::clicked, [=]() {
-        MyProfileWindow *profileWin = new MyProfileWindow(this);
+        MyProfileWindow *profileWin = new MyProfileWindow(userKey, this);
         profileWin->setModal(true);
         profileWin->show();
     });
@@ -458,9 +460,9 @@ MenuWindow::MenuWindow(QWidget *parent) :
         });
         settingsWin->exec();
     });
-    connect(friends, &Icon::clicked, this, [this]() {
+    connect(friends, &Icon::clicked, this, [this, userKey]() {
         friends->setImage(":/icons/darkenedfriends.png", 60, 60);
-        friendswindow *friendsWin = new friendswindow(this);
+        friendswindow *friendsWin = new friendswindow(userKey, this);
         friendsWin->setModal(true);
         connect(friendsWin, &QDialog::finished, [this](int){
             friends->setImage(":/icons/friends.png", 60, 60);
@@ -538,10 +540,10 @@ MenuWindow::MenuWindow(QWidget *parent) :
         });
         inventoryWin->exec();
     });
-    connect(rankings, &Icon::clicked, this, [this]() {
+    connect(rankings, &Icon::clicked, this, [this, userKey]() {
         rankings->setImage(":/icons/darkenedtrophy.png", 60, 60);
 
-        RankingWindow *rankingWin = new RankingWindow(this);
+        RankingWindow *rankingWin = new RankingWindow(userKey, this);
         rankingWin->setModal(true);
 
         connect(rankingWin, &QDialog::finished, [this, rankingWin](int){
@@ -621,14 +623,14 @@ MenuWindow::MenuWindow(QWidget *parent) :
 }
 
 // Función para extraer el token de autenticación desde el archivo .conf
-QString MenuWindow::loadAuthToken() {
+QString MenuWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
 
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         // Pon un qDebug() o algo para saber que falló
-        qDebug() << "No se pudo abrir el archivo de configuración en MenuWindow.";
+        qDebug() << "No se pudo abrir el archivo de configuración en MenuWindow." << configFile.fileName();
         return "";
     }
 

@@ -17,23 +17,23 @@ class GameMessageWindow : public QWidget {
     Q_OBJECT
 
 public:
-    explicit GameMessageWindow(QWidget *parent, const QString &chatID, const QString &userID);
+    explicit GameMessageWindow(const QString &userKey, QWidget *parent, const QString &chatID, const QString &userID);
     ~GameMessageWindow();
 
 private slots:
     void onConnected();
     void onDisconnected();
     void onTextMessageReceived(const QString &message);
-    void sendMessage();
+    void sendMessage(const QString &userKey);
 
 private:
 
     QNetworkAccessManager *networkManager;
-    void loadChatHistoryFromServer();
-    void setupUI();
-    void setupWebSocketConnection();
+    void loadChatHistoryFromServer(const QString &userKey);
+    void setupUI(const QString userKey);
+    void setupWebSocketConnection(const QString &userKey);
     void appendMessage(const QString &senderId, const QString &content);
-    QString loadAuthToken();
+    QString loadAuthToken(const QString &userkey);
     // Historial estático de chats por partida
     static QMap<QString, QList<QPair<QString,QString>>> chatHistories;
     QString chatID;

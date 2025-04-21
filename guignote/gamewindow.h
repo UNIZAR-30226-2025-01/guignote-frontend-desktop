@@ -21,7 +21,7 @@ class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
 public:
-    GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket *ws);
+    GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
 
@@ -44,13 +44,13 @@ private:
 
     bool eventFilter(QObject *watched, QEvent *event) override;
     void setBackground(); // Function to set the background based on the bg value
-    void setupUI();
+    void setupUI(const QString &userKey);
     void setupGameElements(QJsonObject msg);
     void resizeEvent(QResizeEvent *event) override;
     void repositionOrnaments();
     void repositionOptions();
     void repositionHands();
-    QString loadAuthToken();
+    QString loadAuthToken(const QString &userKey);
     void getID();
     void getUsr();
     void recibirMensajes(const QString &mensaje);

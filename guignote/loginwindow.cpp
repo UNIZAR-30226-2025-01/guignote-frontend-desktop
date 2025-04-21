@@ -10,7 +10,6 @@
 
 #include "loginwindow.h"
 #include "loadingwindow.h"
-#include "menuwindow.h"
 #include "recoverpasswordwindow.h"
 
 // Inclusión de librerías de Qt necesarias para la interfaz y red
@@ -159,24 +158,24 @@ LoginWindow::LoginWindow(QWidget *parent)
     // CheckBox "Recordar contraseña"
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
     QString checkBoxStyle = R"(
-    QCheckBox {
-        color: #ffffff;
-        font-size: 14px;
-    }
-    QCheckBox::indicator {
-        width: 16px;
-        height: 16px;
-    }
-    QCheckBox::indicator:unchecked {
-        background-color: #c2c2c3;
-        border: 1px solid #545454;
-    }
-    QCheckBox::indicator:checked {
-        background-color: #c2c2c3;
-        border: 1px solid #545454;
-        image: url(":/icons/cross.png");
-    }
-)";
+        QCheckBox {
+            color: #ffffff;
+            font-size: 14px;
+        }
+        QCheckBox::indicator {
+            width: 16px;
+            height: 16px;
+        }
+        QCheckBox::indicator:unchecked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+            image: url(":/icons/cross.png");
+        }
+    )";
     rememberCheck->setStyleSheet(checkBoxStyle);
     mainLayout->addWidget(rememberCheck);
 
@@ -268,7 +267,8 @@ LoginWindow::LoginWindow(QWidget *parent)
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
                         qDebug() << "Token recibido:" << token;
-                        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+                        QString userKey = userOrEmail; // Este es el input del usuario
+                        QSettings settings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(userKey));
                         settings.setValue("auth/token", token);
                         settings.setValue("auth/remember", rememberCheck->isChecked());
 
@@ -281,7 +281,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                             settings.remove("auth/user");
                             settings.remove("auth/pass");
                         }
-                        LoadingWindow *loadWin = new LoadingWindow();
+                        LoadingWindow *loadWin = new LoadingWindow(userKey, this);
                         // Si existe una ventana padre (MainWindow), se reemplaza el widget central por el menú.
                         if (this->parentWidget()) {
                             QMainWindow *mainWin = qobject_cast<QMainWindow*>(this->parentWidget());

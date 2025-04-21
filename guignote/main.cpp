@@ -86,8 +86,8 @@ int main(int argc, char *argv[])
     if (ok) {
         // Guardamos el token para usarlo en las peticiones si lo necesitas
         settings.setValue("auth/token", token);
-        LoadingWindow l;    // Mostramos la pantalla de carga
-        l.show();
+        LoadingWindow *l = new LoadingWindow(user);    // Mostramos la pantalla de carga
+        l->show();
         return a.exec();
     } else {
         MainWindow w;

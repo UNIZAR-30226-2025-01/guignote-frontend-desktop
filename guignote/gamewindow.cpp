@@ -27,19 +27,19 @@ Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
-GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket *ws) {
+GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws) {
     bg = fondo;
     gameType = type;
     player_id=id;
     cardSize = 175;
     this->ws = ws;
     QObject::connect(ws, &QWebSocket::textMessageReceived, this, &GameWindow::recibirMensajes);
-    token = loadAuthToken();
+    token = loadAuthToken(userKey);
     setBackground();
      if (msg.contains("chat_id")) {
         chatID = QString::number(msg["chat_id"].toInt());
     }
-    setupUI();
+    setupUI(userKey);
     setupGameElements(msg);
     setMouseTracking(true);
     optionsBar->setMouseTracking(true);
@@ -49,7 +49,7 @@ GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket 
     }
 }
 
-void GameWindow::setupUI() {
+void GameWindow::setupUI(const QString &userKey) {
 
     // Registrar fuente personalizada
     int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
@@ -94,19 +94,20 @@ void GameWindow::setupUI() {
         w->exec();
     });
 
-    connect(chat, &Icon::clicked, this, [this]() {
+    connect(chat, &Icon::clicked, this, [this, userKey]() {
         if (chatID.isEmpty()) {
             // aún no ha llegado start_game con chat_id
             QDialog *d = createDialog(this, "El chat no está disponible. Espera a que inicie la partida.");
             d->show();
             return;
         }
-        GameMessageWindow *w = new GameMessageWindow(this, chatID, QString::number(player_id));        w->setWindowModality(Qt::ApplicationModal);
+        GameMessageWindow *w = new GameMessageWindow(userKey, this, chatID, QString::number(player_id));
+        w->setWindowModality(Qt::ApplicationModal);
         w->move(this->geometry().center() - w->rect().center());
         w->show(); w->raise(); w->activateWindow();
     });
 
-    connect(quit, &Icon::clicked, this, [this]() {
+    connect(quit, &Icon::clicked, this, [this, userKey]() {
         quit->setImage(":/icons/darkeneddoor.png", 60, 60);
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -148,13 +149,13 @@ void GameWindow::setupUI() {
         dialogButtonLayout->addWidget(yesButton);
         dialogButtonLayout->addWidget(noButton);
         dialogLayout->addLayout(dialogButtonLayout);
-        connect(yesButton, &QPushButton::clicked, [this, confirmDialog]() {
+        connect(yesButton, &QPushButton::clicked, [this, confirmDialog, userKey]() {
             // cerramos el diálogo de confirmación
             confirmDialog->close();
 
             // creamos y mostramos el menú raíz
             QSize windowSize = this->size();
-            MenuWindow *menuWindow = new MenuWindow();
+            MenuWindow *menuWindow = new MenuWindow(userKey);
             menuWindow->resize(windowSize);
             menuWindow->show();
             menuWindow->raise();
@@ -573,9 +574,9 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
 }
 
 // Función para extraer el token de autenticación desde el archivo .conf
-QString GameWindow::loadAuthToken() {
+QString GameWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
