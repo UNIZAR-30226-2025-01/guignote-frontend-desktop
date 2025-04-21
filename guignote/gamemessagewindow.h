@@ -9,12 +9,15 @@
 #include <QPushButton>
 #include <qboxlayout.h>
 #include <qlabel.h>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 
 class GameMessageWindow : public QWidget {
     Q_OBJECT
 
 public:
-    explicit GameMessageWindow(QWidget *parent, const QString &egameID, const QString &userID);
+    explicit GameMessageWindow(QWidget *parent, const QString &chatID, const QString &userID);
     ~GameMessageWindow();
 
 private slots:
@@ -24,17 +27,19 @@ private slots:
     void sendMessage();
 
 private:
+
+    QNetworkAccessManager *networkManager;
+    void loadChatHistoryFromServer();
     void setupUI();
     void setupWebSocketConnection();
     void appendMessage(const QString &senderId, const QString &content);
     QString loadAuthToken();
     // Historial estático de chats por partida
     static QMap<QString, QList<QPair<QString,QString>>> chatHistories;
-    QString gameID;
+    QString chatID;
     QString userID;
     QWebSocket *webSocket;
     // Identificador de este chat, para indexar chatHistories
-    QString chatID;
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
     QPushButton *closeButton;

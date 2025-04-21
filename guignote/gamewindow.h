@@ -79,7 +79,7 @@ private:
 
     // Conexión Backend
     void setupGameState(QJsonObject s0);
-
+    QString chatID;
     QPropertyAnimation *showOptionsAnimation = nullptr;
     QPropertyAnimation *hideOptionsAnimation = nullptr;
     bool isOptionsVisible = false;
@@ -96,17 +96,8 @@ private:
 
     void mostrarTurno(const QString &texto, bool miTurno);
     void ocultarTurno();
-    QFrame*   scoreFrame;
-    QLabel*   lblPlayerName;
-    QLabel*   lblOpponentName;
-    QLabel*   lblScore;
-    QLabel*   lblLastRound;
 
-    int       scoreSelf = 0;
-    int       scoreOpp  = 0;
-    QString   opponentName;
 
-    void      updateScoreLabel();
 
 };
 

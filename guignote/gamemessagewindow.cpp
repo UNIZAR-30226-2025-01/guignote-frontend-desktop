@@ -11,12 +11,14 @@
 #include <QJsonObject>
 #include <QTimer>
 #include <QDebug>
+#include <qjsonarray.h>
+
 
 QMap<QString, QList<QPair<QString,QString>>> GameMessageWindow::chatHistories;
 
 
 GameMessageWindow::GameMessageWindow(QWidget *parent, const QString &gameID, const QString &userID)
-    : QWidget(parent), gameID(gameID), userID(userID)
+    : QWidget(parent), chatID(gameID), userID(userID)
 {
     // Ventana sin borde y estilo
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -28,12 +30,50 @@ GameMessageWindow::GameMessageWindow(QWidget *parent, const QString &gameID, con
     setupWebSocketConnection();
 
     //  — Cargar historial previo si existiera —
-    if (chatHistories.contains(chatID)) {
-        for (auto &entry : chatHistories[chatID]) {
-            appendMessage(entry.first, entry.second);
-        }
-    }
+    networkManager = new QNetworkAccessManager(this);
+    loadChatHistoryFromServer();
 }
+
+void GameMessageWindow::loadChatHistoryFromServer() {
+    QString token = loadAuthToken();
+    if (token.isEmpty()) {
+        qDebug() << "GameMessageWindow: No se puede cargar historial, token vacío.";
+        return;
+    }
+
+    QString urlString = QString("http://188.165.76.134:8000/chat_partida/obtener/?chat_id=%1").arg(chatID);
+    QNetworkRequest request((QUrl(urlString)));
+    request.setRawHeader("Auth", token.toUtf8());
+
+    QNetworkReply *reply = networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [=]() {
+        if (reply->error()) {
+            qDebug() << "Error al obtener historial:" << reply->errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        QByteArray responseData = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(responseData);
+        if (!doc.isObject()) {
+            qDebug() << "Respuesta de historial no es JSON válido.";
+            reply->deleteLater();
+            return;
+        }
+
+        QJsonArray mensajes = doc.object()["mensajes"].toArray();
+        for (int i = mensajes.size() - 1; i >= 0; --i) {
+            QJsonObject msg = mensajes[i].toObject();
+            QString senderId = QString::number(msg["emisor"].toInt());
+            QString content = msg["contenido"].toString();
+            appendMessage(senderId, content);
+        }
+
+
+        reply->deleteLater();
+    });
+}
+
 
 GameMessageWindow::~GameMessageWindow() {
     qDebug() << "GameMessageWindow: Destructor, cerrando WebSocket.";
@@ -108,8 +148,9 @@ void GameMessageWindow::setupWebSocketConnection() {
         return;
     }
 
-    QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
-                            .arg(gameID, token);
+    QString urlString = QString("ws://188.165.76.134:8000/ws/chat_partida/%1/?token=%2")
+                            .arg(chatID, token);
+
     qDebug() << "GameMessageWindow: Conectando a" << urlString;
     webSocket->open(QUrl(urlString));
 
@@ -135,10 +176,18 @@ void GameMessageWindow::onTextMessageReceived(const QString &message) {
         return;
     }
     QJsonObject obj = doc.object();
-    QString senderId = QString::number(obj["emisor"].toInt());
-    QString content  = obj["contenido"].toString();
+
+    if (obj.contains("error")) {
+        qDebug() << "Error del WebSocket:" << obj["error"].toString();
+        return;
+    }
+
+    QJsonObject emisorObj = obj["emisor"].toObject();
+    QString senderId = QString::number(emisorObj["id"].toInt());
+    QString content = obj["contenido"].toString();
     appendMessage(senderId, content);
 }
+
 
 void GameMessageWindow::sendMessage() {
     // 1) Recuperar y validar el texto

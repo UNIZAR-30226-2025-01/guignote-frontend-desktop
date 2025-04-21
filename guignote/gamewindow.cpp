@@ -17,6 +17,7 @@
 #include <QtWebSockets>
 
 QMap<QString, Carta*> GameWindow::cartasPorId;
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false);
 
 void GameWindow::addCartaPorId(Carta* c){
     cartasPorId[c->idGlobal] = c;
@@ -35,19 +36,16 @@ GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket 
     QObject::connect(ws, &QWebSocket::textMessageReceived, this, &GameWindow::recibirMensajes);
     token = loadAuthToken();
     setBackground();
+     if (msg.contains("chat_id")) {
+        chatID = QString::number(msg["chat_id"].toInt());
+    }
     setupUI();
     setupGameElements(msg);
     setMouseTracking(true);
     optionsBar->setMouseTracking(true);
 
-
-    // Generar gameID
     if (msg.contains("gameID") && msg["gameID"].isString()) {
         gameID = msg["gameID"].toString();
-        qDebug() << "GameWindow: usar gameID del servidor =" << gameID;
-    } else {
-        gameID = QUuid::createUuid().toString();
-        qDebug() << "GameWindow: gameID generado localmente =" << gameID;
     }
 }
 
@@ -96,9 +94,14 @@ void GameWindow::setupUI() {
         w->exec();
     });
 
-    connect(chat, &Icon::clicked, this, [=]() {
-        GameMessageWindow *w = new GameMessageWindow(this, gameID, QString::number(player_id));
-        w->setWindowModality(Qt::ApplicationModal);
+    connect(chat, &Icon::clicked, this, [this]() {
+        if (chatID.isEmpty()) {
+            // aún no ha llegado start_game con chat_id
+            QDialog *d = createDialog(this, "El chat no está disponible. Espera a que inicie la partida.");
+            d->show();
+            return;
+        }
+        GameMessageWindow *w = new GameMessageWindow(this, chatID, QString::number(player_id));        w->setWindowModality(Qt::ApplicationModal);
         w->move(this->geometry().center() - w->rect().center());
         w->show(); w->raise(); w->activateWindow();
     });
@@ -251,51 +254,9 @@ void GameWindow::setupUI() {
     turnoLabel->setGeometry(overlay->rect());
     QFont font(fontFamily, 38);
     turnoLabel->setFont(font);
-
-    // ––– Setup del marcador dentro de un frame con layout –––
-    scoreFrame = new QFrame(this);
-    scoreFrame->setStyleSheet("background: rgba(0,0,0,120); border-radius: 8px;");
-    auto *scoreLayout = new QVBoxLayout(scoreFrame);
-    scoreLayout->setSpacing(4);
-    scoreLayout->setContentsMargins(8,8,8,8);
-
-    lblPlayerName   = new QLabel(scoreFrame);
-    lblOpponentName = new QLabel(scoreFrame);
-    lblScore        = new QLabel(scoreFrame);
-    lblLastRound    = new QLabel(scoreFrame);
-
-    // Sólo color y tamaño de fuente
-    QString labelStyle = "color: white; font: bold 16px;";
-    lblPlayerName->setStyleSheet(labelStyle);
-    lblOpponentName->setStyleSheet(labelStyle);
-    lblScore->setStyleSheet(labelStyle);
-    lblLastRound->setStyleSheet(labelStyle);
-
-    scoreLayout->addWidget(lblPlayerName);
-    scoreLayout->addWidget(lblOpponentName);
-    scoreLayout->addWidget(lblScore);
-    scoreLayout->addWidget(lblLastRound);
-
-    scoreFrame->adjustSize();
-    scoreFrame->move(20, 20);
-    scoreFrame->show();
-    scoreFrame->setMinimumWidth(300);
-    scoreFrame->raise();
-    optionsBar->raise();
-
 }
 
-// Helper para refrescar marcador
-void GameWindow::updateScoreLabel() {
-    lblScore->setText(
-        QString("%1: %2   vs   %3: %4")
-            .arg(lblPlayerName->text())
-            .arg(scoreSelf)
-            .arg(lblOpponentName->text())
-            .arg(scoreOpp)
-        );
-    scoreFrame->adjustSize();
-}
+
 
 
 bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
@@ -326,7 +287,6 @@ void GameWindow::mostrarTurno(const QString &texto, bool /*miTurno*/) {
     optionsBar->raise();
 
 
-    scoreFrame->raise();
 
     fadeOut->stop();
     fadeIn->start();
@@ -562,15 +522,6 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     for (int i = 0; i < posiciones.size(); ++i) {
         posiciones[i]->mostrarPosicion();
     }
-    // 1) reajusta el overlay y demás…
-    overlay->setGeometry(this->rect());
-    turnoLabel->setGeometry(overlay->rect());
-
-    // 2) reposiciona el marcador
-    scoreFrame->adjustSize();  // para que ajuste altura al texto
-    int x = (width() - scoreFrame->width()) / 2;
-    scoreFrame->move(x, 20);
-    scoreFrame->raise();
 
 }
 
@@ -578,7 +529,7 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
 
 // Función auxiliar para crear un diálogo modal con mensaje personalizado.
 // Si exitApp es verdadero, al cerrar se finaliza la aplicación.
-static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     dialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
@@ -749,22 +700,17 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 
 
     else if (type == "start_game") {
+        if(data.contains("chat_id")) {
+            chatID = QString::number(data["chat_id"].toInt());
+        }
         // inicializo nombres y marcador
         QJsonArray jugadores = data["jugadores"].toArray();
         for (auto v : jugadores) {
             auto obj = v.toObject();
             int   id   = obj["id"].toInt();
             auto  name = obj["nombre"].toString();
-            if (id == player_id) {
-                lblPlayerName->setText(name);
-            } else {
-                opponentName = name;
-                lblOpponentName->setText(name);
-            }
         }
-        // reset puntuaciones
-        scoreSelf = scoreOpp = 0;
-        updateScoreLabel();
+
     }
 
     else if (type == "card_played") {
@@ -800,29 +746,6 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         QString palo  = lastCartaObj["palo"].toString();
         int     valor = lastCartaObj["valor"].toInt();
 
-        // 1) limpio la mesa
-        for (Posicion* pos : posiciones) {
-            pos->removeCard();
-        }
-        // 2) actualizo puntuaciones
-        if (ganador == lblPlayerName->text())
-            scoreSelf += puntos;
-        else
-            scoreOpp  += puntos;
-        updateScoreLabel();
-
-        // 3) muestro quién ganó la baza y con qué carta
-        lblLastRound->setText(
-            QString("🏆 %1 gana con %2 de %3 (+%4)")
-                .arg(ganador)
-                .arg(valor)
-                .arg(palo)
-                .arg(puntos)
-        );
-        scoreFrame->adjustSize();
-
-        // opcional: también puedes llamar a mostrarTurno() para efecto overlay
-        mostrarTurno(lblLastRound->text(), false);
     }
 
     else if (type == "phase_update") {
