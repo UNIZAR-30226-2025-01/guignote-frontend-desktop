@@ -16,7 +16,7 @@
 #include <QDebug>
 #include <QString>
 
-RankingWindow::RankingWindow(QWidget *parent)
+RankingWindow::RankingWindow(const QString &userKey, QWidget *parent)
     : QDialog(parent)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -25,14 +25,14 @@ RankingWindow::RankingWindow(QWidget *parent)
     setFixedSize(900, 650);
 
     networkManager = new QNetworkAccessManager(this);
-    authToken = loadAuthToken();
+    authToken = loadAuthToken(userKey);
     setupUI();
     fetchIndividualRanking();
 }
 
-QString RankingWindow::loadAuthToken() {
+QString RankingWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qDebug() << "No se pudo cargar el archivo de configuración.";

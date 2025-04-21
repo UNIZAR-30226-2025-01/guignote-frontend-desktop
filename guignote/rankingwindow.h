@@ -15,7 +15,7 @@ class RankingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit RankingWindow(QWidget *parent = nullptr);
+    explicit RankingWindow(const QString &userKey, QWidget *parent = nullptr);
 
 private:
     // UI
@@ -33,7 +33,7 @@ private:
 
     // Métodos
     void setupUI();
-    QString loadAuthToken();
+    QString loadAuthToken(const QString &userKey);
 
     void fetchIndividualRanking();
     void fetchTeamRanking();

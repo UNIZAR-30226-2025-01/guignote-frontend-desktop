@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QtWebSockets>
 #include <QUuid>
+#include <qgraphicseffect.h>
 #include "icon.h"
 #include "mano.h"
 #include "deck.h"
@@ -20,11 +21,13 @@ class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
 public:
-    GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket *ws);
+    GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
 
 private:
+    QMap<int,int> playerPosMap;
+    bool arrastre = false;
     QTimer *hideOptionsTimer = nullptr;
     bool isMouseOverOptions = false;
     QString gameID;
@@ -41,13 +44,13 @@ private:
 
     bool eventFilter(QObject *watched, QEvent *event) override;
     void setBackground(); // Function to set the background based on the bg value
-    void setupUI();
+    void setupUI(const QString &userKey);
     void setupGameElements(QJsonObject msg);
     void resizeEvent(QResizeEvent *event) override;
     void repositionOrnaments();
     void repositionOptions();
     void repositionHands();
-    QString loadAuthToken();
+    QString loadAuthToken(const QString &userKey);
     void getID();
     void getUsr();
     void recibirMensajes(const QString &mensaje);
@@ -76,13 +79,26 @@ private:
 
     // Conexión Backend
     void setupGameState(QJsonObject s0);
-
+    QString chatID;
     QPropertyAnimation *showOptionsAnimation = nullptr;
     QPropertyAnimation *hideOptionsAnimation = nullptr;
     bool isOptionsVisible = false;
     int optionsBarHeight = 80;  // altura fija de la barra
     const int indicatorHeight  = 6;   // alto del indicador
     QLabel   *optionsIndicator = nullptr;
+    QGraphicsOpacityEffect *overlayEffect = nullptr;
+    QPropertyAnimation *fadeIn = nullptr;
+    QPropertyAnimation *fadeOut = nullptr;
+    QWidget *overlay = nullptr;
+    QLabel *turnoLabel = nullptr;
+    QGraphicsOpacityEffect *overlayOpacity = nullptr;
+    QPropertyAnimation *fadeAnimation = nullptr;
+
+    void mostrarTurno(const QString &texto, bool miTurno);
+    void ocultarTurno();
+
+
+
 };
 
 #endif // GAMEWINDOW_H

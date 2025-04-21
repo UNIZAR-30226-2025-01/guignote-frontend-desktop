@@ -23,7 +23,7 @@ class MenuWindow;
 class MenuWindow : public QWidget {
     Q_OBJECT
 public:
-    explicit MenuWindow(QWidget *parent = nullptr);
+    explicit MenuWindow(const QString &userKey, QWidget *parent = nullptr);
     QMediaPlayer *backgroundPlayer;
     QAudioOutput *audioOutput;
     ~MenuWindow();
@@ -73,16 +73,16 @@ private:
     void getSettings();
 
     // Métodos para la conexión con el backend
-    QString loadAuthToken();
+    QString loadAuthToken(const QString &userKey);
     QString token;
 
     QWebSocket *webSocket;
-    void jugarPartida(const QString &token, int capacidad = 2);
+    void jugarPartida(const QString &userKey, const QString &token, int capacidad = 2);
     QLabel *mensajeCola = nullptr;
     QDialog *searchingDialog = nullptr;
     int jugadoresCola = 0;
     int jugadoresMax = 0;
-    void manejarMensaje(const QString &mensaje);
+    void manejarMensaje(const QString &userKey, const QString &mensaje);
     QString usr;
     int id;
 

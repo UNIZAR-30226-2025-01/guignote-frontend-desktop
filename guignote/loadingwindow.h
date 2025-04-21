@@ -24,7 +24,7 @@ public:
      * @brief Constructor de la pantalla de carga.
      * @param parent Widget padre.
      */
-    explicit LoadingWindow(QWidget *parent = nullptr);
+    explicit LoadingWindow(const QString &userKey, QWidget *parent = nullptr);
 
     /**
      * @brief Destructor de la pantalla de carga.
@@ -48,16 +48,18 @@ private slots:
     /**
      * @brief Inicia la animación de desvanecimiento de la pantalla de carga.
      */
-    void startFadeOut();
+    void startFadeOut(const QString &userKey);
 
     /**
      * @brief Slot que se ejecuta al finalizar la animación de desvanecimiento.
      *
      * Abre la ventana del menú y cierra la pantalla de carga.
      */
-    void onFadeOutFinished();
+    void onFadeOutFinished(const QString &userKey);
 
 private:
+    QString userKey;
+
     QLabel *gifLabel;                ///< Etiqueta para mostrar el gif.
     QMovie *loadingMovie;            ///< Objeto QMovie para reproducir el gif.
     QTimer *displayTimer;            ///< Timer para controlar la duración de la pantalla de carga.

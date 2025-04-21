@@ -17,6 +17,7 @@
 #include <QtWebSockets>
 
 QMap<QString, Carta*> GameWindow::cartasPorId;
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false);
 
 void GameWindow::addCartaPorId(Carta* c){
     cartasPorId[c->idGlobal] = c;
@@ -26,32 +27,41 @@ Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
-GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket *ws) {
+GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws) {
     bg = fondo;
     gameType = type;
     player_id=id;
     cardSize = 175;
     this->ws = ws;
     QObject::connect(ws, &QWebSocket::textMessageReceived, this, &GameWindow::recibirMensajes);
-    token = loadAuthToken();
+    token = loadAuthToken(userKey);
     setBackground();
-    setupUI();
+     if (msg.contains("chat_id")) {
+        chatID = QString::number(msg["chat_id"].toInt());
+    }
+    setupUI(userKey);
     setupGameElements(msg);
     setMouseTracking(true);
     optionsBar->setMouseTracking(true);
 
-
-    // Generar gameID
     if (msg.contains("gameID") && msg["gameID"].isString()) {
         gameID = msg["gameID"].toString();
-        qDebug() << "GameWindow: usar gameID del servidor =" << gameID;
-    } else {
-        gameID = QUuid::createUuid().toString();
-        qDebug() << "GameWindow: gameID generado localmente =" << gameID;
     }
 }
 
-void GameWindow::setupUI() {
+void GameWindow::setupUI(const QString &userKey) {
+
+    // Registrar fuente personalizada
+    int fontId = QFontDatabase::addApplicationFont(":/fonts/GlossypersonaluseRegular-eZL93.otf");
+    QString fontFamily;
+    if (fontId != -1) {
+        fontFamily = QFontDatabase::applicationFontFamilies(fontId).at(0);
+        qDebug() << "✔ Fuente cargada:" << fontFamily;
+    } else {
+        qWarning() << "❌ No se pudo cargar la fuente Glossy Personaluse.";
+        fontFamily = "Arial";  // Fuente alternativa
+    }
+
     // 1) Barra de opciones y layout
     optionsBar = new QFrame(this);
     optionsBar->setObjectName("optionsBar");
@@ -84,14 +94,20 @@ void GameWindow::setupUI() {
         w->exec();
     });
 
-    connect(chat, &Icon::clicked, this, [=]() {
-        GameMessageWindow *w = new GameMessageWindow(this, gameID, QString::number(player_id));
+    connect(chat, &Icon::clicked, this, [this, userKey]() {
+        if (chatID.isEmpty()) {
+            // aún no ha llegado start_game con chat_id
+            QDialog *d = createDialog(this, "El chat no está disponible. Espera a que inicie la partida.");
+            d->show();
+            return;
+        }
+        GameMessageWindow *w = new GameMessageWindow(userKey, this, chatID, QString::number(player_id));
         w->setWindowModality(Qt::ApplicationModal);
         w->move(this->geometry().center() - w->rect().center());
         w->show(); w->raise(); w->activateWindow();
     });
 
-    connect(quit, &Icon::clicked, this, [this]() {
+    connect(quit, &Icon::clicked, this, [this, userKey]() {
         quit->setImage(":/icons/darkeneddoor.png", 60, 60);
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -133,13 +149,13 @@ void GameWindow::setupUI() {
         dialogButtonLayout->addWidget(yesButton);
         dialogButtonLayout->addWidget(noButton);
         dialogLayout->addLayout(dialogButtonLayout);
-        connect(yesButton, &QPushButton::clicked, [this, confirmDialog]() {
+        connect(yesButton, &QPushButton::clicked, [this, confirmDialog, userKey]() {
             // cerramos el diálogo de confirmación
             confirmDialog->close();
 
             // creamos y mostramos el menú raíz
             QSize windowSize = this->size();
-            MenuWindow *menuWindow = new MenuWindow();
+            MenuWindow *menuWindow = new MenuWindow(userKey);
             menuWindow->resize(windowSize);
             menuWindow->show();
             menuWindow->raise();
@@ -205,7 +221,44 @@ void GameWindow::setupUI() {
     optionsBar->raise();
     optionsIndicator->raise();
     hideOptionsTimer->start();
+
+    // Capa oscura de overlay
+    overlay = new QWidget(this);
+    overlay->setGeometry(this->rect());
+    overlay->setStyleSheet("background-color: rgba(0, 0, 0, 200);");
+    overlay->hide();
+
+    // Efecto de opacidad + animaciones
+    overlayEffect = new QGraphicsOpacityEffect(overlay);
+    overlay->setGraphicsEffect(overlayEffect);
+    overlayEffect->setOpacity(0.0);
+
+    fadeIn = new QPropertyAnimation(overlayEffect, "opacity", this);
+    fadeIn->setDuration(700);
+    fadeIn->setStartValue(0.0);
+    fadeIn->setEndValue(1.0);
+    fadeIn->setEasingCurve(QEasingCurve::OutQuad);
+
+    fadeOut = new QPropertyAnimation(overlayEffect, "opacity", this);
+    fadeOut->setDuration(500);
+    fadeOut->setStartValue(1.0);
+    fadeOut->setEndValue(0.0);
+    fadeOut->setEasingCurve(QEasingCurve::InOutQuad);
+    connect(fadeOut, &QPropertyAnimation::finished, [this]() {
+        overlay->hide();
+    });
+
+    // Texto centrado
+    turnoLabel = new QLabel(overlay);
+    turnoLabel->setAlignment(Qt::AlignCenter);
+    turnoLabel->setStyleSheet("color: white; font-size: 40px; background: transparent;");
+    turnoLabel->setGeometry(overlay->rect());
+    QFont font(fontFamily, 38);
+    turnoLabel->setFont(font);
 }
+
+
+
 
 bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
     if ((watched == optionsBar || watched == optionsIndicator)) {
@@ -226,6 +279,32 @@ bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
     return QWidget::eventFilter(watched, event);
 }
 
+
+void GameWindow::mostrarTurno(const QString &texto, bool /*miTurno*/) {
+    turnoLabel->setText(texto);
+
+    overlay->show();
+    overlay->raise();
+    optionsBar->raise();
+
+
+
+    fadeOut->stop();
+    fadeIn->start();
+
+    for (Carta* carta : manos[0]->cartas)
+        carta->raise();
+
+    QTimer::singleShot(2500, this, &GameWindow::ocultarTurno);
+}
+
+
+
+
+void GameWindow::ocultarTurno() {
+    fadeIn->stop();
+    fadeOut->start();
+}
 
 
 
@@ -438,17 +517,20 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     repositionHands();
     repositionOptions();
     deck->actualizarVisual();
+    overlay->setGeometry(this->rect());
+    turnoLabel->setGeometry(overlay->rect());
 
     for (int i = 0; i < posiciones.size(); ++i) {
         posiciones[i]->mostrarPosicion();
     }
+
 }
 
 // FUNCIONES PARA COMUNICARSE CON BACKEND Y JUGAR PARTIDAS
 
 // Función auxiliar para crear un diálogo modal con mensaje personalizado.
 // Si exitApp es verdadero, al cerrar se finaliza la aplicación.
-static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     dialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
@@ -492,9 +574,9 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
 }
 
 // Función para extraer el token de autenticación desde el archivo .conf
-QString GameWindow::loadAuthToken() {
+QString GameWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
@@ -584,6 +666,8 @@ void GameWindow::setupGameState(QJsonObject s0){
             }
 
             manos[pos]->player_id = id;
+            playerPosMap[id] = pos;
+            playerPosMap[this->player_id] = 0;
             this->posiciones[pos]->player_id = id;
             for(int j = 0; j < numCartas; j++){
                 Carta* back = new Carta(this, this, "0", "", cardSize, 0);
@@ -603,65 +687,113 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     QJsonObject data = obj.value("data").toObject();
 
     if (type == "turn_update") {
-        QString msg = data.value("message").toString();
         int jugadorId = data["jugador"].toObject()["id"].toInt();
         QString nombre = data["jugador"].toObject()["nombre"].toString();
-        int turnoIndex = data["turno_index"].toInt();
-        qDebug() << "Turno de" << nombre << "(ID:" << jugadorId << ") - Index:" << turnoIndex;
 
-        // Permitimos jugar cartas solo en tu turno
-        if(jugadorId == player_id){
+        if (jugadorId == player_id) {
             posiciones[0]->setLock(false);
-            qDebug() << "UnLocked";
+            mostrarTurno("Es tu turno", true);
         } else {
             posiciones[0]->setLock(true);
-            qDebug() << "Locked";
+            mostrarTurno("Es el turno de " + nombre, false);
         }
     }
+
+
+    else if (type == "start_game") {
+        if(data.contains("chat_id")) {
+            chatID = QString::number(data["chat_id"].toInt());
+        }
+        // inicializo nombres y marcador
+        QJsonArray jugadores = data["jugadores"].toArray();
+        for (auto v : jugadores) {
+            auto obj = v.toObject();
+            int   id   = obj["id"].toInt();
+            auto  name = obj["nombre"].toString();
+        }
+
+    }
+
     else if (type == "card_played") {
         int jugadorId = data["jugador"].toObject()["id"].toInt();
-        QString nombre = data["jugador"].toObject()["nombre"].toString();
-        bool automatica = data["automatica"].toBool();
-        QString palo = data["carta"].toObject()["palo"].toString();
-        int valor = data["carta"].toObject()["valor"].toInt();
-        qDebug() << nombre << "jugó" << valor << "de" << palo << (automatica ? "(automática)" : "");
-    }
-    else if (type == "round_result") {
-        QString ganador = data["ganador"].toObject()["nombre"].toString();
-        int puntos = data["puntos_baza"].toInt();
-        int puntos1 = data["puntos_equipo_1"].toInt();
-        int puntos2 = data["puntos_equipo_2"].toInt();
-        qDebug() << "Ganador de la ronda:" << ganador << "- Puntos:" << puntos << "→ E1:" << puntos1 << "E2:" << puntos2;
+        QString palo    = data["carta"].toObject()["palo"].toString();
+        int valor       = data["carta"].toObject()["valor"].toInt();
 
-        for (Posicion* pos : posiciones) {
-            if (pos) {
-                // Usás el puntero directamente
-                pos->removeCard();  // por ejemplo
-            }
+        int idx = playerPosMap.value(jugadorId, -1);
+        if (idx < 0) return;
+
+        // 1) Para los oponentes: quitar un back de su mano
+        if (idx != 0) {
+            manos[idx]->eliminarCarta(0);
+            // 2) Crear y mostrar la carta real sobre la posición
+            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
+            addCartaPorId(carta);
+            posiciones[idx]->setCard(carta);
         }
 
+        // Desbloquear la posición siguiente
+        int siguiente = (idx + 1) % posiciones.size();
+        posiciones[siguiente]->setLock(false);
     }
+
+    else if (type == "round_result") {
+        // extraigo datos
+        QString ganador = data["ganador"].toObject()["nombre"].toString();
+        int puntos       = data["puntos_baza"].toInt();
+        // carta ganadora para mostrar
+        // asumimos que la última carta jugada por el ganador está en cartasPorId
+        // podrías almacenar la info del mensaje card_played justo antes, aquí simplificamos:
+        QJsonObject lastCartaObj = data["carta_ganadora"].toObject(); // <--- necesitarías que el backend la envíe
+        QString palo  = lastCartaObj["palo"].toString();
+        int     valor = lastCartaObj["valor"].toInt();
+
+    }
+
     else if (type == "phase_update") {
-        QString msg = data.value("message").toString();
-        qDebug() << "[Fase de arrastre]" << msg;
+        arrastre = true;
+        mostrarTurno(data["message"].toString(), false);
     }
+
     else if (type == "card_drawn") {
         QString palo = data["carta"].toObject()["palo"].toString();
-        int valor = data["carta"].toObject()["valor"].toInt();
-        qDebug() << "Robaste una carta:" << valor << "de" << palo;
+        int valor    = data["carta"].toObject()["valor"].toInt();
+
+        if (data["usuario"].toObject().value("id").toInt() == player_id) {
+            // me toca a mí
+            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
+            addCartaPorId(carta);
+            manos[0]->añadirCarta(carta);
+        } else {
+            // oponente, sólo añadimos reverso
+            int idx = playerPosMap.value(
+                data["usuario"].toObject().value("id").toInt(), -1);
+            if (idx >= 0) {
+                Carta* back = new Carta(this, this, "0", "", cardSize, 0);
+                manos[idx]->añadirCarta(back);
+            }
+        }
+        // Actualizar mazo
+        deck->cartaRobada();
     }
+
     else if (type == "player_left") {
         QString msg = data["message"].toString();
         QString nombre = data["usuario"].toObject()["nombre"].toString();
         qDebug() << nombre << "se desconectó." << msg;
     }
     else if (type == "end_game") {
-        QString msg = data["message"].toString();
-        int ganadorEquipo = data["ganador_equipo"].toInt();
-        int puntos1 = data["puntos_equipo_1"].toInt();
-        int puntos2 = data["puntos_equipo_2"].toInt();
-        qDebug() << "🏁 Fin del juego:" << msg << "Ganador: Equipo" << ganadorEquipo << "→ E1:" << puntos1 << "E2:" << puntos2;
+        QString msg    = data["message"].toString();
+        int ganadorEq  = data["ganador_equipo"].toInt();
+        int p1 = data["puntos_equipo_1"].toInt();
+        int p2 = data["puntos_equipo_2"].toInt();
+
+        QDialog *d = createDialog(this,
+                                  QString("%1\n\nEquipo %2 gana!\nPuntos: E1=%3  E2=%4")
+                                      .arg(msg).arg(ganadorEq).arg(p1).arg(p2),
+                                  false);
+        d->show();
     }
+
     else {
         qDebug() << "Mensaje desconocido:" << mensaje;
     }

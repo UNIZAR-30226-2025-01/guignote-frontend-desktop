@@ -16,8 +16,9 @@
 #include <QMainWindow>
 #include <QDebug>
 
-LoadingWindow::LoadingWindow(QWidget *parent)
+LoadingWindow::LoadingWindow(const QString &userKey, QWidget *parent)
     : QDialog(parent),
+    userKey(userKey),
     gifLabel(new QLabel(this)),
     loadingMovie(new QMovie(":/video/carga.gif")),
     displayTimer(new QTimer(this)),
@@ -49,7 +50,9 @@ LoadingWindow::LoadingWindow(QWidget *parent)
 
     // Configurar el timer para la duración de la pantalla de carga (3.5 segundos antes de iniciar el fade out).
     displayTimer->setSingleShot(true);
-    connect(displayTimer, &QTimer::timeout, this, &LoadingWindow::startFadeOut);
+    connect(displayTimer, &QTimer::timeout, this, [this, userKey]() {
+        this->startFadeOut(userKey);
+    });
 
     // Configurar el efecto de opacidad.
     QGraphicsOpacityEffect *opacityEffect = new QGraphicsOpacityEffect(this);
@@ -93,7 +96,7 @@ void LoadingWindow::showEvent(QShowEvent *event)
 /**
  * @brief Inicia la animación de desvanecimiento de la pantalla de carga.
  */
-void LoadingWindow::startFadeOut() {
+void LoadingWindow::startFadeOut(const QString &userKey) {
     if (fadeOutStarted)
         return;
     fadeOutStarted = true;
@@ -108,7 +111,9 @@ void LoadingWindow::startFadeOut() {
     fadeAnimation->setDuration(1000); // Duración de 1 segundo.
     fadeAnimation->setStartValue(1.0);
     fadeAnimation->setEndValue(0.0);
-    connect(fadeAnimation, &QPropertyAnimation::finished, this, &LoadingWindow::onFadeOutFinished);
+    connect(fadeAnimation, &QPropertyAnimation::finished, this, [=]() {
+        this->onFadeOutFinished(userKey);
+    });
     fadeAnimation->start();
 }
 
@@ -117,18 +122,18 @@ void LoadingWindow::startFadeOut() {
  *
  * Abre la ventana del menú y cierra la pantalla de carga.
  */
-void LoadingWindow::onFadeOutFinished() {
+void LoadingWindow::onFadeOutFinished(const QString &userKey) {
     if (loadingMovie) {
         loadingMovie->stop();
     }
     // Si LoadingWindow tiene un padre y éste es un QMainWindow, se reemplaza su widget central.
     QMainWindow *mainWin = qobject_cast<QMainWindow*>(parentWidget());
     if (mainWin) {
-        MenuWindow *menuWin = new MenuWindow(mainWin);
+        MenuWindow *menuWin = new MenuWindow(userKey, mainWin);
         mainWin->setCentralWidget(menuWin);
     } else {
         // Si no se tiene un QMainWindow, se crea MenuWindow con la misma geometría.
-        MenuWindow *menuWin = new MenuWindow(nullptr);
+        MenuWindow *menuWin = new MenuWindow(userKey);
         menuWin->setGeometry(this->geometry());
         menuWin->show();
     }

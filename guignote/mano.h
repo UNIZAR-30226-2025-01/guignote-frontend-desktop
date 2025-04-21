@@ -14,11 +14,12 @@ public:
     void mostrarMano();
     int player_id;
     bool is_interactive;
+    QVector<Carta*> cartas;
+
 
 private:
     int num_cards;
     int pos;
-    QVector<Carta*> cartas;
 };
 
 #endif // MANO_H

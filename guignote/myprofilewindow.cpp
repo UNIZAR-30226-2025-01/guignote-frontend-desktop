@@ -66,14 +66,14 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
 }
 
 // Constructor: configura la ventana, la UI y carga los datos del backend.
-MyProfileWindow::MyProfileWindow(QWidget *parent) : QDialog(parent) {
+MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(850, 680);
 
     setupUI();
-    loadNameAndStats(); // Se llama a la función que carga nombre, ELO y estadísticas.
+    loadNameAndStats(userKey); // Se llama a la función que carga nombre, ELO y estadísticas.
 }
 
 // Configura la UI dividiéndola en secciones.
@@ -211,9 +211,9 @@ QPixmap MyProfileWindow::createCircularImage(const QString &imagePath, int size)
 }
 
 // Extrae el token de autenticación desde el archivo de configuración.
-QString MyProfileWindow::loadAuthToken() {
+QString MyProfileWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
@@ -235,8 +235,8 @@ QString MyProfileWindow::loadAuthToken() {
 }
 
 // Conecta con el backend para obtener el nombre, el ELO y las estadísticas, y actualiza userLabel y statsLabel.
-void MyProfileWindow::loadNameAndStats() {
-    QString token = loadAuthToken();
+void MyProfileWindow::loadNameAndStats(const QString &userKey) {
+    QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {
         createDialog(this, "No se encontró el token de autenticación.")->show();
         return;

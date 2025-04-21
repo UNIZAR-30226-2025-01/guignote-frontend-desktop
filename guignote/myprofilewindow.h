@@ -22,7 +22,7 @@ public:
      * @brief Constructor de la ventana de perfil.
      * @param parent Widget padre, por defecto es nullptr.
      */
-    explicit MyProfileWindow(QWidget *parent = nullptr);
+    explicit MyProfileWindow(const QString &userKey, QWidget *parent = nullptr);
 
 private:
     // Elementos de la UI
@@ -42,8 +42,8 @@ private:
     QPixmap createCircularImage(const QString &imagePath, int size);
 
     // Métodos para conexión con el backend
-    QString loadAuthToken();
-    void loadNameAndStats(); // Método que consulta el backend para obtener nombre, ELO y estadísticas.
+    QString loadAuthToken(const QString &userKey);
+    void loadNameAndStats(const QString &userKey); // Método que consulta el backend para obtener nombre, ELO y estadísticas.
 };
 
 #endif // MYPROFILEWINDOW_H

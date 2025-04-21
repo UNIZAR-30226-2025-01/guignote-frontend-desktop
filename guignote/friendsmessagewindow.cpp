@@ -13,7 +13,7 @@
 #include <QTimer>
 #include <QWebSocket>
 
-FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString Usuario)
+FriendsMessageWindow::FriendsMessageWindow(const QString &userKey,QWidget *parent,  QString ID, QString Usuario)
     : QWidget(parent)
 {
     friendID = ID;
@@ -25,12 +25,12 @@ FriendsMessageWindow::FriendsMessageWindow(QWidget *parent, QString ID, QString 
 
     networkManager = new QNetworkAccessManager(this);
 
-    setupUI();
-    loadMessages();
-    setupWebSocketConnection();
+    setupUI(userKey);
+    loadMessages(userKey);
+    setupWebSocketConnection(userKey);
 }
 
-void FriendsMessageWindow::setupWebSocketConnection()
+void FriendsMessageWindow::setupWebSocketConnection(const QString &userKey)
 {
     // Crear el QWebSocket
     webSocket = new QWebSocket();
@@ -38,7 +38,7 @@ void FriendsMessageWindow::setupWebSocketConnection()
     // Construir la URL con los parámetros necesarios
     QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
                             .arg(friendID)
-                            .arg(loadAuthToken());
+                            .arg(loadAuthToken(userKey));
     QUrl url(urlString);
 
     // Abrir la conexión WebSocket
@@ -48,7 +48,9 @@ void FriendsMessageWindow::setupWebSocketConnection()
     connect(webSocket, &QWebSocket::connected, this, &FriendsMessageWindow::onConnected);
     connect(webSocket, &QWebSocket::disconnected, this, &FriendsMessageWindow::onDisconnected);
     connect(webSocket, &QWebSocket::textMessageReceived,
-            this, &FriendsMessageWindow::onTextMessageReceived);
+            this, [=](const QString &message) {
+                this->onTextMessageReceived(message, userKey);
+            });
 }
 
 
@@ -64,12 +66,13 @@ void FriendsMessageWindow::onDisconnected()
     // Maneja la desconexión según sea necesario
 }
 
-void FriendsMessageWindow::onTextMessageReceived(const QString &message)
+void FriendsMessageWindow::onTextMessageReceived(const QString &message, const QString &userKey)
 {
-    loadMessages(); // Actualiza la lista de mensajes
+    Q_UNUSED(message);
+    loadMessages(userKey); // Actualiza la lista de mensajes
 }
 
-void FriendsMessageWindow::setupUI()
+void FriendsMessageWindow::setupUI(const QString &userKey)
 {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
@@ -113,13 +116,17 @@ void FriendsMessageWindow::setupUI()
         "border-radius: 10px; border: 1px solid #444;"
         );
     messageInput->setFixedHeight(40);
-    connect(messageInput, &QLineEdit::returnPressed, this, &FriendsMessageWindow::sendMessage);
+    connect(messageInput, &QLineEdit::returnPressed, this, [=]() {
+        this->sendMessage(userKey);
+    });
+
+
 
     mainLayout->addWidget(messageInput);
 }
 
 
-void FriendsMessageWindow::sendMessage()
+void FriendsMessageWindow::sendMessage(const QString &userKey)
 {
     // Obtener el texto ingresado en el campo de entrada
     QString message = messageInput->text().trimmed();
@@ -132,7 +139,7 @@ void FriendsMessageWindow::sendMessage()
     }
 
     // Cargar el token de autenticación desde el archivo de configuración
-    QString token = loadAuthToken();
+    QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {
         qDebug() << "No se pudo obtener el token de autenticación.";
         return;
@@ -164,9 +171,9 @@ void FriendsMessageWindow::sendMessage()
 }
 
 
-void FriendsMessageWindow::loadMessages()
+void FriendsMessageWindow::loadMessages(const QString &userKey)
 {
-    QString token = loadAuthToken();
+    QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {
         qDebug() << "No se pudo obtener el token de autenticación.";
         return;
@@ -268,9 +275,9 @@ void FriendsMessageWindow::adjustMessageSize(QListWidgetItem *item, QLabel *mess
 
 
 // Función para extraer el token de autenticación desde el archivo .conf
-QString FriendsMessageWindow::loadAuthToken() {
+QString FriendsMessageWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + "/Grace Hopper/Sota, Caballo y Rey.conf";
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qDebug() << "No se pudo cargar el archivo de configuración.";

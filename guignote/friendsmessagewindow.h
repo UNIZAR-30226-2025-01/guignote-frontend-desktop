@@ -17,13 +17,13 @@ class FriendsMessageWindow : public QWidget
     Q_OBJECT
 
 public:
-    explicit FriendsMessageWindow(QWidget *parent = nullptr, QString ID = "", QString Usuario = "");
+    explicit FriendsMessageWindow( const QString &userKeyQWidget, QWidget *parent = nullptr, QString ID = "", QString Usuario = "");
     ~FriendsMessageWindow();
 
 private:
     QWebSocket *webSocket;
-    void onTextMessageReceived(const QString &message);
-
+    void onTextMessageReceived(const QString &message, const QString &userKey);
+    void addMessageToList(const QString &contenido, int emisorId);
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
     QPushButton *closeButton;
@@ -33,13 +33,13 @@ private:
     QNetworkAccessManager *networkManager;
     QListWidget *messagesListWidget;
 
-    void setupUI();
-    void setupWebSocketConnection();
-    QString loadAuthToken();
+    void setupUI(const QString &userKey);
+    void setupWebSocketConnection(const QString &userKey);
+    QString loadAuthToken(const QString &userKey);
     void adjustMessageSize(QListWidgetItem *item, QLabel *messageLabel);
 
-    void sendMessage();
-    void loadMessages();
+    void sendMessage(const QString &userKey);
+    void loadMessages(const QString &userKey);
     void onConnected();
     void onDisconnected();
 };
