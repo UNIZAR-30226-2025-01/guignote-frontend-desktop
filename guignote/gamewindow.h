@@ -25,6 +25,8 @@ public:
     Carta* getCartaPorId(QString id);
 
 private:
+    QTimer *hideOptionsTimer = nullptr;
+    bool isMouseOverOptions = false;
     QString gameID;
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
@@ -37,10 +39,11 @@ private:
     // 1 -> 1v1 Friendly
     // 2 -> 2v2 (Ranked or Friendly)
 
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void setBackground(); // Function to set the background based on the bg value
     void setupUI();
     void setupGameElements(QJsonObject msg);
-    void resizeEvent(QResizeEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
     void repositionOrnaments();
     void repositionOptions();
     void repositionHands();
@@ -73,6 +76,13 @@ private:
 
     // Conexión Backend
     void setupGameState(QJsonObject s0);
+
+    QPropertyAnimation *showOptionsAnimation = nullptr;
+    QPropertyAnimation *hideOptionsAnimation = nullptr;
+    bool isOptionsVisible = false;
+    int optionsBarHeight = 80;  // altura fija de la barra
+    const int indicatorHeight  = 6;   // alto del indicador
+    QLabel   *optionsIndicator = nullptr;
 };
 
 #endif // GAMEWINDOW_H

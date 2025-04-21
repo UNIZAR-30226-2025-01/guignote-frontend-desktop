@@ -37,6 +37,9 @@ GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket 
     setBackground();
     setupUI();
     setupGameElements(msg);
+    setMouseTracking(true);
+    optionsBar->setMouseTracking(true);
+
 
     // Generar gameID
     if (msg.contains("gameID") && msg["gameID"].isString()) {
@@ -49,9 +52,17 @@ GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket 
 }
 
 void GameWindow::setupUI() {
+    // 1) Barra de opciones y layout
     optionsBar = new QFrame(this);
     optionsBar->setObjectName("optionsBar");
+    optionsBar->setFixedHeight(optionsBarHeight);
 
+    auto *lay = new QHBoxLayout(optionsBar);
+    lay->setSpacing(20);
+    lay->setContentsMargins(15, 8, 15, 8);
+    lay->setAlignment(Qt::AlignCenter);
+
+    // 2) Crear los iconos UNA sola vez
     settings = new Icon(this);
     settings->setImage(":/icons/settings.png", 50, 50);
     chat = new Icon(this);
@@ -59,29 +70,25 @@ void GameWindow::setupUI() {
     quit = new Icon(this);
     quit->setImage(":/icons/door.png", 60, 60);
 
-    connect(settings, &Icon::clicked, [=]() {
+    // 3) Añadirlos al layout
+    lay->addWidget(settings);
+    lay->addWidget(chat);
+    lay->addWidget(quit);
+
+    // 4) Conectar sus señales
+    connect(settings, &Icon::clicked, this, [=]() {
         settings->setImage(":/icons/darkenedsettings.png", 50, 50);
-        SettingsWindow *settingsWin = new SettingsWindow(this, this);
-        settingsWin->setModal(true);
-        connect(settingsWin, &QDialog::finished, [this](int){
-            settings->setImage(":/icons/settings.png", 50, 50);
-        });
-        settingsWin->exec();
+        SettingsWindow *w = new SettingsWindow(this, this);
+        w->setModal(true);
+        connect(w, &QDialog::finished, [=](int){ settings->setImage(":/icons/settings.png",50,50); });
+        w->exec();
     });
 
-    connect(chat, &Icon::clicked, this, [this]() {
-        qDebug() << "Icono de chat pulsado. Abriendo GameMessageWindow...";
-        // Creamos la ventana de chat, pasándole el ID de partida y el ID de jugador:
-        GameMessageWindow *chatWin =
-            new GameMessageWindow(this,
-                                  gameID,
-                                  QString::number(player_id));
-        chatWin->setWindowModality(Qt::ApplicationModal);
-        // Centrar sobre la ventana padre:
-        chatWin->move(this->geometry().center() - chatWin->rect().center());
-        chatWin->show();
-        chatWin->raise();
-        chatWin->activateWindow();
+    connect(chat, &Icon::clicked, this, [=]() {
+        GameMessageWindow *w = new GameMessageWindow(this, gameID, QString::number(player_id));
+        w->setWindowModality(Qt::ApplicationModal);
+        w->move(this->geometry().center() - w->rect().center());
+        w->show(); w->raise(); w->activateWindow();
     });
 
     connect(quit, &Icon::clicked, this, [this]() {
@@ -158,7 +165,71 @@ void GameWindow::setupUI() {
         });
         centerTimer->start();
     });
+    // 5) Indicador siempre visible
+    optionsIndicator = new QLabel(this);
+    optionsIndicator->setObjectName("optionsIndicator");
+    optionsIndicator->setFixedHeight(indicatorHeight);
+    optionsIndicator->setStyleSheet(R"(
+        QLabel#optionsIndicator {
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 #c2c2c3, stop:1 #9b9b9b);
+            border-radius: 3px;
+        }
+    )");
+    optionsIndicator->installEventFilter(this);
+
+    // 6) Animaciones y temporizador
+    showOptionsAnimation = new QPropertyAnimation(optionsBar, "pos", this);
+    showOptionsAnimation->setDuration(300);
+    showOptionsAnimation->setEasingCurve(QEasingCurve::OutQuad);
+
+    hideOptionsAnimation = new QPropertyAnimation(optionsBar, "pos", this);
+    hideOptionsAnimation->setDuration(300);
+    hideOptionsAnimation->setEasingCurve(QEasingCurve::InQuad);
+
+    hideOptionsTimer = new QTimer(this);
+    hideOptionsTimer->setInterval(2000);
+    connect(hideOptionsTimer, &QTimer::timeout, this, [=](){
+        if (!isMouseOverOptions && isOptionsVisible)
+            hideOptionsAnimation->start();
+        isOptionsVisible = false;
+    });
+
+    // 7) Posicionar inicialmente y asegurar Z‑order
+    repositionOptions();          // centra y dimensiona barra + indicador
+    optionsBar->move(optionsBar->x(), -optionsBarHeight);
+    optionsIndicator->move(
+        optionsBar->x() + (optionsBar->width() - optionsIndicator->width())/2,
+        0
+        );
+    optionsBar->raise();
+    optionsIndicator->raise();
+    hideOptionsTimer->start();
 }
+
+bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
+    if ((watched == optionsBar || watched == optionsIndicator)) {
+        if (event->type() == QEvent::Enter) {
+            isMouseOverOptions = true;
+            if (!isOptionsVisible) {
+                showOptionsAnimation->start();
+                isOptionsVisible = true;
+            }
+            return true;
+        }
+        else if (event->type() == QEvent::Leave) {
+            isMouseOverOptions = false;
+            hideOptionsTimer->start();
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
+}
+
+
+
+
+
 
 void GameWindow::setBackground() {
     QString ornament;
@@ -323,41 +394,41 @@ void GameWindow::repositionOrnaments() {
 }
 
 void GameWindow::repositionOptions() {
-    // Set optionsBar position to the top-right corner of the screen
-    int windowWidth = this->width();
-    int windowHeight = this->height();
+    auto *lay = qobject_cast<QHBoxLayout*>(optionsBar->layout());
+    if (!lay) return;
 
-    int x = (windowWidth - windowWidth/8) / 2;  // Center horizontally
+    int windowW = width();
+    int iconsW   = settings->width() + chat->width() + quit->width();
+    int spacing  = lay->spacing();
+    QMargins m   = lay->contentsMargins();
+    int minW     = iconsW + spacing*2 + m.left() + m.right();
+    int barW     = qMax(windowW/8, minW);
 
-    // Place optionsBar at the top-right of the window with a height of 80
-    optionsBar->setGeometry(x, 0, windowWidth/8, 80);
+    optionsBar->setFixedWidth(barW);
+    int x = (windowW - barW) / 2;
+    optionsBar->move(x, optionsBar->y());
+
+    // Animaciones
+    showOptionsAnimation->setStartValue(QPoint(x, -optionsBarHeight));
+    showOptionsAnimation->setEndValue  (QPoint(x,    0));
+    hideOptionsAnimation->setStartValue(QPoint(x,    0));
+    hideOptionsAnimation->setEndValue  (QPoint(x, -optionsBarHeight));
+
+    // Indicador proporcional
+    int indW = barW / 3;
+    optionsIndicator->setFixedSize(indW, indicatorHeight);
+    optionsIndicator->move(
+        x + (barW - indW)/2,
+        0
+        );
+
+    // Siempre al frente
     optionsBar->raise();
-    settings->raise();
-    chat->raise();
-    quit->raise();
-
-    // Create a horizontal layout to arrange the icons inside optionsBar
-    QHBoxLayout *layout = new QHBoxLayout(optionsBar);
-
-    // Set a minimum space of 5 pixels between icons
-    layout->setSpacing(5);
-
-    // Add the three icons to the layout
-    layout->addWidget(settings);
-    layout->addWidget(chat);
-    layout->addWidget(quit);
-
-    // Make the icons stretch to fill the available space
-    layout->setStretch(0, 1);
-    layout->setStretch(1, 1);
-    layout->setStretch(2, 1);
-
-    // Set the layout to the optionsBar
-    optionsBar->setLayout(layout);
-
-    // Optionally, adjust the icons' alignment (optional, depending on preference)
-    layout->setAlignment(Qt::AlignCenter);  // Align icons in the center horizontally
+    optionsIndicator->raise();
 }
+
+
+
 
 // Función para recolocar y reposicionar todos los elementos
 void GameWindow::resizeEvent(QResizeEvent *event) {
