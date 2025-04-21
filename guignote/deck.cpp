@@ -30,7 +30,7 @@ Deck::Deck(Carta* triunfo, int skin, int cardSize, QWidget *parent, QString toke
 
     // Carta de triunfo
     if (triunfo) {
-        QPixmap original = triunfo->pixmapOrig;
+        QPixmap original = triunfo->getOriginalPixmap();
         QTransform rotacion;
         rotacion.rotate(90);
         QPixmap rotada = original.transformed(rotacion, Qt::SmoothTransformation);
@@ -131,9 +131,8 @@ void Deck::setTriunfo(Carta* nuevaTriunfo)
     if (nuevaTriunfo) {
         triunfo = nuevaTriunfo;
 
-        QPixmap original = triunfo->pixmapOrig;
-        qDebug() << "pixmapOrig válido?" << !triunfo->pixmapOrig.isNull();
-        QTransform rotacion;
+        QPixmap original = triunfo->getOriginalPixmap();
+        qDebug() << "originalPixmap válido?" << !triunfo->getOriginalPixmap().isNull();        QTransform rotacion;
         rotacion.rotate(90);
         QPixmap rotada = original.transformed(rotacion, Qt::SmoothTransformation);
 

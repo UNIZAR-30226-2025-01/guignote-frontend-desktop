@@ -20,6 +20,8 @@ public:
     int player_id;
     void setCard(Carta* carta);
     void removeCard();
+    Carta* cartaActual;
+
     void setLock(bool l);
 
 protected:
@@ -34,7 +36,6 @@ private:
     int alturaCarta;
     int anchuraCarta;
     bool Lock;
-    Carta* cartaActual;
     QPixmap fondoBase;
 
     void jugarCarta();

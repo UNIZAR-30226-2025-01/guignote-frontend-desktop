@@ -15,6 +15,14 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QtWebSockets>
+#include <QPoint>//
+
+
+struct Slot {
+    Posicion* posW;
+    Carta*    c;
+    QPoint    start;
+};
 
 QMap<QString, Carta*> GameWindow::cartasPorId;
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false);
@@ -450,6 +458,9 @@ void GameWindow::setupGameElements(QJsonObject msg) {
     deck = new Deck(nullptr, 0, cardSize, this, token);
 
     setupGameState(msg);
+    for (Posicion* posW : posiciones) {
+        pilaCount[posW] = 0;
+    }
 }
 
 void GameWindow::repositionHands(){
@@ -716,38 +727,159 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 
     else if (type == "card_played") {
         int jugadorId = data["jugador"].toObject()["id"].toInt();
-        QString palo    = data["carta"].toObject()["palo"].toString();
-        int valor       = data["carta"].toObject()["valor"].toInt();
-
-        int idx = playerPosMap.value(jugadorId, -1);
+        int idx       = playerPosMap.value(jugadorId, -1);
         if (idx < 0) return;
 
-        // 1) Para los oponentes: quitar un back de su mano
-        if (idx != 0) {
-            manos[idx]->eliminarCarta(0);
-            // 2) Crear y mostrar la carta real sobre la posición
-            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
-            addCartaPorId(carta);
-            posiciones[idx]->setCard(carta);
+        if (jugadorId == player_id) {
+            return;
         }
 
-        // Desbloquear la posición siguiente
+        // --- Sólo oponente a partir de aquí ---
+
+        Carta* backCarta = manos[idx]->cartas.first();
+        QPoint start = backCarta->mapTo(this, QPoint(0,0));
+
+        manos[idx]->eliminarCarta(0);
+
+        QString palo = data["carta"].toObject()["palo"].toString();
+        int valor    = data["carta"].toObject()["valor"].toInt();
+        // 1) Creamos la carta ya en modo “cara arriba”
+        Carta* carta = new Carta(this, this,
+                                 QString::number(valor),
+                                 palo,
+                                 cardSize,
+                                 /*skin=*/0,
+                                 /*faceUp=*/true);
+        addCartaPorId(carta);
+        carta->move(start);
+        carta->show();
+        carta->raise();
+
+
+         // 2) Calculamos el destino: centro de la Posicion
+         Posicion* posWidget = posiciones[idx];
+         QPoint dst = posWidget->mapTo(this,
+                               QPoint((posWidget->width()  - carta->width())/2,
+                                      (posWidget->height() - carta->height())/2));
+
+         // 3) Flip‐anim: rotación Y de 0→180º
+         {
+             auto *flip = new QPropertyAnimation(carta, "rotationY", this);
+             flip->setDuration(500);
+             flip->setStartValue(0.0);
+             flip->setEndValue(180.0);
+             flip->setEasingCurve(QEasingCurve::InOutQuad);
+             flip->start(QAbstractAnimation::DeleteWhenStopped);
+         }
+
+         // 4) Animamos simultáneamente el movimiento
+         {
+             auto *moveAnim = new QPropertyAnimation(carta, "pos", this);
+             moveAnim->setDuration(500);
+             moveAnim->setStartValue(start);
+             moveAnim->setEndValue(dst);
+             connect(moveAnim, &QPropertyAnimation::finished, [=]() {
+                 posWidget->setCard(carta);
+                 backCarta->deleteLater();
+             });
+             moveAnim->start(QAbstractAnimation::DeleteWhenStopped);
+         }
+        // 6) Desbloqueamos siguiente
         int siguiente = (idx + 1) % posiciones.size();
         posiciones[siguiente]->setLock(false);
     }
 
-    else if (type == "round_result") {
-        // extraigo datos
-        QString ganador = data["ganador"].toObject()["nombre"].toString();
-        int puntos       = data["puntos_baza"].toInt();
-        // carta ganadora para mostrar
-        // asumimos que la última carta jugada por el ganador está en cartasPorId
-        // podrías almacenar la info del mensaje card_played justo antes, aquí simplificamos:
-        QJsonObject lastCartaObj = data["carta_ganadora"].toObject(); // <--- necesitarías que el backend la envíe
-        QString palo  = lastCartaObj["palo"].toString();
-        int     valor = lastCartaObj["valor"].toInt();
 
+    else if (type == "round_result") {
+        // 1) Info del ganador
+        int ganadorId      = data["ganador"].toObject()["id"].toInt();
+        QString ganadorNom = data["ganador"].toObject()["nombre"].toString();
+
+        // 2) Overlay anunciador
+        mostrarTurno(QString("¡Gana la baza: %1!").arg(ganadorNom),
+                     ganadorId == player_id);
+
+        // 3) Extraer **tanto** cartaActual **como** cualquier hija directa
+        struct Slot { Posicion* posW; Carta* c; QPoint start; };
+        QVector<Slot> slotList;
+        for (Posicion* posW : posiciones) {
+            // 3a) Si hay cartaActual, la cogemos
+            if (Carta* c = posW->cartaActual) {
+                QPoint g = c->mapToGlobal(QPoint(0,0));
+                QPoint start = mapFromGlobal(g);
+                slotList.append({ posW, c, start });
+                posW->cartaActual = nullptr;
+                c->setParent(this);
+                c->move(start);
+                c->show(); c->raise();
+            }
+            // 3b) Y buscamos cualquier otra Carta hija directa
+            auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
+            for (Carta* c : hijas) {
+                // si ya era la cartaActual, la ignoramos
+                // 3b) Y buscamos cualquier otra Carta hija directa
+                auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
+                for (Carta* c : hijas) {
+                    // comprobamos si ya la añadimos
+                    bool already = false;
+                    for (const Slot &s : slotList) {
+                        if (s.c == c) { already = true; break; }
+                    }
+                    if (already)
+                        continue;
+
+                    QPoint g = c->mapToGlobal(QPoint(0,0));
+                    QPoint start = mapFromGlobal(g);
+                    slotList.append({ posW, c, start });
+                    c->setParent(this);
+                    c->move(start);
+                    c->show(); c->raise();
+                }
+
+                QPoint g = c->mapToGlobal(QPoint(0,0));
+                QPoint start = mapFromGlobal(g);
+                slotList.append({ posW, c, start });
+                c->setParent(this);
+                c->move(start);
+                c->show(); c->raise();
+            }
+        }
+
+        // 4) Desbloquear
+        for (Posicion* posW : posiciones)
+            posW->setLock(false);
+
+        // 5) Animar hacia la esquina sólo sota/rey, el resto se destruye
+        const bool userWon = (ganadorId == player_id);
+        QPoint base = userWon
+                          ? QPoint(width()  - winPileMargin - cardSize,
+                                   height() - winPileMargin - cardSize)
+                          : QPoint(winPileMargin, winPileMargin);
+        int &count = userWon ? winPileCountUser : winPileCountOpponent;
+
+        for (const Slot &sl : slotList) {
+            Carta* c = sl.c;
+            c->hideFace();
+            bool keep = (c->num == "10" || c->num == "12");
+            QPoint dst = base + QPoint(count * winPileOffset,
+                                       count * winPileOffset);
+            if (keep) ++count;
+            auto *anim = new QPropertyAnimation(c, "pos", this);
+            anim->setDuration(500);
+            anim->setStartValue(sl.start);
+            anim->setEndValue(dst);
+            connect(anim, &QPropertyAnimation::finished, [c, keep]() {
+                if (!keep) c->deleteLater();
+            });
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+        }
     }
+
+
+
+
+
+
 
     else if (type == "phase_update") {
         arrastre = true;

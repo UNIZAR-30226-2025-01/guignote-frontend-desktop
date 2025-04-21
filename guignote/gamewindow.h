@@ -17,6 +17,8 @@
 #include "posicion.h"
 
 
+
+
 class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
@@ -26,6 +28,11 @@ public:
     Carta* getCartaPorId(QString id);
 
 private:
+    int winPileCountUser = 0;
+    int winPileCountOpponent = 0;
+    static constexpr int winPileOffset = 15;  // desplazamiento entre cartas apiladas
+    static constexpr int winPileMargin = 20;  // margen respecto a la esquina
+    QHash<Posicion*, int> pilaCount;
     QMap<int,int> playerPosMap;
     bool arrastre = false;
     QTimer *hideOptionsTimer = nullptr;

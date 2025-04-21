@@ -1,144 +1,144 @@
+// carta.cpp
 #include "carta.h"
 #include "mano.h"
 #include "gamewindow.h"
-#include <QPainter>
+
 #include <QMouseEvent>
-#include <QDebug>
 #include <QDrag>
 #include <QMimeData>
+#include <QApplication>
+#include <QDebug>
 
-Carta::Carta(GameWindow *gw, QWidget *parent, QString num, QString suit, int h, int skin)
-    : QLabel(parent), arrastrando(false)
+Carta::Carta(GameWindow *gw,
+             QWidget *parent,
+             const QString &num,
+             const QString &suit,
+             int h,
+             int skin,
+             bool faceUp)
+    : QLabel(parent),
+    num(num),
+    suit(suit),
+    isFaceUp(faceUp),
+    locked(true),
+    arrastrando(false),
+    ID(-1),
+    mano(nullptr)
 {
-    this->num = num;
-    this->suit = suit;
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_TranslucentBackground);
     setStyleSheet("background: transparent;");
     setMouseTracking(true);
 
-    QPixmap img = selectPixmap(skin);
-    setImagen(img, h);
+    // Selección de imagenes
+    QPixmap front = selectPixmap(skin);
+    backPixmap    = selectPixmap(0);               // asumimos que skin=0 es reverso
+    setImagen(front, h);
 
-    ID = -1;
-    this->locked = true;
+    // Guardamos pixmaps escalados
+    frontPixmap = this->pixmap();                  // cara visible
+    pixmapOrig  = frontPixmap;
+    backPixmap  = backPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    pixmapOrig = this->pixmap(); // Una sola vez al inicio
-    this->idGlobal = num + suit;  // Ej: "1Oros"
-
-    gw->addCartaPorId(this);
+    idGlobal = num + suit;
+    if (gw) gw->addCartaPorId(this);
 }
 
-void Carta::setLock(bool lock){
-    locked=lock;
+void Carta::setLock(bool lock) {
+    locked = lock;
 }
 
 QPixmap Carta::getImagen() const {
     return imagen;
 }
 
-QPixmap Carta::selectPixmap(int skin){
+QPixmap Carta::selectPixmap(int skin) const {
     QString ruta = ":/decks/";
-    //Seleccionamos la skin
-    switch (skin) {
-    case 0:
-        ruta += "base/";
-        break;
-    case 1:
-        ruta += "poker/";
-        break;
-    }
+    ruta += (skin == 1 ? "poker/" : "base/");
 
-    //Seleccionamos imagen
-    if (num == "0"){
-        ruta+="Back";
-    } else {
-        ruta+=this->num;
-        ruta+=this->suit;
-    }
+    if (num == "0")
+        ruta += "Back";
+    else
+        ruta += num + suit;
 
-    //Extension de archivo
-    ruta+=".png";
-
-    qDebug() << "ruta: " << ruta;
-
+    ruta += ".png";
     QPixmap pixmap(ruta);
+    if (pixmap.isNull())
+        qWarning() << "Carta::selectPixmap: no existe" << ruta;
     return pixmap;
 }
 
-void Carta::setImagen(const QPixmap &pixmap, int h)
-{
+void Carta::setImagen(const QPixmap &pixmap, int h) {
     imagen = pixmap;
-    update();  // Redibuja el widget
+    update();
 
-    int originalWidth = pixmap.width();
-    int originalHeight = pixmap.height();
-    double aspectRatio = static_cast<double>(originalWidth) / originalHeight;
+    double aspect = double(pixmap.width())/pixmap.height();
+    int newW = int(h * aspect);
 
-    int newWidth = static_cast<int>(h * aspectRatio);
-
-    // Ajustar el tamaño del ImageButton
-    setFixedSize(newWidth, h);
-    setPixmap(pixmap.scaled(newWidth, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    setFixedSize(newW, h);
+    setPixmap(pixmap.scaled(newW, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 }
 
-void Carta::mousePressEvent(QMouseEvent *event)
-{
+void Carta::reveal() {
+    isFaceUp = true;
+    setPixmap(frontPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+}
+
+void Carta::hideFace() {
+    isFaceUp = false;
+    setPixmap(backPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+}
+
+void Carta::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton && !locked) {
         arrastrando = true;
         offsetArrastre = event->pos();
     }
+    QLabel::mousePressEvent(event);
 }
 
-
-
-void Carta::mouseMoveEvent(QMouseEvent *event)
-{
+void Carta::mouseMoveEvent(QMouseEvent *event) {
     if (!locked && (event->buttons() & Qt::LeftButton)) {
-        if ((event->pos() - offsetArrastre).manhattanLength() < 10)
+        if ((event->pos() - offsetArrastre).manhattanLength() < QApplication::startDragDistance())
             return;
 
-        QMimeData *mimeData = new QMimeData;
-        mimeData->setText(idGlobal);
+        QMimeData *mime = new QMimeData;
+        mime->setText(idGlobal);
 
-        QDrag *drag = new QDrag(this);
-        drag->setMimeData(mimeData);
-        drag->setPixmap(this->pixmap());
-        drag->setHotSpot(event->pos());
+        QDrag drag(this);
+        drag.setMimeData(mime);
+        drag.setPixmap(pixmap());
+        drag.setHotSpot(event->pos());
 
-        this->hide();
-
-        Qt::DropAction action = drag->exec(Qt::MoveAction);
-
-        if (action == Qt::IgnoreAction) {
-            this->show();  // No se soltó en lugar válido
-        }
+        hide();
+        if (drag.exec(Qt::MoveAction) == Qt::IgnoreAction)
+            show();
     }
+    QLabel::mouseMoveEvent(event);
 }
 
-void Carta::mouseReleaseEvent(QMouseEvent *event)
-{
+void Carta::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton && !locked) {
         arrastrando = false;
+        if (mano && ID != -1)
+            mano->mostrarMano();
+    }
+    QLabel::mouseReleaseEvent(event);
+}
 
-        if (mano && ID != -1) {
-            // suelta en algún lugar válido o vuelve a la mano
-            mano->mostrarMano();  // vuelve a colocar la mano
-            qDebug() << "Carta reordenada";
-        } else {
-            qDebug() << "Carta soltada sin estar en mano";
-        }
+void Carta::añadirAMano(Mano *m, int id) {
+    mano = m;
+    ID   = id;
+}
+
+void Carta::eliminarDeMano() {
+    if (mano && ID >= 0) {
+        mano->eliminarCarta(ID);
+        ID   = -1;
+        mano = nullptr;
     }
 }
 
-
-//Gestión de mano
-void Carta::añadirAMano(Mano *mano, int id){
-    ID = id;
-    this->mano = mano;
-}
-
-void Carta::eliminarDeMano(){
-    mano->eliminarCarta(ID);
-    ID = -1;
+QPixmap Carta::getOriginalPixmap() const {
+    return pixmapOrig;
 }

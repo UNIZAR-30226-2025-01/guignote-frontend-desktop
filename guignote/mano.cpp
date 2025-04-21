@@ -53,8 +53,8 @@ void mostrarMano1(QVector<Carta*> cartas)
     int altoVentana = contenedor->height();
     int anchoVentana = contenedor->width();
 
-    int anchoCarta = cartas[0]->pixmapOrig.height();  // Rotadas, ahora alto = ancho
-    int altoCarta = cartas[0]->pixmapOrig.width();
+    int anchoCarta = cartas[0]->getOriginalPixmap().height();  // Rotadas, ahora alto = ancho
+    int altoCarta  = cartas[0]->getOriginalPixmap().width();
 
     int totalAltoCartas = cartas.size() * altoCarta + (cartas.size() - 1) * espacioEntreCartas;
 
@@ -71,7 +71,7 @@ void mostrarMano1(QVector<Carta*> cartas)
         QTransform transform;
         transform.rotate(270);
 
-        QPixmap original = cartas[i]->pixmapOrig;
+        QPixmap original = cartas[i]->getOriginalPixmap();
         QPixmap rotado = original.transformed(transform, Qt::SmoothTransformation);
 
         cartas[i]->setPixmap(rotado);
@@ -112,9 +112,8 @@ void mostrarMano2(QVector<Carta*> cartas)
         QTransform transform;
         transform.rotate(180);
 
-        QPixmap original = cartas[i]->pixmapOrig;
+        QPixmap original = cartas[i]->getOriginalPixmap();
         QPixmap rotado = original.transformed(transform, Qt::SmoothTransformation);
-
         cartas[i]->setPixmap(rotado);
         cartas[i]->setFixedSize(rotado.size());
     }
@@ -153,7 +152,7 @@ void mostrarMano3(QVector<Carta*> cartas)
         QTransform transform;
         transform.rotate(90);
 
-        QPixmap original = cartas[i]->pixmapOrig;
+        QPixmap original = cartas[i]->getOriginalPixmap();
         QPixmap rotado = original.transformed(transform, Qt::SmoothTransformation);
 
         cartas[i]->setPixmap(rotado);
