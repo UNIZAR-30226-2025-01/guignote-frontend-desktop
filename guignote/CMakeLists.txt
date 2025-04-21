@@ -53,6 +53,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         mano.h mano.cpp
         deck.h deck.cpp
         posicion.h posicion.cpp
+        gamemessagewindow.h gamemessagewindow.cpp
     )
 else()
     if(ANDROID)

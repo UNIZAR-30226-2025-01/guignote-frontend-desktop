@@ -1,4 +1,5 @@
 #include "gamewindow.h"
+#include "gamemessagewindow.h"
 #include "settingswindow.h"
 #include "menuwindow.h"
 #include "carta.h"
@@ -36,6 +37,15 @@ GameWindow::GameWindow(int type, int fondo, QJsonObject msg, int id, QWebSocket 
     setBackground();
     setupUI();
     setupGameElements(msg);
+
+    // Generar gameID
+    if (msg.contains("gameID") && msg["gameID"].isString()) {
+        gameID = msg["gameID"].toString();
+        qDebug() << "GameWindow: usar gameID del servidor =" << gameID;
+    } else {
+        gameID = QUuid::createUuid().toString();
+        qDebug() << "GameWindow: gameID generado localmente =" << gameID;
+    }
 }
 
 void GameWindow::setupUI() {
@@ -59,8 +69,19 @@ void GameWindow::setupUI() {
         settingsWin->exec();
     });
 
-    connect(chat, &Icon::clicked, this, []() {
-        qDebug() << "Chat icon clicked!";
+    connect(chat, &Icon::clicked, this, [this]() {
+        qDebug() << "Icono de chat pulsado. Abriendo GameMessageWindow...";
+        // Creamos la ventana de chat, pasándole el ID de partida y el ID de jugador:
+        GameMessageWindow *chatWin =
+            new GameMessageWindow(this,
+                                  gameID,
+                                  QString::number(player_id));
+        chatWin->setWindowModality(Qt::ApplicationModal);
+        // Centrar sobre la ventana padre:
+        chatWin->move(this->geometry().center() - chatWin->rect().center());
+        chatWin->show();
+        chatWin->raise();
+        chatWin->activateWindow();
     });
 
     connect(quit, &Icon::clicked, this, [this]() {

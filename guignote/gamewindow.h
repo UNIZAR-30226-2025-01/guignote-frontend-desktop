@@ -9,6 +9,7 @@
 #include <QCloseEvent>
 #include <QJsonObject>
 #include <QtWebSockets>
+#include <QUuid>
 #include "icon.h"
 #include "mano.h"
 #include "deck.h"
@@ -24,6 +25,7 @@ public:
     Carta* getCartaPorId(QString id);
 
 private:
+    QString gameID;
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
     int cardSize;
