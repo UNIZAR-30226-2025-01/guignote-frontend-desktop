@@ -27,7 +27,7 @@ public:
      * @brief Constructor de SettingsWindow.
      * @param parent Puntero al widget padre, por defecto nullptr.
      */
-    explicit SettingsWindow(QWidget *mainWindow, QWidget *parent = nullptr);
+    explicit SettingsWindow(QWidget *mainWindow, QWidget *parent = nullptr, QString usr="");
 
     /**
      * @brief Destructor de SettingsWindow.
@@ -36,20 +36,11 @@ public:
 
 private:
     QWidget *mainWindowRef; // Guardar referencia al mainWindow
-    QListWidget *sidebar;           ///< Widget lateral para la navegación.
-    QStackedWidget *stackedWidget;  ///< Área que muestra las páginas de configuración.
-    QRadioButton *radioWindowed;    ///< Botón de opción para modo ventana.
-    QRadioButton *radioFullscreen;  ///< Botón de opción para modo pantalla completa.
     QPushButton *closeButton;       ///< Botón para cerrar la ventana de configuración.
-    QSlider *volumeSlider;
+    QSlider *audioSlider;
+    QSlider *soundSlider;
+    QString usr;
 
-    /**
-     * @brief Actualiza el modo gráfico de la aplicación.
-     *
-     * Cambia el modo de visualización del widget padre entre ventana y pantalla completa
-     * según la opción seleccionada.
-     */
-    void updateGraphicsMode();
     void saveSettings();  // Guarda los ajustes en QSettings
     void loadSettings();  // Carga los ajustes desde QSettings
 

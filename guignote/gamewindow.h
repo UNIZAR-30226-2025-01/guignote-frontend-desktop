@@ -15,6 +15,7 @@
 #include "mano.h"
 #include "deck.h"
 #include "posicion.h"
+#include "menuwindow.h"
 
 
 
@@ -23,7 +24,7 @@ class GameWindow : public QWidget // Ensure GameWindow inherits from QWidget
 {
     Q_OBJECT
 public:
-    GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws);
+    GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
 
@@ -42,6 +43,7 @@ private:
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
     int cardSize;
     int player_id;
+    QString usr;
     QString token;
     QWebSocket *ws;
 
@@ -103,8 +105,8 @@ private:
 
     void mostrarTurno(const QString &texto, bool miTurno);
     void ocultarTurno();
-
-
+    void getSettings();
+    MenuWindow *menuWindowRef = nullptr;
 
 };
 

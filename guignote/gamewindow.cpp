@@ -35,7 +35,9 @@ Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
-GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws) {
+GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef) {
+    this->usr = usr;
+    menuWindowRef = menuRef;
     bg = fondo;
     gameType = type;
     player_id=id;
@@ -55,6 +57,8 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
     if (msg.contains("gameID") && msg["gameID"].isString()) {
         gameID = msg["gameID"].toString();
     }
+
+    getSettings();
 }
 
 void GameWindow::setupUI(const QString &userKey) {
@@ -82,7 +86,7 @@ void GameWindow::setupUI(const QString &userKey) {
 
     // 2) Crear los iconos UNA sola vez
     settings = new Icon(this);
-    settings->setImage(":/icons/settings.png", 50, 50);
+    settings->setImage(":/icons/audio.png", 50, 50);
     chat = new Icon(this);
     chat->setImage(":/icons/message.png", 50, 50);
     quit = new Icon(this);
@@ -95,10 +99,10 @@ void GameWindow::setupUI(const QString &userKey) {
 
     // 4) Conectar sus señales
     connect(settings, &Icon::clicked, this, [=]() {
-        settings->setImage(":/icons/darkenedsettings.png", 50, 50);
-        SettingsWindow *w = new SettingsWindow(this, this);
+        settings->setImage(":/icons/darkenedaudio.png", 50, 50);
+        SettingsWindow *w = new SettingsWindow(menuWindowRef, this, usr);
         w->setModal(true);
-        connect(w, &QDialog::finished, [=](int){ settings->setImage(":/icons/settings.png",50,50); });
+        connect(w, &QDialog::finished, [=](int){ settings->setImage(":/icons/audio.png",50,50); });
         w->exec();
     });
 
@@ -929,4 +933,21 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     else {
         qDebug() << "Mensaje desconocido:" << mensaje;
     }
+}
+
+void GameWindow::getSettings() {
+    QString config = "GraceHopper_" + usr;
+    QSettings settings(config, "Sota, Caballo y Rey");
+    int volume = settings.value("sound/volume", 50).toInt();
+    qDebug() << "Cargando configuración - Volumen:" << volume;
+
+    this->showFullScreen();
+
+    MenuWindow *menuWin = qobject_cast<MenuWindow*>(menuWindowRef);
+    if (menuWin && menuWin->audioOutput) {
+        menuWin->audioOutput->setVolume(static_cast<double>(volume) / 100.0);
+    } else {
+        qWarning() << "Error: no se pudo acceder a audioOutput desde MenuWindow.";
+    }
+    this->update();
 }
