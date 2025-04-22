@@ -19,7 +19,7 @@ public:
     explicit friendswindow(const QString &userKey, QWidget *parent = nullptr);
 
 public slots:
-    void removeFriend(const QString &friendId, const QString &userKey);
+    void removeFriend(const QString &friendId);
 
 private:
     // Layout principal y componentes del encabezado
@@ -47,24 +47,26 @@ private:
     QNetworkAccessManager *networkManager;
 
     // Métodos para configurar la interfaz
-    void setupUI(const QString &userKey);
+    void setupUI();
     QWidget* createFriendsTab();
     QWidget* createRequestsTab();
-    QWidget* createSearchTab(const QString &userKey);
+    QWidget* createSearchTab();
 
     // Métodos para crear widgets personalizados en las pestañas
-    QWidget* createSearchResultWidget(const QJsonObject &usuario, const QString userKey);
-    QWidget* createRequestWidget(const QJsonObject &solicitud, const QString userKey);
-    QWidget* createFriendWidget(const QJsonObject &amigo, const QString &userKey);
+    QWidget* createSearchResultWidget(const QJsonObject &usuario);
+    QWidget* createRequestWidget(const QJsonObject &solicitud);
+    QWidget* createFriendWidget(const QJsonObject &amigo);
 
     // Métodos para la conexión con el backend
-    QString loadAuthToken(const QString &userKey);
-    void fetchFriends(const QString &userKey);
-    void fetchRequests(const QString &userKey);
-    void searchUsers(const QString &userKey);
-    void sendFriendRequest(const QString &userKey);
-    void acceptRequest(const QString &userKey);
-    void rejectRequest(const QString &userKey);
+    QString loadAuthToken();
+    void fetchFriends();
+    void fetchRequests();
+    void searchUsers();
+    void sendFriendRequest();
+    void acceptRequest();
+    void rejectRequest();
+
+    QString userKey;
 };
 
 #endif // FRIENDSWINDOW_H

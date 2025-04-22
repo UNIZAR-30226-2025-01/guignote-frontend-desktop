@@ -168,16 +168,16 @@ void SettingsWindow::closeEvent(QCloseEvent *event)
 
 void SettingsWindow::saveSettings()
 {
-    QString config = "GraceHopper_" + usr;
-    QSettings settings(config, "Sota, Caballo y Rey");
+    QString config = "Sota, Caballo y Rey_" + usr;
+    QSettings settings("Grace Hopper", config);
     settings.setValue("sound/volume", audioSlider->value());
     settings.setValue("sound/effectsVolume", soundSlider->value());
 }
 
 void SettingsWindow::loadSettings()
 {
-    QString config = "GraceHopper_" + usr;
-    QSettings settings(config, "Sota, Caballo y Rey");
+    QString config = "Sota, Caballo y Rey_" + usr;
+    QSettings settings("Grace Hopper", config);
     // Cargar volumen y aplicarlo a la barra de sonido
     int volume = settings.value("sound/volume", 50).toInt();  // Valor por defecto: 50
     audioSlider->setValue(volume);

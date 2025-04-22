@@ -627,6 +627,8 @@ QString MenuWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
 
+    qDebug() << "userKey: " << userKey;
+
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         // Pon un qDebug() o algo para saber que falló
@@ -785,8 +787,8 @@ void MenuWindow::closeEvent(QCloseEvent *event)
 }
 
 void MenuWindow::getSettings() {
-    QString config = "GraceHopper_" + usr;
-    QSettings settings(config, "Sota, Caballo y Rey");
+    QString config = "Sota, Caballo y Rey_" + usr;
+    QSettings settings("Grace Hopper", config);
     int volume = settings.value("sound/volume", 50).toInt();
     qDebug() << "Cargando configuración ["<< usr <<"] - Volumen:" << volume;
 

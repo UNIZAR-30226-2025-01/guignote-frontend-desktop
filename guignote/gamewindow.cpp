@@ -936,8 +936,8 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 }
 
 void GameWindow::getSettings() {
-    QString config = "GraceHopper_" + usr;
-    QSettings settings(config, "Sota, Caballo y Rey");
+    QString config = "Sota, Caballo y Rey_" + usr;
+    QSettings settings("Grace Hopper", config);
     int volume = settings.value("sound/volume", 50).toInt();
     qDebug() << "Cargando configuración - Volumen:" << volume;
 
