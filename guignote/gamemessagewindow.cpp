@@ -173,24 +173,22 @@ void GameMessageWindow::onDisconnected() {
 }
 
 void GameMessageWindow::onTextMessageReceived(const QString &message) {
-    qDebug() << "GameMessageWindow: Mensaje recibido:" << message;
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-    if (!doc.isObject()) {
-        qDebug() << "GameMessageWindow: JSON inválido.";
-        return;
-    }
-    QJsonObject obj = doc.object();
+    if (!doc.isObject()) return;
 
-    if (obj.contains("error")) {
-        qDebug() << "Error del WebSocket:" << obj["error"].toString();
-        return;
-    }
+    QJsonObject obj = doc.object();
+    if (obj.contains("error")) return;
 
     QJsonObject emisorObj = obj["emisor"].toObject();
     QString senderId = QString::number(emisorObj["id"].toInt());
+
+    // IGNORAR SI ES MI PROPIO MENSAJE
+    if (senderId == userID) return;
+
     QString content = obj["contenido"].toString();
     appendMessage(senderId, content);
 }
+
 
 
 void GameMessageWindow::sendMessage(const QString &userKey) {
@@ -238,9 +236,9 @@ void GameMessageWindow::appendMessage(const QString &senderId, const QString &co
     // — Usar los mismos estilos de burbuja que en FriendsMessageWindow —
     if (senderId != userID) {
         lbl->setStyleSheet(
-            "background-color: #2196F3; color: white; padding: 8px; font-size: 16px;"
+            "background-color: #1D4536; color: #F9F9F4; padding: 8px; font-size: 16px;"
             "border-radius: 10px; min-width: 100px; max-width: 400px;"
-        );
+            );
         lay->setAlignment(lbl, Qt::AlignLeft);
     } else {
         lbl->setStyleSheet(
