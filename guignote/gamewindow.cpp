@@ -18,12 +18,6 @@
 #include <QPoint>//
 
 
-struct Slot {
-    Posicion* posW;
-    Carta*    c;
-    QPoint    start;
-};
-
 QMap<QString, Carta*> GameWindow::cartasPorId;
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false);
 
@@ -36,6 +30,7 @@ Carta* GameWindow::getCartaPorId(QString id){
 }
 
 GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef) {
+
     this->usr = usr;
     menuWindowRef = menuRef;
     bg = fondo;
@@ -43,7 +38,9 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
     player_id=id;
     cardSize = 175;
     this->ws = ws;
-    QObject::connect(ws, &QWebSocket::textMessageReceived, this, &GameWindow::recibirMensajes);
+    QObject::connect(ws, &QWebSocket::textMessageReceived,
+                     this, &GameWindow::recibirMensajes,
+                     Qt::UniqueConnection);
     token = loadAuthToken(userKey);
     setBackground();
      if (msg.contains("chat_id")) {
@@ -58,7 +55,6 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
         gameID = msg["gameID"].toString();
     }
 
-    getSettings();
 }
 
 void GameWindow::setupUI(const QString &userKey) {
@@ -819,27 +815,7 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             }
             // 3b) Y buscamos cualquier otra Carta hija directa
             auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
-            for (Carta* c : hijas) {
-                // si ya era la cartaActual, la ignoramos
-                // 3b) Y buscamos cualquier otra Carta hija directa
-                auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
-                for (Carta* c : hijas) {
-                    // comprobamos si ya la añadimos
-                    bool already = false;
-                    for (const Slot &s : slotList) {
-                        if (s.c == c) { already = true; break; }
-                    }
-                    if (already)
-                        continue;
-
-                    QPoint g = c->mapToGlobal(QPoint(0,0));
-                    QPoint start = mapFromGlobal(g);
-                    slotList.append({ posW, c, start });
-                    c->setParent(this);
-                    c->move(start);
-                    c->show(); c->raise();
-                }
-
+            for (Carta* c : std::as_const(hijas)) {
                 QPoint g = c->mapToGlobal(QPoint(0,0));
                 QPoint start = mapFromGlobal(g);
                 slotList.append({ posW, c, start });
@@ -941,7 +917,7 @@ void GameWindow::getSettings() {
     int volume = settings.value("sound/volume", 50).toInt();
     qDebug() << "Cargando configuración - Volumen:" << volume;
 
-    this->showFullScreen();
+    // Lo quito para depurar TODO: this->showFullScreen();
 
     MenuWindow *menuWin = qobject_cast<MenuWindow*>(menuWindowRef);
     if (menuWin && menuWin->audioOutput) {

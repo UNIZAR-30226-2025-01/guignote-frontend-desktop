@@ -24,8 +24,8 @@ class MenuWindow : public QWidget {
     Q_OBJECT
 public:
     explicit MenuWindow(const QString &userKey, QWidget *parent = nullptr);
-    QMediaPlayer *backgroundPlayer;
-    QAudioOutput *audioOutput;
+    QMediaPlayer *backgroundPlayer = nullptr;
+    QAudioOutput *audioOutput = nullptr;
     ~MenuWindow();
 
 public slots:

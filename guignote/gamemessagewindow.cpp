@@ -12,6 +12,8 @@
 #include <QTimer>
 #include <QDebug>
 #include <qjsonarray.h>
+#include <QSettings>
+#include <QStandardPaths>
 
 
 QMap<QString, QList<QPair<QString,QString>>> GameMessageWindow::chatHistories;
@@ -41,38 +43,62 @@ void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
         return;
     }
 
-    QString urlString = QString("http://188.165.76.134:8000/chat_partida/obtener/?chat_id=%1").arg(chatID);
-    QNetworkRequest request((QUrl(urlString)));
-    request.setRawHeader("Auth", token.toUtf8());
+    QTcpSocket *socket = new QTcpSocket(this);
+    socket->connectToHost("188.165.76.134", 8000);
+    if (!socket->waitForConnected(3000)) {
+        qDebug() << "GameMessageWindow: Error al conectar socket:" << socket->errorString();
+        socket->deleteLater();
+        return;
+    }
 
-    QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, this, [=]() {
-        if (reply->error()) {
-            qDebug() << "Error al obtener historial:" << reply->errorString();
-            reply->deleteLater();
-            return;
-        }
+    // Construimos la petición HTTP “a mano”
+    QString httpReq = QString(
+                          "GET /chat_partida/obtener/?chat_id=%1 HTTP/1.1\r\n"
+                          "Host: 188.165.76.134:8000\r\n"
+                          "Àuth: %2\r\n"
+                          "Auth: %2\r\n"
+                          "Connection: close\r\n"
+                          "\r\n"
+                          ).arg(chatID, token.trimmed());
 
-        QByteArray responseData = reply->readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(responseData);
-        if (!doc.isObject()) {
-            qDebug() << "Respuesta de historial no es JSON válido.";
-            reply->deleteLater();
-            return;
-        }
+    socket->write(httpReq.toUtf8());
+    if (!socket->waitForBytesWritten(3000)) {
+        qDebug() << "GameMessageWindow: Error al enviar petición:" << socket->errorString();
+    }
+    if (!socket->waitForReadyRead(5000)) {
+        qDebug() << "GameMessageWindow: Timeout esperando respuesta.";
+        socket->close();
+        socket->deleteLater();
+        return;
+    }
 
-        QJsonArray mensajes = doc.object()["mensajes"].toArray();
-        for (int i = mensajes.size() - 1; i >= 0; --i) {
-            QJsonObject msg = mensajes[i].toObject();
-            QString senderId = QString::number(msg["emisor"].toInt());
-            QString content = msg["contenido"].toString();
-            appendMessage(senderId, content);
-        }
+    QByteArray raw = socket->readAll();
+    socket->close();
+    socket->deleteLater();
 
+    // Separa cabeceras de cuerpo
+    int idx = raw.indexOf("\r\n\r\n");
+    if (idx < 0) {
+        qDebug() << "GameMessageWindow: Respuesta HTTP malformada.";
+        return;
+    }
+    QByteArray body = raw.mid(idx + 4);
 
-        reply->deleteLater();
-    });
+    // Parseamos JSON y mostramos como antes
+    QJsonDocument doc = QJsonDocument::fromJson(body);
+    if (!doc.isObject()) {
+        qDebug() << "Respuesta de historial no es JSON válido.";
+        return;
+    }
+    QJsonArray mensajes = doc.object()["mensajes"].toArray();
+    for (int i = mensajes.size() - 1; i >= 0; --i) {
+        QJsonObject msg = mensajes[i].toObject();
+        QString senderId = QString::number(msg["emisor"].toInt());
+        QString content  = msg["contenido"].toString();
+        appendMessage(senderId, content);
+    }
 }
+
 
 
 GameMessageWindow::~GameMessageWindow() {
@@ -261,24 +287,15 @@ void GameMessageWindow::appendMessage(const QString &senderId, const QString &co
     });
 }
 
-QString GameMessageWindow::loadAuthToken(const QString &userkey) {
+QString GameMessageWindow::loadAuthToken(const QString &userKey) {
+    // Construimos la misma ruta que usa LoginWindow para el .conf
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userkey);
-    QFile f(configPath);
-    if (!f.open(QIODevice::ReadOnly|QIODevice::Text)) {
-        qDebug() << "GameMessageWindow: No se pudo abrir config.";
-        return {};
+                       + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
+    // Forzamos formato INI para leerlo
+    QSettings settings(configPath, QSettings::IniFormat);
+    QString token = settings.value("auth/token").toString();
+    if (token.isEmpty()) {
+        qDebug() << "GameMessageWindow: Token no encontrado en" << configPath;
     }
-    QString token;
-    while (!f.atEnd()) {
-        QString line = f.readLine().trimmed();
-        if (line.startsWith("token=")) {
-            token = line.mid(QString("token=").length()).trimmed();
-            break;
-        }
-    }
-    f.close();
-    if (token.isEmpty())
-        qDebug() << "GameMessageWindow: Token no encontrado en config.";
     return token;
 }
