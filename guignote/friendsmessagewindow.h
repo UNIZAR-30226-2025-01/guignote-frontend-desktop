@@ -2,46 +2,62 @@
 #define FRIENDSMESSAGEWINDOW_H
 
 #include <QWidget>
-#include <QVBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QLineEdit>
-#include <QNetworkAccessManager>
 #include <QListWidget>
-#include <QJsonDocument>
-#include <QJsonObject>
+#include <QListWidgetItem>
+#include <QNetworkAccessManager>
 #include <QWebSocket>
+#include <qboxlayout.h>
 
 class FriendsMessageWindow : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit FriendsMessageWindow( const QString &userKeyQWidget, QWidget *parent = nullptr, QString ID = "", QString Usuario = "");
+    // Ahora recibe: userKey, friendId, friendName, [parent]
+    explicit FriendsMessageWindow(const QString &userKey,
+                                  const QString &friendId,
+                                  const QString &friendName,
+                                  QWidget *parent = nullptr);
     ~FriendsMessageWindow();
 
-private:
-    QWebSocket *webSocket;
-    void onTextMessageReceived(const QString &message, const QString &userKey);
-    void addMessageToList(const QString &contenido, int emisorId);
-    QVBoxLayout *mainLayout;
-    QLabel *titleLabel;
-    QPushButton *closeButton;
-    QLineEdit *messageInput;
-    QString friendID;
-    QString usr;
-    QNetworkAccessManager *networkManager;
-    QListWidget *messagesListWidget;
-
-    void setupUI(const QString &userKey);
-    void setupWebSocketConnection(const QString &userKey);
-    QString loadAuthToken(const QString &userKey);
-    void adjustMessageSize(QListWidgetItem *item, QLabel *messageLabel);
-
-    void sendMessage(const QString &userKey);
-    void loadMessages(const QString &userKey);
+private slots:
     void onConnected();
     void onDisconnected();
+    void onTextMessageReceived(const QString &rawMessage);
+
+private:
+    // Inicialización
+    void setupUI(const QString &userKey);
+    void setupWebSocketConnection(const QString &userKey);
+
+    // Mensajes
+    void loadMessages(const QString &userKey);
+    void sendMessage(const QString &userKey);
+    void appendMessage(const QString &senderId, const QString &content);
+
+    // Autenticación
+    QString loadAuthToken(const QString &userKey);
+    QString loadOwnId(const QString &userKey);
+
+    // Componentes de red
+    QWebSocket               *webSocket;
+    QNetworkAccessManager    *networkManager;
+
+    // UI
+    QVBoxLayout  *mainLayout;
+    QLabel       *titleLabel;
+    QPushButton  *closeButton;
+    QListWidget  *messagesListWidget;
+    QLineEdit    *messageInput;
+    QPushButton  *sendButton;
+
+    // Datos de chat
+    QString friendID;
+    QString usr;
+    QString ownID;
 };
 
 #endif // FRIENDSMESSAGEWINDOW_H

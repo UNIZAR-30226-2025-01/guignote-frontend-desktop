@@ -86,6 +86,8 @@ static QDialog* createExpiredDialog(QWidget *parent) {
     return expiredDialog;
 }
 
+
+
 void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
     QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
     if (!doc.isObject()) {
@@ -553,6 +555,7 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
 
         rankingWin->exec();
     });
+
 
 
     // ------------- ORNAMENTOS ESQUINAS -------------

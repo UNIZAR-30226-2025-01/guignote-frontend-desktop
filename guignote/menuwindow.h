@@ -88,6 +88,9 @@ private:
 
     QLabel* countLabel = nullptr;
 
+    void ensureLoggedIn();
+    QString loadToken();
+    void saveToken(const QString &tok);
 };
 
 #endif // MENUWINDOW_H

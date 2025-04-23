@@ -54,6 +54,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         deck.h deck.cpp
         posicion.h posicion.cpp
         gamemessagewindow.h gamemessagewindow.cpp
+        chatmanager.h chatmanager.cpp
     )
 else()
     if(ANDROID)

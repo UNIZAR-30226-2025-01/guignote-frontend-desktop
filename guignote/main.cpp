@@ -10,7 +10,6 @@
 #include <QJsonObject>
 #include <QEventLoop>
 #include <QUrl>
-
 // Función para hacer login de forma sincrónica
 bool tryLogin(const QString &user, const QString &pass, QString &outToken) {
     QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");

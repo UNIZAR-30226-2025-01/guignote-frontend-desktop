@@ -356,8 +356,9 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
         profileWin->show();
     });
 
-    connect(messageButton, &QPushButton::clicked, [this]() {
-        FriendsMessageWindow *messageWin = new FriendsMessageWindow(userKey, this);
+    connect(messageButton, &QPushButton::clicked, [this, friendId, nombre]() {
+        FriendsMessageWindow *messageWin =
+            new FriendsMessageWindow(userKey, friendId, nombre, this);
         messageWin->setWindowModality(Qt::ApplicationModal);
         messageWin->move(this->geometry().center() - messageWin->rect().center());
         messageWin->show();
