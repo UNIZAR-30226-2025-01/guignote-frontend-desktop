@@ -356,12 +356,18 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
         profileWin->show();
     });
 
+    static QMap<QString, FriendsMessageWindow*> openChats;
+
     connect(messageButton, &QPushButton::clicked, [this, friendId, nombre]() {
-        FriendsMessageWindow *messageWin =
-            new FriendsMessageWindow(userKey, friendId, nombre, this);
-        messageWin->setWindowModality(Qt::ApplicationModal);
-        messageWin->move(this->geometry().center() - messageWin->rect().center());
-        messageWin->show();
+        FriendsMessageWindow *w;
+        if (!openChats.contains(friendId)) {
+            w = new FriendsMessageWindow(userKey, friendId, nombre, this);
+            openChats.insert(friendId, w);
+        } else {
+            w = openChats.value(friendId);
+        }
+        w->show();    // si estaba oculta, la muestra
+        w->raise();   // y la pone encima
     });
 
     connect(deleteButton, &QPushButton::clicked, [this, friendId]() {

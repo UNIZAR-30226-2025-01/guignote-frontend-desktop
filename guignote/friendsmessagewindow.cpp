@@ -18,7 +18,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QByteArray>
-#include "chatmanager.h"
 
  FriendsMessageWindow::FriendsMessageWindow(const QString &userKey,
                                             const QString &friendId,
@@ -43,15 +42,6 @@
     setupUI(userKey);
     loadMessages(userKey);
     setupWebSocketConnection(userKey);
-
-    ChatManager::instance().subscribeTo(friendID);
-    connect(&ChatManager::instance(),
-            &ChatManager::messageReceived,
-            this,
-            [this](const QString &fromId, const QString &text){
-                if (fromId == friendID)
-                    appendMessage(fromId, text);
-            });
 }
 
 
@@ -74,7 +64,7 @@ void FriendsMessageWindow::setupUI(const QString &userKey)
         "QPushButton { background-color: #c2c2c3; border: none; border-radius: 17px; }"
         "QPushButton:hover { background-color: #9b9b9b; }"
         );
-    connect(closeButton, &QPushButton::clicked, this, &QWidget::close);
+    connect(closeButton, &QPushButton::clicked, this, &QWidget::hide);
 
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
