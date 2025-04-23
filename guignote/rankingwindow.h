@@ -40,6 +40,9 @@ private:
     void handleIndividualRankingResponse();
     void handleTeamRankingResponse();
     void updateRankingList(const QJsonArray &playersArray, int type);
+
+    QString amigos = "";
+    int lastPressed = 1;
 };
 
 #endif // RANKINGWINDOW_H

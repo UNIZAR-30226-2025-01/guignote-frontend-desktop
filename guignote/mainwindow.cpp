@@ -153,15 +153,6 @@ MainWindow::MainWindow(QWidget *parent)
     buttonLayout->addWidget(registerButton, 0, Qt::AlignCenter);
     boxLayout->addLayout(buttonLayout);
 
-    // Botones inferiores: preferencias y salir
-    Icon *preferencesButton = new Icon(this);
-    preferencesButton->setImage(":/icons/settings.png", 80, 80);
-    connect(preferencesButton, &Icon::clicked, [=]() {
-        SettingsWindow *settingsWin = new SettingsWindow(this,this);
-        settingsWin->setModal(true);
-        settingsWin->show();
-    });
-
     // ICONO SALIDA
 
     Icon *exitIconButton = new Icon(this);
@@ -222,7 +213,6 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     QHBoxLayout *bottomButtonLayout = new QHBoxLayout();
-    bottomButtonLayout->addWidget(preferencesButton, 0, Qt::AlignLeft);
     bottomButtonLayout->addStretch();
     bottomButtonLayout->addWidget(exitIconButton, 0, Qt::AlignRight);
     boxLayout->addLayout(bottomButtonLayout);

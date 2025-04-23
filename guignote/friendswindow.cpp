@@ -73,16 +73,18 @@ friendswindow::friendswindow(const QString &userKey, QWidget *parent) : QDialog(
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(900, 650);
 
+    this->userKey = userKey;
+
     networkManager = new QNetworkAccessManager(this);
-    setupUI(userKey);
+    setupUI();
 
     // Cargar información inicial
-    fetchFriends(userKey);
-    fetchRequests(userKey);
+    fetchFriends();
+    fetchRequests();
 }
 
 // Configuración de la UI
-void friendswindow::setupUI(const QString &userKey) {
+void friendswindow::setupUI() {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(15);
@@ -127,7 +129,7 @@ void friendswindow::setupUI(const QString &userKey) {
         );
     tabWidget->addTab(createFriendsTab(), "Amigos");
     tabWidget->addTab(createRequestsTab(), "Solicitudes");
-    tabWidget->addTab(createSearchTab(userKey), "Buscar");
+    tabWidget->addTab(createSearchTab(), "Buscar");
 
 
 
@@ -166,7 +168,7 @@ QWidget* friendswindow::createRequestsTab() {
 }
 
 // Pestaña Buscar: campo de búsqueda y lista de resultados.
-QWidget* friendswindow::createSearchTab(const QString &userKey) {
+QWidget* friendswindow::createSearchTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
 
@@ -192,7 +194,7 @@ QWidget* friendswindow::createSearchTab(const QString &userKey) {
     page->setLayout(layout);
 
     // Llamamos a searchUsers para cargar todos los usuarios al abrir la pestaña.
-    searchUsers(userKey);
+    searchUsers();
 
     return page;
 }
@@ -200,12 +202,16 @@ QWidget* friendswindow::createSearchTab(const QString &userKey) {
 
 
 // Función para extraer el token de autenticación desde el archivo .conf
-QString friendswindow::loadAuthToken(const QString &userKey) {
+QString friendswindow::loadAuthToken() {
+
+    qDebug() << "VALOR DE userKey EN loadAuthToken: " << userKey;
+
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
+
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
+        createDialog(this, "No se pudo cargar el archivo de configuración. usrKey = " + userKey)->show();
         return "";
     }
     QString token;
@@ -224,14 +230,14 @@ QString friendswindow::loadAuthToken(const QString &userKey) {
 }
 
 // Obtiene la lista de amigos desde el servidor.
-void friendswindow::fetchFriends(const QString &userKey) {
-    QString token = loadAuthToken(userKey);
+void friendswindow::fetchFriends() {
+    QString token = loadAuthToken();
     if (token.isEmpty()) return;
 
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/obtener_amigos/"));
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply,userKey]() {
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
@@ -247,7 +253,7 @@ void friendswindow::fetchFriends(const QString &userKey) {
                 QJsonArray amigos = obj["amigos"].toArray();
                 for (const QJsonValue &value : amigos) {
                     QJsonObject amigo = value.toObject();
-                    QWidget *friendCard = createFriendWidget(amigo, userKey);
+                    QWidget *friendCard = createFriendWidget(amigo);
                     QListWidgetItem *item = new QListWidgetItem(friendsListWidget);
                     item->setSizeHint(friendCard->sizeHint());
                     friendsListWidget->addItem(item);
@@ -259,7 +265,7 @@ void friendswindow::fetchFriends(const QString &userKey) {
     });
 }
 
-QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo, const QString &userKey) {
+QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
     widget->setStyleSheet("border-radius: 10px;");
@@ -350,14 +356,14 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo, const QStri
         profileWin->show();
     });
 
-    connect(messageButton, &QPushButton::clicked, [this, userKey]() {
+    connect(messageButton, &QPushButton::clicked, [this]() {
         FriendsMessageWindow *messageWin = new FriendsMessageWindow(userKey, this);
         messageWin->setWindowModality(Qt::ApplicationModal);
         messageWin->move(this->geometry().center() - messageWin->rect().center());
         messageWin->show();
     });
 
-    connect(deleteButton, &QPushButton::clicked, [this, friendId, userKey]() {
+    connect(deleteButton, &QPushButton::clicked, [this, friendId]() {
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
@@ -405,8 +411,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo, const QStri
         dialogButtonLayout->addWidget(noButton);
         dialogLayout->addLayout(dialogButtonLayout);
 
-        connect(yesButton, &QPushButton::clicked, [this, confirmDialog, friendId, userKey]() {
-            removeFriend(friendId, userKey);
+        connect(yesButton, &QPushButton::clicked, [this, confirmDialog, friendId]() {
+            removeFriend(friendId);
             confirmDialog->close();
         });
         connect(noButton, &QPushButton::clicked, confirmDialog, &QDialog::close);
@@ -422,8 +428,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo, const QStri
 
 
 // Envía una solicitud para eliminar a un amigo.
-void friendswindow::removeFriend(const QString &friendId, const QString &userKey) {
-    QString token = loadAuthToken(userKey);
+void friendswindow::removeFriend(const QString &friendId) {
+    QString token = loadAuthToken();
     if (token.isEmpty()) {
         qDebug() << "removeFriend: token vacío.";
         return;
@@ -439,7 +445,7 @@ void friendswindow::removeFriend(const QString &friendId, const QString &userKey
     request.setRawHeader("Auth", token.toUtf8());
 
     QNetworkReply *reply = networkManager->sendCustomRequest(request, "DELETE");
-    connect(reply, &QNetworkReply::finished, [this, reply, userKey]() {
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
@@ -447,7 +453,7 @@ void friendswindow::removeFriend(const QString &friendId, const QString &userKey
             return;
         } else if (reply->error() == QNetworkReply::NoError) {
             qDebug() << "Amigo eliminado correctamente.";
-            fetchFriends(userKey);
+            fetchFriends();
         } else {
             qDebug() << "Error en removeFriend, código:" << statusCode;
         }
@@ -456,14 +462,14 @@ void friendswindow::removeFriend(const QString &friendId, const QString &userKey
 }
 
 // Obtiene las solicitudes de amistad desde el servidor.
-void friendswindow::fetchRequests(const QString &userKey) {
-    QString token = loadAuthToken(userKey);
+void friendswindow::fetchRequests() {
+    QString token = loadAuthToken();
     if (token.isEmpty()) return;
 
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/listar_solicitudes_amistad/"));
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply, userKey]() {
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
@@ -481,7 +487,7 @@ void friendswindow::fetchRequests(const QString &userKey) {
                 for (const QJsonValue &value : solicitudes) {
                     QJsonObject solicitud = value.toObject();
                     QListWidgetItem *item = new QListWidgetItem(requestsListWidget);
-                    QWidget *widget = createRequestWidget(solicitud, userKey);
+                    QWidget *widget = createRequestWidget(solicitud);
                     item->setSizeHint(widget->sizeHint());
                     requestsListWidget->addItem(item);
                     requestsListWidget->setItemWidget(item, widget);
@@ -492,7 +498,8 @@ void friendswindow::fetchRequests(const QString &userKey) {
     });
 }
 
-void friendswindow::searchUsers(const QString &userKey) {
+void friendswindow::searchUsers() {
+    qDebug() << "VALOR DE USERKEY EN searchUsers:" << userKey;
     QString searchText = searchLineEdit->text().trimmed();
     qDebug() << "searchUsers triggered with text:" << searchText;
     currentSearchQuery = searchText;
@@ -505,7 +512,7 @@ void friendswindow::searchUsers(const QString &userKey) {
 
     searchResultsListWidget->clear();
 
-    QString token = loadAuthToken(userKey);
+    QString token = loadAuthToken();
     if (token.isEmpty()) return;
 
     QUrl url("http://188.165.76.134:8000/usuarios/buscar_usuarios/");
@@ -519,7 +526,7 @@ void friendswindow::searchUsers(const QString &userKey) {
     QNetworkRequest request(url);
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [this, reply, queryText = searchText, userKey]() {
+    connect(reply, &QNetworkReply::finished, [this, reply, queryText = searchText]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
@@ -541,7 +548,7 @@ void friendswindow::searchUsers(const QString &userKey) {
                 for (const QJsonValue &value : usuarios) {
                     QJsonObject usuario = value.toObject();
                     qDebug() << "Usuario recibido:" << usuario;
-                    QWidget *widget = createSearchResultWidget(usuario, userKey);
+                    QWidget *widget = createSearchResultWidget(usuario);
                     QListWidgetItem *item = new QListWidgetItem(searchResultsListWidget);
                     item->setSizeHint(widget->sizeHint());
                     searchResultsListWidget->addItem(item);
@@ -554,7 +561,7 @@ void friendswindow::searchUsers(const QString &userKey) {
 }
 
 
-QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario, const QString userKey) {
+QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
     widget->setStyleSheet("background-color: #2a2a2a; border: 1px solid #444; border-radius: 10px;");
@@ -614,7 +621,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario, con
     qDebug() << "createSearchResultWidget: userId =" << userId;
     addButton->setProperty("userId", userId);
     connect(addButton, &QPushButton::clicked, this, [=]() {
-        this->sendFriendRequest(userKey);
+        this->sendFriendRequest();
     });
     layout->addWidget(addButton);
 
@@ -624,7 +631,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario, con
 
 
 // Crea un widget para mostrar cada solicitud de amistad.
-QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud, const QString userKey) {
+QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
     widget->setStyleSheet("border-radius: 10px;");
@@ -650,7 +657,7 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud, const 
         "QPushButton:hover { background-color: #2A5C45; }"
         );
     connect(acceptBtn, &QPushButton::clicked, this, [=]() {
-        this->acceptRequest(userKey);
+        this->acceptRequest();
     });
     layout->addWidget(acceptBtn);
 
@@ -661,7 +668,7 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud, const 
         );
     rejectBtn->setProperty("solicitudId", solicitudId);
     connect(rejectBtn, &QPushButton::clicked, this, [=]() {
-        this->rejectRequest(userKey);
+        this->rejectRequest();
     });
     layout->addWidget(rejectBtn);
 
@@ -669,7 +676,7 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud, const 
     return widget;
 }
 
-void friendswindow::sendFriendRequest(const QString &userKey) {
+void friendswindow::sendFriendRequest() {
     QPushButton *button = qobject_cast<QPushButton*>(sender());
     if (!button) {
         qDebug() << "sendFriendRequest: El sender no es un QPushButton.";
@@ -680,7 +687,7 @@ void friendswindow::sendFriendRequest(const QString &userKey) {
         qDebug() << "sendFriendRequest: userId está vacío.";
         return;
     }
-    QString token = loadAuthToken(userKey);
+    QString token = loadAuthToken();
     if (token.isEmpty()) {
         qDebug() << "sendFriendRequest: token vacío.";
         return;
@@ -714,12 +721,12 @@ void friendswindow::sendFriendRequest(const QString &userKey) {
 
 
 // Acepta una solicitud de amistad.
-void friendswindow::acceptRequest(const QString &userKey) {
+void friendswindow::acceptRequest() {
     QObject *senderObj = sender();
     if (!senderObj) return;
     QString solicitudId = senderObj->property("solicitudId").toString();
     if (solicitudId.isEmpty()) return;
-    QString token = loadAuthToken(userKey);
+    QString token = loadAuthToken();
     if (token.isEmpty()) return;
 
     QUrl url("http://188.165.76.134:8000/usuarios/aceptar_solicitud_amistad/");
@@ -731,7 +738,7 @@ void friendswindow::acceptRequest(const QString &userKey) {
     json["solicitud_id"] = solicitudId;
     QJsonDocument doc(json);
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
-    connect(reply, &QNetworkReply::finished, [this, reply, userKey]() {
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
@@ -740,8 +747,8 @@ void friendswindow::acceptRequest(const QString &userKey) {
         }
         if (reply->error() == QNetworkReply::NoError) {
             createDialog(this, "Has aceptado la solicitud de amistad.")->show();
-            fetchRequests(userKey);
-            fetchFriends(userKey);
+            fetchRequests();
+            fetchFriends();
         } else {
             QMessageBox::warning(this, "Error", "No se pudo aceptar la solicitud.");
         }
@@ -750,12 +757,12 @@ void friendswindow::acceptRequest(const QString &userKey) {
 }
 
 // Rechaza una solicitud de amistad.
-void friendswindow::rejectRequest(const QString &userKey) {
+void friendswindow::rejectRequest() {
     QObject *senderObj = sender();
     if (!senderObj) return;
     QString solicitudId = senderObj->property("solicitudId").toString();
     if (solicitudId.isEmpty()) return;
-    QString token = loadAuthToken(userKey);
+    QString token = loadAuthToken();
     if(token.isEmpty()) return;
 
     QUrl url("http://188.165.76.134:8000/usuarios/denegar_solicitud_amistad/");
@@ -767,10 +774,10 @@ void friendswindow::rejectRequest(const QString &userKey) {
     json["solicitud_id"] = solicitudId;
     QJsonDocument doc(json);
     QNetworkReply *reply = networkManager->post(request, doc.toJson());
-    connect(reply, &QNetworkReply::finished, [this, reply, &userKey]() {
+    connect(reply, &QNetworkReply::finished, [this, reply]() {
         if(reply->error() == QNetworkReply::NoError) {
             createDialog(this, "Solicitud de amistad rechazada.")->show();
-            fetchRequests(userKey);
+            fetchRequests();
         } else {
             QMessageBox::warning(this, "Error", "No se pudo rechazar la solicitud.");
         }

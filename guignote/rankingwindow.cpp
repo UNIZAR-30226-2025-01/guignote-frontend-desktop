@@ -83,6 +83,15 @@ void RankingWindow::setupUI() {
     parejasButton = new QPushButton("Parejas", this);
     soloAmigosCheck = new QCheckBox("Solo amigos", this);
 
+    connect(soloAmigosCheck, &QCheckBox::stateChanged, this, [=](int state){
+        amigos = (state == Qt::Checked) ? "_amigos" : "";
+        if (lastPressed == 1) {
+            fetchIndividualRanking();
+        } else if (lastPressed == 2) {
+            fetchTeamRanking();
+        }
+    });
+
     QString buttonStyle =
         "QPushButton {"
         "   background-color: #c2c2c3;"
@@ -154,19 +163,23 @@ void RankingWindow::setupUI() {
 }
 
 void RankingWindow::fetchIndividualRanking() {
-    QUrl url(QString("http://188.165.76.134:8000/usuarios/usuarios/top_elo/"));
+    QString cat = "top_elo" + amigos;
+    QUrl url(QString("http://188.165.76.134:8000/usuarios/" + cat +"/"));
     QNetworkRequest request(url);
     request.setRawHeader("Auth", authToken.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, this, &RankingWindow::handleIndividualRankingResponse);
+    lastPressed = 1;
 }
 
 void RankingWindow::fetchTeamRanking() {
-    QUrl url(QString("http://188.165.76.134:8000/usuarios/usuarios/top_elo_parejas/"));
+    QString cat = "top_elo_parejas" + amigos;
+    QUrl url(QString("http://188.165.76.134:8000/usuarios/" + cat +"/"));
     QNetworkRequest request(url);
     request.setRawHeader("Auth", authToken.toUtf8());
     QNetworkReply *reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, this, &RankingWindow::handleTeamRankingResponse);
+    lastPressed = 2;
 }
 
 void RankingWindow::handleIndividualRankingResponse() {

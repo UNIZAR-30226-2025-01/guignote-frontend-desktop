@@ -177,7 +177,7 @@ void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) 
         QSize windowSize = this->size();  // Get the size of MenuWindow
 
         // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
-        GameWindow *gameWindow = new GameWindow(userKey, type, 1, data, id, webSocket);
+        GameWindow *gameWindow = new GameWindow(userKey, type, 1, data, id, webSocket, usr, this);
         // Le damos la misma posición y tamaño que el MenuWindow
         gameWindow->setGeometry(this->geometry());
         gameWindow->show();
@@ -353,15 +353,6 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     qDebug() << "Token recibido: " + token;
     webSocket = nullptr;
 
-    // ------------- MÚSICA -------------
-    backgroundPlayer = new QMediaPlayer(this);
-    audioOutput = new QAudioOutput(this);
-    backgroundPlayer->setAudioOutput(audioOutput);
-    audioOutput->setVolume(0.5); // Rango 0.0 a 1.0
-    backgroundPlayer->setSource(QUrl("qrc:/bgm/menu_jazz_lofi.mp3"));
-    backgroundPlayer->setLoops(QMediaPlayer::Infinite);
-    backgroundPlayer->play();
-
     // ------------- IMÁGENES DE CARTAS -------------
     boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
     boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
@@ -426,6 +417,16 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
                                              ).arg(nombre).arg(ELO).arg(rank);
 
                     usrLabel->setText(UsrELORank);
+
+                    // ------------- MÚSICA -------------
+                    backgroundPlayer = new QMediaPlayer(this);
+                    audioOutput = new QAudioOutput(this);
+                    backgroundPlayer->setAudioOutput(audioOutput);
+                    audioOutput->setVolume(0.0); // Rango 0.0 a 1.0
+                    backgroundPlayer->setSource(QUrl("qrc:/bgm/menu_jazz_lofi.mp3"));
+                    backgroundPlayer->setLoops(QMediaPlayer::Infinite);
+                    backgroundPlayer->play();
+                    getSettings();
                 } else {
                     usrLabel->setText("Error al cargar usuario");
                 }
@@ -444,7 +445,7 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     inventory = new Icon(this);
     rankings = new Icon(this);
 
-    settings->setImage(":/icons/settings.png", 50, 50);
+    settings->setImage(":/icons/audio.png", 50, 50);
     friends->setImage(":/icons/friends.png", 60, 60);
     exit->setImage(":/icons/door.png", 60, 60);
     inventory->setImage(":/icons/chest.png", 50, 50);
@@ -452,11 +453,11 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
 
     // ------------- EVENTOS DE CLICK EN ICONOS -------------
     connect(settings, &Icon::clicked, [=]() {
-        settings->setImage(":/icons/darkenedsettings.png", 60, 60);
-        SettingsWindow *settingsWin = new SettingsWindow(this, this);
+        settings->setImage(":/icons/darkenedaudio.png", 60, 60);
+        SettingsWindow *settingsWin = new SettingsWindow(this, this, usr);
         settingsWin->setModal(true);
         connect(settingsWin, &QDialog::finished, [this](int){
-            settings->setImage(":/icons/settings.png", 60, 60);
+            settings->setImage(":/icons/audio.png", 60, 60);
         });
         settingsWin->exec();
     });
@@ -619,13 +620,14 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     )");
 
     repositionOrnaments();
-    getSettings();
 }
 
 // Función para extraer el token de autenticación desde el archivo .conf
 QString MenuWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
+
+    qDebug() << "userKey: " << userKey;
 
     QFile configFile(configPath);
     if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
@@ -785,20 +787,13 @@ void MenuWindow::closeEvent(QCloseEvent *event)
 }
 
 void MenuWindow::getSettings() {
-    QSettings settings("guignote", "settings");
-    bool fullscreen = settings.value("graphics/fullscreen", false).toBool();
+    QString config = "Sota, Caballo y Rey_" + usr;
+    QSettings settings("Grace Hopper", config);
     int volume = settings.value("sound/volume", 50).toInt();
-    qDebug() << "Cargando configuración - Fullscreen:" << fullscreen << ", Volumen:" << volume;
+    qDebug() << "Cargando configuración ["<< usr <<"] - Volumen:" << volume;
 
-    if (fullscreen) {
-        if (!this->isFullScreen()) {
-            this->showFullScreen();
-        }
-    } else {
-        if (!this->isMaximized()) {
-            this->showNormal();
-        }
-    }
+    this->showFullScreen();
+
     if (audioOutput) {
         audioOutput->setVolume(static_cast<double>(volume) / 100.0);
     } else {
