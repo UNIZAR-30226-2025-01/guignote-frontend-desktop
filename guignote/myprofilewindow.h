@@ -44,6 +44,8 @@ private:
     // Métodos para conexión con el backend
     QString loadAuthToken(const QString &userKey);
     void loadNameAndStats(const QString &userKey); // Método que consulta el backend para obtener nombre, ELO y estadísticas.
+
+    QDialog* createDialogLogOut(QWidget *parent, const QString &message); //Mensaje conf logOut
 };
 
 #endif // MYPROFILEWINDOW_H

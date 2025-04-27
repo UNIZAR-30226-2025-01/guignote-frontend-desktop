@@ -65,6 +65,78 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
     return dialog;
 }
 
+QDialog* MyProfileWindow::createDialogLogOut(QWidget *parent, const QString &message) {
+    QDialog *dialog = new QDialog(parent);
+    dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    dialog->setStyleSheet("QDialog { background-color: #2c2f32; border-radius: 5px; padding: 20px; border: none; }");
+
+    // QGraphicsDropShadowEffect eliminado para no tener el borde ovalado en el texto
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QLabel *label = new QLabel(message, dialog);
+    label->setWordWrap(true);
+    label->setStyleSheet("color: white; font-size: 16px; border: none; background: transparent;");
+    label->setAlignment(Qt::AlignCenter);
+    layout->addWidget(label);
+
+    // Crear los botones Sí y No con el mismo estilo que el botón original "OK"
+    QPushButton *yesButton = new QPushButton("Sí", dialog);
+    yesButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px; "
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    yesButton->setFixedSize(100, 40);
+
+    QPushButton *noButton = new QPushButton("No", dialog);
+    noButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px; "
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    noButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(yesButton);
+    btnLayout->addWidget(noButton);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    // Conectar el botón "Sí" para realizar el log out y limpiar credenciales
+    QObject::connect(yesButton, &QPushButton::clicked, [this, dialog]() {
+        // Hacer LogOut
+        dialog->close();
+        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+        // Elimina de forma controlada las credenciales y el token
+        settings.remove("auth/user");
+        settings.remove("auth/pass");
+        settings.remove("auth/token");
+        qDebug() << "Credenciales eliminadas correctamente desde QSettings.";
+
+        QWidget *p = parentWidget();
+        while (p) {
+            p->close();               // Cierra este padre
+            p = p->parentWidget();    // Avanza al siguiente en la jerarquía
+        }
+        this->close();
+
+        // Creamos y mostramos la nueva MainWindow
+        MainWindow *mw = new MainWindow();
+        mw->show();
+    });
+
+    // Conectar el botón "No" solo para cerrar el diálogo
+    QObject::connect(noButton, &QPushButton::clicked, [dialog]() {
+        dialog->close();
+    });
+
+    dialog->adjustSize();
+    dialog->move(parent->geometry().center() - dialog->rect().center());
+    return dialog;
+}
+
+
 // Constructor: configura la ventana, la UI y carga los datos del backend.
 MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -168,24 +240,7 @@ QHBoxLayout* MyProfileWindow::createBottomLayout() {
     // Conexión para el botón Log Out
     connect(logOutButton, &QPushButton::clicked, this, [this]() {
         qDebug() << "Botón Log Out presionado";
-
-        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
-        // Elimina de forma controlada las credenciales y el token
-        settings.remove("auth/user");
-        settings.remove("auth/pass");
-        settings.remove("auth/token");
-        qDebug() << "Credenciales eliminadas correctamente desde QSettings.";
-
-        QWidget *p = parentWidget();
-        while (p) {
-            p->close();               // Cierra este padre
-            p = p->parentWidget();    // Avanza al siguiente en la jerarquía
-        }
-        this->close();
-
-        // Creamos y mostramos la nueva MainWindow
-        MainWindow *mw = new MainWindow();
-        mw->show();
+        createDialogLogOut(this, "¿Cerrar Sesion?")->show();
     });
 
     return bottomLayout;
