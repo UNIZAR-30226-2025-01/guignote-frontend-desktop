@@ -19,6 +19,10 @@
 #include <QMessageBox>
 #include <QGraphicsDropShadowEffect>
 #include <QPushButton>
+#include <QFileDialog>
+#include <QHttpMultiPart>
+#include <QHttpPart>
+
 
 // Función auxiliar para crear un diálogo modal con mensaje personalizado.
 // Si exitApp es verdadero, al cerrar se finaliza la aplicación.
@@ -211,6 +215,172 @@ QDialog* MyProfileWindow::createDialogBorrarUsr(QWidget *parent, const QString &
     return dialog;
 }
 
+QDialog* MyProfileWindow::createDialogSetPfp(QWidget *parent, const QString &message) {
+    QDialog *dialog = new QDialog(parent);
+    dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    dialog->setStyleSheet("QDialog { background-color: #2c2f32; border-radius: 5px; padding: 20px; border: none; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QLabel *label = new QLabel(message, dialog);
+    label->setWordWrap(true);
+    label->setStyleSheet("color: white; font-size: 16px; border: none; background: transparent;");
+    label->setAlignment(Qt::AlignCenter);
+    layout->addWidget(label);
+
+    QPushButton *yesButton = new QPushButton("Sí", dialog);
+    yesButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px; "
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    yesButton->setFixedSize(100, 40);
+
+    QPushButton *noButton = new QPushButton("No", dialog);
+    noButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px; "
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    noButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(yesButton);
+    btnLayout->addWidget(noButton);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    // Conectar el botón "Sí" para realizar el cambio de PFP
+    QObject::connect(yesButton, &QPushButton::clicked, [this, dialog]() {
+        // Cambiar PFP
+        choosePfp();
+    });
+
+    // Conectar el botón "No" solo para cerrar el diálogo
+    QObject::connect(noButton, &QPushButton::clicked, [dialog]() {
+        dialog->close();
+    });
+
+    // Conectar la señal de éxito para cerrar el diálogo después de que el PFP se haya cambiado
+    QObject::connect(this, &MyProfileWindow::pfpChangedSuccessfully, dialog, &QDialog::close);
+
+    dialog->adjustSize();
+    dialog->move(parent->geometry().center() - dialog->rect().center());
+    return dialog;
+}
+
+
+void MyProfileWindow::choosePfp() {
+    // Abrir el cuadro de diálogo para seleccionar un archivo de imagen
+    QString filePath = QFileDialog::getOpenFileName(this, "Selecciona una foto de perfil", "", "Imágenes (*.png *.jpg *.jpeg *.bmp *.gif)");
+
+    if (filePath.isEmpty()) {
+        qDebug() << "No se seleccionó ninguna imagen.";
+        return; // Si no se selecciona ninguna imagen, salir de la función.
+    } else {
+        qDebug() << "Imagen cargada.";
+    }
+
+    // Crear un objeto QFile para leer la imagen seleccionada
+    QFile *file = new QFile(filePath); // Usamos un puntero para el archivo
+    if (!file->open(QIODevice::ReadOnly)) {
+        qDebug() << "No se pudo abrir el archivo de imagen. Error: " << file->errorString();
+        createDialog(this, "No se pudo abrir el archivo de imagen. Intenta con otro archivo.")->show();
+        return;
+    } else {
+        qDebug() << "QFile creado.";
+    }
+
+    // Crear el cuerpo multipart/form-data para la solicitud
+    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    qDebug() << "QHttpMultiPart creado.";
+
+    // Crear la parte del archivo de imagen
+    QHttpPart imagePart;
+    imagePart.setHeader(QNetworkRequest::ContentDispositionHeader, QString("form-data; name=\"imagen\"; filename=\"%1\"").arg(file->fileName()));
+    imagePart.setHeader(QNetworkRequest::ContentTypeHeader, "image/jpeg");  // Suponiendo que la imagen es JPEG, ajustar según el formato
+    imagePart.setBodyDevice(file);  // Asociar el archivo con el cuerpo de la solicitud
+
+    multiPart->append(imagePart);
+    qDebug() << "Imagen añadida al QHttpMultiPart.";
+
+    // Obtener el token de autenticación
+    QString token = loadAuthToken(key);
+    if (token.isEmpty()) {
+        createDialog(this, "No se encontró el token de autenticación.")->show();
+        return;
+    } else {
+        qDebug() << "Token cargado.";
+    }
+
+    // Crear el manejador de solicitudes
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    qDebug() << "QNetworkAccessManager creado.";
+
+    // Configurar la solicitud POST
+    QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/imagen/"));
+    request.setRawHeader("Auth", token.toUtf8());  // Incluir el token de autenticación en el encabezado
+
+    // Verificar si el request está configurado correctamente
+    qDebug() << "URL configurada: " << request.url();
+
+    // Enviar la solicitud POST con el cuerpo multipart/form-data
+    QNetworkReply *reply = manager->post(request, multiPart);
+
+    // Verificar si el reply es nulo
+    if (!reply) {
+        qDebug() << "Error: QNetworkReply no se ha creado correctamente.";
+        return;
+    }
+    qDebug() << "Solicitud POST enviada.";
+
+    // Conectar la respuesta a la función de procesamiento
+    connect(reply, &QNetworkReply::finished, this, [this, reply, multiPart, file]() {
+        // Verificar si el reply es válido
+        if (!reply) {
+            qDebug() << "Error: reply es nulo en el slot de finished.";
+            return;
+        }
+
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+        // Depuración: Ver el código de estado
+        qDebug() << "Código de estado HTTP: " << statusCode;
+
+        // Verificar los diferentes códigos de estado
+        if (statusCode == 401) {
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
+        } else if (statusCode == 405) {
+            createDialog(this, "Método no permitido. Verifique la API.", true)->show();
+        } else if (statusCode == 200) {
+            // Respuesta exitosa (Imagen actualizada)
+            QByteArray response = reply->readAll();
+            qDebug() << "Respuesta recibida del servidor: " << response;
+
+            QJsonDocument doc = QJsonDocument::fromJson(response);
+            if (doc.isObject()) {
+                QJsonObject obj = doc.object();
+                QString message = obj.value("mensaje").toString();
+                createDialog(this, message)->show();  // Mostrar mensaje de éxito
+
+                // Emitir la señal después de la actualización exitosa de la foto de perfil
+                emit pfpChangedSuccessfully();
+                qDebug() << "Foto de perfil actualizada.";
+            }
+        } else {
+            // Manejo de otros errores
+            QByteArray response = reply->readAll();
+            qDebug() << "Error de servidor: " << response;
+            createDialog(this, "Hubo un problema al actualizar la imagen. Inténtelo de nuevo más tarde.")->show();
+        }
+
+        // Limpiar los recursos
+        reply->deleteLater();
+        multiPart->deleteLater();
+        file->close();  // Cerramos el archivo después de la operación
+    });
+}
+
 
 // Constructor: configura la ventana, la UI y carga los datos del backend.
 MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
@@ -276,7 +446,7 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     fotoPerfil->setPixmap(circularImage);
     fotoPerfil->setFixedSize(pfpSize, pfpSize);
     connect(fotoPerfil, &Icon::clicked, [=]() {
-        qDebug() << "Foto de perfil clickada";
+        createDialogSetPfp(this, "¿Cambiar foto de perfil?")->show();
     });
     profileLayout->addWidget(fotoPerfil, 0, Qt::AlignCenter);
 
@@ -475,4 +645,3 @@ void MyProfileWindow::delUsr(const QString &userKey) {
         reply->deleteLater();
     });
 }
-
