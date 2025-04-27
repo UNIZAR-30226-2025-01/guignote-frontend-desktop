@@ -136,6 +136,81 @@ QDialog* MyProfileWindow::createDialogLogOut(QWidget *parent, const QString &mes
     return dialog;
 }
 
+QDialog* MyProfileWindow::createDialogBorrarUsr(QWidget *parent, const QString &message) {
+    QDialog *dialog = new QDialog(parent);
+    dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    dialog->setStyleSheet("QDialog { background-color: #2c2f32; border-radius: 5px; padding: 20px; border: none; }");
+
+    // QGraphicsDropShadowEffect eliminado para no tener el borde ovalado en el texto
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QLabel *label = new QLabel(message, dialog);
+    label->setWordWrap(true);
+    label->setStyleSheet("color: white; font-size: 16px; border: none; background: transparent;");
+    label->setAlignment(Qt::AlignCenter);
+    layout->addWidget(label);
+
+    // Crear los botones Sí y No con el mismo estilo que el botón original "OK"
+    QPushButton *yesButton = new QPushButton("Sí", dialog);
+    yesButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px; "
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    yesButton->setFixedSize(100, 40);
+
+    QPushButton *noButton = new QPushButton("No", dialog);
+    noButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px; "
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    noButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(yesButton);
+    btnLayout->addWidget(noButton);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    // Conectar el botón "Sí" para realizar el log out y limpiar credenciales
+    QObject::connect(yesButton, &QPushButton::clicked, [this, dialog]() {
+        // Borrar Usuario
+
+        delUsr(key);
+
+        // LogOut inmediatamente despues
+        dialog->close();
+        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+        // Elimina de forma controlada las credenciales y el token
+        settings.remove("auth/user");
+        settings.remove("auth/pass");
+        settings.remove("auth/token");
+        qDebug() << "Credenciales eliminadas correctamente desde QSettings.";
+
+        QWidget *p = parentWidget();
+        while (p) {
+            p->close();               // Cierra este padre
+            p = p->parentWidget();    // Avanza al siguiente en la jerarquía
+        }
+        this->close();
+
+        // Creamos y mostramos la nueva MainWindow
+        MainWindow *mw = new MainWindow();
+        mw->show();
+    });
+
+    // Conectar el botón "No" solo para cerrar el diálogo
+    QObject::connect(noButton, &QPushButton::clicked, [dialog]() {
+        dialog->close();
+    });
+
+    dialog->adjustSize();
+    dialog->move(parent->geometry().center() - dialog->rect().center());
+    return dialog;
+}
+
 
 // Constructor: configura la ventana, la UI y carga los datos del backend.
 MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
@@ -146,6 +221,7 @@ MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDia
 
     setupUI();
     loadNameAndStats(userKey); // Se llama a la función que carga nombre, ELO y estadísticas.
+    key = userKey;
 }
 
 // Configura la UI dividiéndola en secciones.
@@ -223,9 +299,21 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
 }
 
 // Crea el layout inferior con el botón de Log Out.
-// Crea el layout inferior con el botón de Log Out.
 QHBoxLayout* MyProfileWindow::createBottomLayout() {
     QHBoxLayout *bottomLayout = new QHBoxLayout();
+
+    // Crear el botón Borrar Cuenta en la parte inferior izquierda con el mismo estilo que LogOut
+    QPushButton *deleteAccountButton = new QPushButton("Borrar Cuenta", this);
+    deleteAccountButton->setStyleSheet(
+        "QPushButton { background-color: red; color: white; font-size: 18px; padding: 10px; border-radius: 5px; "
+        "border: 2px solid #8B0000; }"
+        "QPushButton:hover { background-color: #cc0000; }"
+        "QPushButton:pressed { background-color: #8B0000; }"
+        );
+    deleteAccountButton->setFixedSize(200, 50);
+    bottomLayout->addWidget(deleteAccountButton, 0, Qt::AlignLeft);
+
+    // Crear el botón LogOut en la parte inferior derecha
     logOutButton = new QPushButton("Log Out", this);
     logOutButton->setStyleSheet(
         "QPushButton { background-color: red; color: white; font-size: 18px; padding: 10px; border-radius: 5px; "
@@ -237,14 +325,22 @@ QHBoxLayout* MyProfileWindow::createBottomLayout() {
     bottomLayout->addStretch();
     bottomLayout->addWidget(logOutButton, 0, Qt::AlignRight);
 
-    // Conexión para el botón Log Out
+    // Conectar el botón LogOut
     connect(logOutButton, &QPushButton::clicked, this, [this]() {
         qDebug() << "Botón Log Out presionado";
-        createDialogLogOut(this, "¿Cerrar Sesion?")->show();
+        createDialogLogOut(this, "¿Cerrar Sesión?")->show();
+    });
+
+    // Conectar el botón Borrar Cuenta
+    connect(deleteAccountButton, &QPushButton::clicked, this, [this]() {
+        qDebug() << "Botón Borrar Cuenta presionado";
+        createDialogBorrarUsr(this, "¿Estás seguro de que quieres borrar tu cuenta?")->show();
     });
 
     return bottomLayout;
 }
+
+
 
 // Convierte una imagen en un QPixmap circular.
 QPixmap MyProfileWindow::createCircularImage(const QString &imagePath, int size) {
@@ -346,3 +442,37 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
         reply->deleteLater();
     });
 }
+
+void MyProfileWindow::delUsr(const QString &userKey) {
+    QString token = loadAuthToken(userKey);
+    if (token.isEmpty()) {
+        createDialog(this, "No se encontró el token de autenticación.")->show();
+        return;
+    }
+
+    // Crear el manejador de solicitudes
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+
+    // Configurar la URL y la solicitud POST
+    QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/eliminar_usuario/"));
+    request.setRawHeader("Auth", token.toUtf8());  // Agregar el token de autenticación al encabezado
+
+    // Enviar la solicitud POST (sin cuerpo adicional, ya que solo necesitas el encabezado)
+    QNetworkReply *reply = manager->deleteResource(request);
+
+    // Conectar la respuesta a la función de procesamiento
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
+        // Verificar los diferentes códigos de estado
+        if (statusCode == 401) {
+            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
+        } else if (statusCode == 405) {
+            createDialog(this, "Método no permitido.", true)->show();
+        }
+
+        // Limpiar la respuesta
+        reply->deleteLater();
+    });
+}
+
