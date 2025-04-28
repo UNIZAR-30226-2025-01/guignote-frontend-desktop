@@ -22,6 +22,9 @@ public:
                                   const QString &friendName,
                                   QWidget *parent = nullptr);
     ~FriendsMessageWindow();
+signals:
+    // Emite cada vez que llegue un mensaje nuevo
+    void newMessageReceived(const QString& fromFriendId);
 
 private slots:
     void onConnected();

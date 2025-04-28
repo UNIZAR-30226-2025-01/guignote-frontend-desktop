@@ -853,6 +853,7 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             });
             anim->start(QAbstractAnimation::DeleteWhenStopped);
         }
+
     }
 
 

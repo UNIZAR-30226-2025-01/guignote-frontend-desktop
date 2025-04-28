@@ -66,14 +66,14 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
 }
 
 // Constructor: configura la ventana, la UI y carga los datos del backend.
-MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
+MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent), m_userKey(userKey) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(850, 680);
 
     setupUI();
-    loadNameAndStats(userKey); // Se llama a la función que carga nombre, ELO y estadísticas.
+    loadNameAndStats(m_userKey); // Se llama a la función que carga nombre, ELO y estadísticas.
 }
 
 // Configura la UI dividiéndola en secciones.
@@ -119,18 +119,18 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     profileLayout->setAlignment(Qt::AlignCenter);
     profileLayout->addStretch();
 
-    int pfpSize = 200;
-    QString imagePath = ":/icons/profile.png";
-    QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+    // int pfpSize = 200;
+    // QString imagePath = ":/icons/profile.png";
+    // QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
-    fotoPerfil = new Icon();
-    fotoPerfil->setHoverEnabled(false);
-    fotoPerfil->setPixmap(circularImage);
-    fotoPerfil->setFixedSize(pfpSize, pfpSize);
-    connect(fotoPerfil, &Icon::clicked, [=]() {
-        qDebug() << "Foto de perfil clickada";
-    });
-    profileLayout->addWidget(fotoPerfil, 0, Qt::AlignCenter);
+    // fotoPerfil = new Icon();
+    // fotoPerfil->setHoverEnabled(false);
+    // fotoPerfil->setPixmap(circularImage);
+    // fotoPerfil->setFixedSize(pfpSize, pfpSize);
+    // connect(fotoPerfil, &Icon::clicked, [=]() {
+    //     qDebug() << "Foto de perfil clickada";
+    // });
+    // profileLayout->addWidget(fotoPerfil, 0, Qt::AlignCenter);
 
     // userLabel se actualizará con nombre y ELO desde el backend.
     userLabel = new QLabel("<span style='font-size: 24px; font-weight: bold; color: white;'>Usuario(0)</span><br>"
@@ -151,7 +151,6 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
 }
 
 // Crea el layout inferior con el botón de Log Out.
-// Crea el layout inferior con el botón de Log Out.
 QHBoxLayout* MyProfileWindow::createBottomLayout() {
     QHBoxLayout *bottomLayout = new QHBoxLayout();
     logOutButton = new QPushButton("Log Out", this);
@@ -166,26 +165,38 @@ QHBoxLayout* MyProfileWindow::createBottomLayout() {
     bottomLayout->addWidget(logOutButton, 0, Qt::AlignRight);
 
     // Conexión para el botón Log Out
-    connect(logOutButton, &QPushButton::clicked, this, [this]() {
+    connect(logOutButton, &QPushButton::clicked, this, [this]() { // Captura [this] para acceder a m_userKey
         qDebug() << "Botón Log Out presionado";
 
-        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
-        // Elimina de forma controlada las credenciales y el token
+        // Usa la instancia CORRECTA de QSettings con la clave del usuario almacenada
+        QSettings settings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(m_userKey));
+
+        // Elimina de forma controlada las credenciales y el token del usuario correcto
         settings.remove("auth/user");
         settings.remove("auth/pass");
         settings.remove("auth/token");
-        qDebug() << "Credenciales eliminadas correctamente desde QSettings.";
+        settings.remove("auth/remember"); // Añade esto también por si acaso
+        settings.sync(); // Asegura que los cambios se escriban inmediatamente (opcional pero recomendable aquí)
 
+        qDebug() << "Credenciales eliminadas para userKey:" << m_userKey;
+
+        // --- Lógica para cerrar ventanas y mostrar MainWindow (Parece correcta) ---
         QWidget *p = parentWidget();
-        while (p) {
-            p->close();               // Cierra este padre
-            p = p->parentWidget();    // Avanza al siguiente en la jerarquía
-        }
+        // Primero cierra la ventana actual de perfil ANTES de cerrar los padres
         this->close();
+
+        // Luego cierra la jerarquía de padres (si existe)
+        while (p) {
+            QWidget *parentToClose = p;
+            p = p->parentWidget(); // Avanza al siguiente ANTES de cerrar el actual
+            parentToClose->close(); // Cierra el padre actual
+        }
+
 
         // Creamos y mostramos la nueva MainWindow
         MainWindow *mw = new MainWindow();
         mw->show();
+
     });
 
     return bottomLayout;
@@ -210,27 +221,22 @@ QPixmap MyProfileWindow::createCircularImage(const QString &imagePath, int size)
     return circularPixmap;
 }
 
-// Extrae el token de autenticación desde el archivo de configuración.
+// Extrae el token de autenticación usando QSettings consistentemente.
 QString MyProfileWindow::loadAuthToken(const QString &userKey) {
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
-    QFile configFile(configPath);
-    if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
-        return "";
-    }
-    QString token;
-    while (!configFile.atEnd()) {
-        QString line = configFile.readLine().trimmed();
-        if (line.startsWith("token=")) {
-            token = line.mid(QString("token=").length()).trimmed();
-            break;
-        }
-    }
-    configFile.close();
+    // Usa la misma organización y nombre de aplicación/grupo que en LoginWindow
+    QSettings settings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(userKey));
+
+    // Lee el valor usando la clave correcta
+    QString token = settings.value("auth/token").toString();
+
     if (token.isEmpty()) {
-        createDialog(this, "No se encontró el token en el archivo de configuración.")->show();
+        qWarning() << "No se encontró el token para userKey:" << userKey << "en la configuración.";
+        // Mantén o ajusta tu diálogo de error si es necesario
+        createDialog(this, "No se encontró el token en la configuración.")->show();
+        return ""; // Devuelve vacío si no se encuentra
     }
+
+    qDebug() << "Token cargado para userKey:" << userKey;
     return token;
 }
 
@@ -249,7 +255,6 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
-            reply->deleteLater();
             return;
         }
         if (reply->error() == QNetworkReply::NoError) {
