@@ -15,6 +15,8 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QtWebSockets>
+#include <QSequentialAnimationGroup>
+#include <QPauseAnimation>
 #include <QPoint>//
 
 
@@ -827,8 +829,13 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             qDebug() << ">>> round_result recibido. ganadorId =" << ganadorId
                      << ", nombre =" << ganadorNom;
             // 2) Overlay anunciador
-            mostrarTurno(QString("¡Gana la baza: %1!").arg(ganadorNom),
-                         ganadorId == player_id);
+            if (ganadorId == player_id) {
+                // Mensaje para quien gana
+                mostrarTurno(QString("¡Has ganado la mano!"), true);
+            } else {
+                // Mensaje para quien pierde
+                mostrarTurno(QString("¡%1 ha ganado la mano!").arg(ganadorNom), false);
+            }
 
             // 3) Extraer **tanto** cartaActual **como** cualquier hija directa
             struct Slot { Posicion* posW; Carta* c; QPoint start; };
@@ -933,59 +940,87 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             qDebug() << "Contador previo (winPileCounts[" << ganadorPos << "]) =" << count;
 
 
-            // 1) Creamos el grupo de animación
-            auto *group = new QParallelAnimationGroup(this);
+            // Creamos una animación secuencial de 3 fases:
+            auto *seq = new QSequentialAnimationGroup(this);
+
+            // FASE 1: “Pelea” — pequeñas sacudidas en el centro
+            auto *fight = new QParallelAnimationGroup(seq);
+            srand(QTime::currentTime().msec());
             for (const Slot &sl : slotList) {
                 Carta* c = sl.c;
-                c->hideFace();  // boca abajo
+                QPoint orig = sl.start;
+                c->hideFace();
+                int dx = (rand() % 41) - 20;  // -20..+20 px
+                int dy = (rand() % 41) - 20;
+                auto *a = new QPropertyAnimation(c, "pos");
+                a->setDuration(300);
+                a->setStartValue(orig);
+                a->setEndValue(orig + QPoint(dx, dy));
+                a->setEasingCurve(QEasingCurve::InOutQuad);
+                fight->addAnimation(a);
+            }
+            seq->addAnimation(fight);
+
+            // FASE 2: volver al centro
+            auto *ret = new QParallelAnimationGroup(seq);
+            for (const Slot &sl : slotList) {
+                Carta* c = sl.c;
+                auto *a = new QPropertyAnimation(c, "pos");
+                a->setDuration(300);
+                a->setStartValue(c->pos());
+                a->setEndValue(sl.start);
+                a->setEasingCurve(QEasingCurve::InOutQuad);
+                ret->addAnimation(a);
+            }
+            seq->addAnimation(ret);
+
+            // PAUSA antes de mostrar mensaje
+            auto *pause = new QPauseAnimation(200, seq);
+            seq->addAnimation(pause);
+            connect(pause, &QPauseAnimation::finished, this, [=](){
+                if (ganadorId == player_id)
+                    mostrarTurno("¡Has ganado la mano!", true);
+                else
+                    mostrarTurno(QString("¡%1 ha ganado la mano!").arg(ganadorNom), false);
+            });
+
+            // FASE 3: mover a la pila de triunfo
+            auto *move = new QParallelAnimationGroup(seq);
+            for (const Slot &sl : slotList) {
+                Carta* c = sl.c;
                 bool keep = (c->num == "10" || c->num == "12");
                 QPoint dst = base + QPoint(count * winPileOffset,
                                            count * winPileOffset);
                 if (keep) ++count;
-
-                auto *anim = new QPropertyAnimation(c, "pos", this);
-                anim->setDuration(500);
-                anim->setStartValue(sl.start);
-                anim->setEndValue(dst);
-                group->addAnimation(anim);
-
-                // Cuando termine cada carta, la borramos si no la queremos mantener
-                connect(anim, &QPropertyAnimation::finished, [c, keep]() {
+                auto *a = new QPropertyAnimation(c, "pos");
+                a->setDuration(500);
+                a->setStartValue(c->pos());
+                a->setEndValue(dst);
+                a->setEasingCurve(QEasingCurve::InOutQuad);
+                move->addAnimation(a);
+                connect(a, &QPropertyAnimation::finished, [c, keep](){
                     if (!keep) c->deleteLater();
                 });
             }
+            seq->addAnimation(move);
 
-            // 2) Al terminar todas:
-            connect(group, &QParallelAnimationGroup::finished, this, [=]() {
-                // — Primero, borramos cualquier montón viejo de esa posición
-                for (Carta* oldBack : pileBacks[ganadorPos]) {
+            // Al acabar, regenerar los reversos y refrescar manos
+            connect(move, &QParallelAnimationGroup::finished, this, [=]() {
+                for (Carta* oldBack : pileBacks[ganadorPos])
                     oldBack->deleteLater();
-                }
                 pileBacks[ganadorPos].clear();
-
-                // — Ahora creamos dos cartas reverso en `base`, con un pequeño offset
                 for (int i = 0; i < 2; ++i) {
-                    Carta* back = new Carta(this, this,
-                                            /*num=*/"0", /*palo=*/"",
-                                            cardSize,
-                                            /*skin=*/0,
-                                            /*faceUp=*/false);
-                    QPoint pilePos = base + QPoint(i * pileBackOffset,
-                                                   i * pileBackOffset);
-                    back->move(pilePos);
-                    back->show();
+                    Carta* back = new Carta(this, this, "0", "", cardSize, 0, false);
+                    QPoint p = base + QPoint(i * pileBackOffset, i * pileBackOffset);
+                    back->move(p); back->show();
                     pileBacks[ganadorPos].append(back);
                 }
-
-                // — Finalmente, refrescamos manos y la ventana
-                for (Mano* mano : manos)
-                    mano->mostrarMano();
+                for (Mano* m : manos) m->mostrarMano();
                 repositionHands();
                 update();
             });
 
-            // 3) Arrancamos el grupo
-            group->start(QAbstractAnimation::DeleteWhenStopped);
+            seq->start(QAbstractAnimation::DeleteWhenStopped);
             pendingRoundResult = nullptr;
 
             for (Mano* mano : manos) {
