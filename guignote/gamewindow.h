@@ -54,6 +54,8 @@ private:
     // 1 -> 1v1 Friendly
     // 2 -> 2v2 (Ranked or Friendly)
 
+    QVector<int> winPileCounts = QVector<int>(4, 0);  // Uno por cada posición
+
     bool eventFilter(QObject *watched, QEvent *event) override;
     void setBackground(); // Function to set the background based on the bg value
     void setupUI(const QString &userKey);
@@ -110,6 +112,10 @@ private:
     void ocultarTurno();
     void getSettings();
     MenuWindow *menuWindowRef = nullptr;
+    // Para guardar, por cada posición, los dos 'backs' que simulan el montón
+    QMap<int, QVector<Carta*>> pileBacks;
+    // Desplazamiento en píxels entre las dos cartas del montón
+    const int pileBackOffset = 8;
 
 };
 
