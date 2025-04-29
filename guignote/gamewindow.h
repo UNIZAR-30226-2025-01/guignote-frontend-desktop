@@ -29,6 +29,7 @@ public:
     Carta* getCartaPorId(QString id);
 
 private:
+    bool myTurn = false; // true si es mi turno, false en caso contrario
     int winPileCountUser = 0;
     int winPileCountOpponent = 0;
     static constexpr int winPileOffset = 15;  // desplazamiento entre cartas apiladas

@@ -802,38 +802,50 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         // 3) Extraer **tanto** cartaActual **como** cualquier hija directa
         struct Slot { Posicion* posW; Carta* c; QPoint start; };
         QVector<Slot> slotList;
-        for (Posicion* posW : posiciones) {
-            // 3a) Si hay cartaActual, la cogemos
+            for (Posicion* posW : posiciones) {
+                // 3a) Si hay cartaActual, la cogemos
             if (Carta* c = posW->cartaActual) {
                 QPoint g = c->mapToGlobal(QPoint(0,0));
                 QPoint start = mapFromGlobal(g);
                 slotList.append({ posW, c, start });
-                posW->cartaActual = nullptr;
-                c->setParent(this);
-                c->move(start);
+                posW->cartaActual = nullptr; // Desvincular lógicamente
+                c->setParent(this);          // Reparentar (desvincular visualmente)
+                c->move(start);              // Asegurar posición tras reparentar
                 c->show(); c->raise();
             }
-            // 3b) Y buscamos cualquier otra Carta hija directa
-            auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
-            for (Carta* c : std::as_const(hijas)) {
-                QPoint g = c->mapToGlobal(QPoint(0,0));
-                QPoint start = mapFromGlobal(g);
-                slotList.append({ posW, c, start });
-                c->setParent(this);
-                c->move(start);
-                c->show(); c->raise();
-            }
-        }
+                // 3b) Y buscamos cualquier otra Carta hija directa
+                auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
+                for (Carta* c : std::as_const(hijas)) {
+                   // Añadimos una comprobación para evitar procesar dos veces la misma carta
+                    // si hubiera algún timing extraño entre cartaActual=nullptr y findChildren
+                    bool already_processed = false;
+                    for(const auto& slot : slotList) {
+                        if (slot.c == c) {
+                            already_processed = true;
+                            break;
+                        }
+                    }
+                    if (already_processed) continue;
 
-        // 4) Desbloquear
+                    QPoint g = c->mapToGlobal(QPoint(0,0));
+                    QPoint start = mapFromGlobal(g);
+                    slotList.append({ posW, c, start });
+                    c->setParent(this);          // Reparentar (desvincular visualmente)
+                    c->move(start);              // Asegurar posición tras reparentar
+                    c->show(); c->raise();
+                }
+        // Forzar actualización visual del widget Posicion después de quitarle las cartas.
+        posW->update();
+        // *************************
+    }
+        // 4) Desbloquear (ya estaba)
         for (Posicion* posW : posiciones)
             posW->setLock(false);
-
-        // 5) Animar hacia la esquina sólo sota/rey, el resto se destruye
-        const bool userWon = (ganadorId == player_id);
-        QPoint base = userWon
-                          ? QPoint(width()  - winPileMargin - cardSize,
-                                   height() - winPileMargin - cardSize)
+    // 5) A
+    const bool userWon = (ganadorId == player_id);
+    QPoint base = userWon
+                      ? QPoint(width()  - winPileMargin - cardSize,
+                               height() - winPileMargin - cardSize)
                           : QPoint(winPileMargin, winPileMargin);
         int &count = userWon ? winPileCountUser : winPileCountOpponent;
 
