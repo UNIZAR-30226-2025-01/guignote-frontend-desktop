@@ -29,6 +29,8 @@ public:
     Carta* getCartaPorId(QString id);
 
 private:
+    std::function<void()> pendingRoundResult;
+
     bool myTurn = false; // true si es mi turno, false en caso contrario
     int winPileCountUser = 0;
     int winPileCountOpponent = 0;
