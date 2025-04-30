@@ -1,94 +1,98 @@
 cmake_minimum_required(VERSION 3.16)
-
 project(guignote VERSION 0.1 LANGUAGES CXX)
+
+option(BUILD_TESTING "Build tests" ON)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Actualizamos la búsqueda para incluir WebSockets.
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network Multimedia WebSockets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia WebSockets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network Multimedia WebSockets Test)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Multimedia WebSockets Test)
 
+# ----------- 1.  FUENTES NORMALES -----------------
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
-        menuwindow.h
-        menuwindow.cpp
-        menuwindow.ui  # <-- ¡Asegura que CMAKE_AUTOUIC lo procese!
+    main.cpp
+    mainwindow.cpp        mainwindow.h  mainwindow.ui
+    menuwindow.cpp        menuwindow.h  menuwindow.ui
+    loginwindow.cpp       loginwindow.h
+    registerwindow.cpp    registerwindow.h
+    recoverpasswordwindow.cpp  recoverpasswordwindow.h
+    imagebutton.cpp       imagebutton.h
+    icon.cpp              icon.h
+    friendswindow.cpp     friendswindow.h
+    settingswindow.cpp    settingswindow.h  settingswindow.ui
+    inventorywindow.cpp   inventorywindow.h
+    myprofilewindow.cpp   myprofilewindow.h
+    userprofilewindow.cpp userprofilewindow.h
+    loadingwindow.cpp     loadingwindow.h
+    friendsmessagewindow.cpp friendsmessagewindow.h
+    rankingwindow.cpp     rankingwindow.h
+    gamewindow.cpp        gamewindow.h
+    carta.cpp             carta.h
+    mano.cpp              mano.h
+    deck.cpp              deck.h
+    posicion.cpp          posicion.h
+    gamemessagewindow.cpp gamemessagewindow.h
+    resource.qrc
 )
 
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(guignote
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-        resource.qrc
-        loginwindow.h loginwindow.cpp
-        registerwindow.h registerwindow.cpp
-        recoverpasswordwindow.h recoverpasswordwindow.cpp
-        menuwindow.h menuwindow.cpp
-        imagebutton.h imagebutton.cpp
-        icon.h
-        icon.cpp
-        icons/friends.png icons/hide_password.png icons/house-door.png icons/padlock.png icons/settings.png
-        icons/divider.png
-        friendswindow.h
-        settingswindow.h settingswindow.cpp
-        settingswindow.ui
-        friendswindow.h friendswindow.cpp
-        inventorywindow.h inventorywindow.cpp
-        myprofilewindow.h myprofilewindow.cpp
-        icons/profile.png
-        userprofilewindow.h userprofilewindow.cpp
-        loadingwindow.h loadingwindow.cpp
-        friendsmessagewindow.h friendsmessagewindow.cpp
-        rankingwindow.h rankingwindow.cpp
-        gamewindow.h gamewindow.cpp
-        carta.h carta.cpp
-        mano.h mano.cpp
-        deck.h deck.cpp
-        posicion.h posicion.cpp
-        gamemessagewindow.h gamemessagewindow.cpp
+qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}
 
-    )
-else()
-    if(ANDROID)
-        add_library(guignote SHARED
-            ${PROJECT_SOURCES}
-        )
-    else()
-        add_executable(guignote
-            ${PROJECT_SOURCES}
-        )
-    endif()
-endif()
 
-# Enlazamos las bibliotecas, incluyendo WebSockets.
-target_link_libraries(guignote PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Multimedia Qt${QT_VERSION_MAJOR}::WebSockets)
 
-if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.guignote)
-endif()
-set_target_properties(guignote PROPERTIES
-    ${BUNDLE_ID_OPTION}
-    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
+
+
+
+
+
 )
 
-include(GNUInstallDirs)
-install(TARGETS guignote
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+target_link_libraries(guignote PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Multimedia
+    Qt${QT_VERSION_MAJOR}::WebSockets
 )
-
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(guignote)
+endif()
+
+# ----------- 2.  EJECUTABLE DE TESTS ---------------
+if(BUILD_TESTING)
+    enable_testing()
+
+    # quitamos main.cpp de la lista de fuentes para los tests
+    list(REMOVE_ITEM PROJECT_SOURCES main.cpp)
+
+    add_executable(tests_guignote
+        tests/main_tests.cpp
+        tests/test_mainwindow.cpp
+        tests/test_registerwindow.cpp
+        tests/test_loginwindow.cpp
+        ${PROJECT_SOURCES}
+        tests/test_mainwindow.h
+        tests/test_registerwindow.h
+        tests/test_loginwindow.h
+        tests/test_menuwindow.h
+        tests/test_menuwindow.cpp
+
+
+        # ← añade TODA la lógica a probar
+    )
+    set_source_files_properties(tests/main_tests.cpp PROPERTIES SKIP_AUTOMOC ON)
+
+    target_include_directories(tests_guignote PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+    target_link_libraries(tests_guignote PRIVATE
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Test      # imprescindible
+        Qt${QT_VERSION_MAJOR}::Network
+        Qt${QT_VERSION_MAJOR}::Multimedia
+        Qt${QT_VERSION_MAJOR}::WebSockets
+    )
+
+    add_test(NAME guignote_tests COMMAND tests_guignote)
 endif()
