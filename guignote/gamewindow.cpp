@@ -712,18 +712,13 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     QJsonObject data = obj.value("data").toObject();
 
     if (type == "turn_update") {
-        qDebug() << "   ▶ turn_update: data =" << data;
-
-        int jugadorId = data["jugador"].toObject()["id"].toInt();
-        QString nombre = data["jugador"].toObject()["nombre"].toString();
-
-        if (jugadorId == player_id) {
-            posiciones[0]->setLock(false);
-            mostrarTurno("Es tu turno", true);
-        } else {
-            posiciones[0]->setLock(true);
-            mostrarTurno("Es el turno de " + nombre, false);
+        // Si aún estamos animando el resultado de la ronda, lo guardamos
+        if (roundResultInProgress) {
+           pendingTurnUpdateData = obj["data"].toObject();
+           return;
         }
+        // Si no, lo procesamos inmediatamente
+        processTurnUpdate(obj["data"].toObject());
     }
 
 
@@ -820,6 +815,8 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 
     else if (type == "round_result") {
         qDebug() << "   ▶ round_result: data =" << data;
+        // Antes de cualquier animación:
+        roundResultInProgress = true;
 
         pendingRoundResult = [=]() {
             // 1) Info del ganador
@@ -943,23 +940,24 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             // Creamos una animación secuencial de 3 fases:
             auto *seq = new QSequentialAnimationGroup(this);
 
-            // FASE 1: “Pelea” — pequeñas sacudidas en el centro
-            auto *fight = new QParallelAnimationGroup(seq);
-            srand(QTime::currentTime().msec());
-            for (const Slot &sl : slotList) {
-                Carta* c = sl.c;
-                QPoint orig = sl.start;
-                c->hideFace();
-                int dx = (rand() % 41) - 20;  // -20..+20 px
-                int dy = (rand() % 41) - 20;
-                auto *a = new QPropertyAnimation(c, "pos");
-                a->setDuration(300);
-                a->setStartValue(orig);
-                a->setEndValue(orig + QPoint(dx, dy));
-                a->setEasingCurve(QEasingCurve::InOutQuad);
-                fight->addAnimation(a);
-            }
-            seq->addAnimation(fight);
+            // Por ahora lo quito que se ve raro
+            // // FASE 1: “Pelea” — pequeñas sacudidas en el centro
+            // auto *fight = new QParallelAnimationGroup(seq);
+            // srand(QTime::currentTime().msec());
+            // for (const Slot &sl : slotList) {
+            //     Carta* c = sl.c;
+            //     QPoint orig = sl.start;
+            //     c->hideFace();
+            //     int dx = (rand() % 41) - 20;  // -20..+20 px
+            //     int dy = (rand() % 41) - 20;
+            //     auto *a = new QPropertyAnimation(c, "pos");
+            //     a->setDuration(300);
+            //     a->setStartValue(orig);
+            //     a->setEndValue(orig + QPoint(dx, dy));
+            //     a->setEasingCurve(QEasingCurve::InOutQuad);
+            //     fight->addAnimation(a);
+            // }
+            // seq->addAnimation(fight);
 
             // FASE 2: volver al centro
             auto *ret = new QParallelAnimationGroup(seq);
@@ -1018,6 +1016,13 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
                 for (Mano* m : manos) m->mostrarMano();
                 repositionHands();
                 update();
+                // Acabamos de procesar el resultado de la ronda: liberamos la marca
+                roundResultInProgress = false;
+                // Si había un turn_update pendiente, lo procesamos ahora
+                if (!pendingTurnUpdateData.isEmpty()) {
+                    processTurnUpdate(pendingTurnUpdateData);
+                    pendingTurnUpdateData = QJsonObject();
+               }
             });
 
             seq->start(QAbstractAnimation::DeleteWhenStopped);
@@ -1051,28 +1056,67 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 
     else if (type == "card_drawn") {
         qDebug() << "   ▶ card_drawn: data =" << data;
+        // ▶ Retrasar animación de robo hasta que termine el movimiento de la pila
+        QJsonObject drawData = data;
+        QTimer::singleShot(800, this, [this, drawData]() {
+            // -- código original de card_drawn --
+            QString palo = drawData["carta"].toObject()["palo"].toString();
+            int valor    = drawData["carta"].toObject()["valor"].toInt();
+            QPoint start = deck->mapTo(this,
+                                       QPoint((deck->width()  - cardSize) / 2,
+                                              (deck->height() - cardSize) / 2));
 
-        QString palo = data["carta"].toObject()["palo"].toString();
-        int valor    = data["carta"].toObject()["valor"].toInt();
-
-        if (data["usuario"].toObject().value("id").toInt() == player_id) {
-            // me toca a mí
-            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
-            addCartaPorId(carta);
-            manos[0]->añadirCarta(carta);
-        } else {
-            // oponente, sólo añadimos reverso
-            int idx = playerPosMap.value(
-                data["usuario"].toObject().value("id").toInt(), -1);
-            if (idx >= 0) {
-                Carta* back = new Carta(this, this, "0", "", cardSize, 0);
-                manos[idx]->añadirCarta(back);
+            // Determinar mano
+            int userId = player_id;
+            Mano* mano = manos[0];
+            if (drawData.contains("usuario")) {
+                userId = drawData["usuario"].toObject().value("id").toInt();
+                if (userId != player_id) {
+                    int idx = playerPosMap.value(userId, -1);
+                    if (idx >= 0) mano = manos[idx];
+                    else return;
+                }
             }
-        }
-        // Actualizar mazo
-        deck->cartaRobada();
-        repositionHands();
+
+            // Crear carta
+            bool faceUp = (userId == player_id);
+            Carta* carta = new Carta(this, this,
+                                     faceUp ? QString::number(valor) : QString("0"),
+                                     palo,
+                                     cardSize,
+                                     /*skin=*/0,
+                                     /*faceUp=*/faceUp);
+            addCartaPorId(carta);
+
+            // Añadir a la mano y fijar layout
+            mano->añadirCarta(carta);
+            mano->mostrarMano();
+            QPoint finalPos = carta->pos();
+
+            // Animar desde el mazo hasta la mano
+            carta->move(start);
+            carta->show();
+            carta->raise();
+            auto *anim = new QPropertyAnimation(carta, "pos", this);
+            anim->setDuration(500);
+            anim->setStartValue(start);
+            anim->setEndValue(finalPos);
+            anim->setEasingCurve(QEasingCurve::OutQuad);
+            connect(anim, &QPropertyAnimation::finished, [=]() {
+                mano->mostrarMano();
+            });
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+            // Actualizar mazo
+            deck->cartaRobada();
+            deck->actualizarVisual();
+        });
+        return;
     }
+
+
+
+
 
     else if (type == "player_left") {
         QString msg = data["message"].toString();
@@ -1098,6 +1142,20 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         qDebug() << "Mensaje desconocido:" << mensaje;
     }
 }
+
+void GameWindow::processTurnUpdate(const QJsonObject &data) {
+    int jugadorId = data["jugador"].toObject()["id"].toInt();
+    QString nombre = data["jugador"].toObject()["nombre"].toString();
+
+    if (jugadorId == player_id) {
+        posiciones[0]->setLock(false);
+        mostrarTurno("Es tu turno", true);
+    } else {
+        posiciones[0]->setLock(true);
+        mostrarTurno("Es el turno de " + nombre, false);
+    }
+}
+
 
 void GameWindow::getSettings() {
     QString config = "Sota, Caballo y Rey_" + usr;

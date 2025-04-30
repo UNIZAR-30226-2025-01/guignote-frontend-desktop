@@ -116,7 +116,9 @@ private:
     QMap<int, QVector<Carta*>> pileBacks;
     // Desplazamiento en píxels entre las dos cartas del montón
     const int pileBackOffset = 8;
-
+    bool roundResultInProgress = false;
+    QJsonObject pendingTurnUpdateData;
+    void processTurnUpdate(const QJsonObject &data);
 };
 
 #endif // GAMEWINDOW_H
