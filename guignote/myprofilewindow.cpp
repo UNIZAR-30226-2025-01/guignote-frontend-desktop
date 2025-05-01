@@ -254,6 +254,7 @@ QDialog* MyProfileWindow::createDialogSetPfp(QWidget *parent, const QString &mes
     QObject::connect(yesButton, &QPushButton::clicked, [this, dialog]() {
         // Cambiar PFP
         choosePfp();
+        dialog->close();
     });
 
     // Conectar el botón "No" solo para cerrar el diálogo
