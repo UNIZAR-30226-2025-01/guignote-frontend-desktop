@@ -439,9 +439,9 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     profileLayout->setAlignment(Qt::AlignCenter);
     profileLayout->addStretch();
 
-    // int pfpSize = 200;
-    // QString imagePath = ":/icons/profile.png";
-    // QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+    int pfpSize = 200;
+    QString imagePath = ":/icons/profile.png";
+    QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
     fotoPerfil = new Icon();
     fotoPerfil->setHoverEnabled(false);
