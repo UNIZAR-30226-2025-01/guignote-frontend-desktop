@@ -30,7 +30,7 @@ public:
 
 private:
     std::function<void()> pendingRoundResult;
-
+    QTimer             *hideTurnoTimer;
     bool myTurn = false; // true si es mi turno, false en caso contrario
     int winPileCountUser = 0;
     int winPileCountOpponent = 0;
@@ -119,6 +119,10 @@ private:
     bool roundResultInProgress = false;
     QJsonObject pendingTurnUpdateData;
     void processTurnUpdate(const QJsonObject &data);
+    QJsonObject pendingDrawData;
+    void animateDraw(const QJsonObject &drawData, int userID);
+    bool hasPendingDraw = false;
+    int pendingDrawUserId     = -1;
 };
 
 #endif // GAMEWINDOW_H
