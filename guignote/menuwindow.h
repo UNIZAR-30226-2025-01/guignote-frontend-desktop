@@ -24,8 +24,8 @@ class MenuWindow : public QWidget {
     Q_OBJECT
 public:
     explicit MenuWindow(const QString &userKey, QWidget *parent = nullptr);
-    QMediaPlayer *backgroundPlayer;
-    QAudioOutput *audioOutput;
+    QMediaPlayer *backgroundPlayer = nullptr;
+    QAudioOutput *audioOutput = nullptr;
     ~MenuWindow();
 
 public slots:
@@ -88,6 +88,12 @@ private:
 
     QLabel* countLabel = nullptr;
 
+    void ensureLoggedIn();
+    QString loadToken();
+    void saveToken(const QString &tok);
+    Icon *friendsIcon = nullptr;
+    Icon *messagesIcon = nullptr;
+    int   unreadMessages = 0;
 };
 
 #endif // MENUWINDOW_H

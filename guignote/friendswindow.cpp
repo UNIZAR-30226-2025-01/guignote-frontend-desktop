@@ -392,11 +392,18 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
         profileWin->show();
     });
 
-    connect(messageButton, &QPushButton::clicked, [this]() {
-        FriendsMessageWindow *messageWin = new FriendsMessageWindow(userKey, this);
-        messageWin->setWindowModality(Qt::ApplicationModal);
-        messageWin->move(this->geometry().center() - messageWin->rect().center());
-        messageWin->show();
+    static QMap<QString, FriendsMessageWindow*> openChats;
+
+    connect(messageButton, &QPushButton::clicked, [this, friendId, nombre]() {
+        FriendsMessageWindow *w;
+        if (!openChats.contains(friendId)) {
+            w = new FriendsMessageWindow(userKey, friendId, nombre, this);
+            openChats.insert(friendId, w);
+        } else {
+            w = openChats.value(friendId);
+        }
+        w->show();    // si estaba oculta, la muestra
+        w->raise();   // y la pone encima
     });
 
     connect(deleteButton, &QPushButton::clicked, [this, friendId]() {
@@ -530,6 +537,8 @@ void friendswindow::fetchRequests() {
                     requestsListWidget->addItem(item);
                     requestsListWidget->setItemWidget(item, widget);
                 }
+                int solicitudesCount = solicitudes.size();
+                emit friendRequestsCountChanged(solicitudesCount);
             }
         }
         reply->deleteLater();

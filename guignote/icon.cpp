@@ -38,6 +38,33 @@ void Icon::setImage(const QString &imagePath, int width, int height) {
 
     setPixmap(pixmap.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     setFixedSize(width, height);
+
+    setAttribute(Qt::WA_TranslucentBackground);
+    setScaledContents(true);
+
+    // Creamos la etiqueta del badge
+    badgeLabel = new QLabel(this);
+    badgeLabel->setStyleSheet(R"(
+        background-color: red;
+        color: white;
+        font-size: 10px;
+        border-radius: 8px;
+    )");
+    badgeLabel->setAlignment(Qt::AlignCenter);
+    badgeLabel->setFixedSize(16,16);
+    badgeLabel->hide();
+
+    // Preparamos la animación de shake
+    shakeAnim = new QPropertyAnimation(this, "pos", this);
+    shakeAnim->setDuration(300);
+    shakeAnim->setKeyValueAt(0.0,   pos());
+    shakeAnim->setKeyValueAt(0.10,  pos() + QPoint(-5, 0));
+    shakeAnim->setKeyValueAt(0.20,  pos() + QPoint( 5, 0));
+    shakeAnim->setKeyValueAt(0.30,  pos() + QPoint(-5, 0));
+    shakeAnim->setKeyValueAt(0.40,  pos() + QPoint( 5, 0));
+    shakeAnim->setKeyValueAt(0.50,  pos());
+    // (el resto vuelve al 1.0 en pos())
+    shakeAnim->setKeyValueAt(1.0,   pos());
 }
 
 void Icon::setPixmapImg(const QPixmap &pixmap, int width, int height) {
@@ -95,4 +122,39 @@ void Icon::leaveEvent(QEvent *event) {
  */
 void Icon::setHoverEnabled(bool enabled) {
     hoverEnabled = enabled;
+}
+
+
+void Icon::resizeEvent(QResizeEvent *event) {
+    QLabel::resizeEvent(event);
+    // Recolocamos el badge en la esquina superior derecha
+    int bx = width()  - badgeLabel->width()/2;
+    int by = - badgeLabel->height()/2;
+    badgeLabel->move(bx, by);
+}
+
+void Icon::setBadgeCount(int count) {
+    badgeCount = count;
+    if (count > 0) {
+        badgeLabel->setText(QString::number(count));
+        badgeLabel->show();
+        shake();
+    } else {
+        badgeLabel->hide();
+    }
+}
+
+void Icon::shake() {
+    if (shakeAnim->state() == QAbstractAnimation::Running)
+        shakeAnim->stop();
+    // Actualizamos los valores por si el icono se ha movido
+    QPoint p0 = pos();
+    shakeAnim->setKeyValueAt(0.0,  p0);
+    shakeAnim->setKeyValueAt(0.10, p0 + QPoint(-5,0));
+    shakeAnim->setKeyValueAt(0.20, p0 + QPoint( 5,0));
+    shakeAnim->setKeyValueAt(0.30, p0 + QPoint(-5,0));
+    shakeAnim->setKeyValueAt(0.40, p0 + QPoint( 5,0));
+    shakeAnim->setKeyValueAt(0.50, p0);
+    shakeAnim->setKeyValueAt(1.0,  p0);
+    shakeAnim->start();
 }

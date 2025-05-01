@@ -83,7 +83,7 @@ void RankingWindow::setupUI() {
     parejasButton = new QPushButton("Parejas", this);
     soloAmigosCheck = new QCheckBox("Solo amigos", this);
 
-    connect(soloAmigosCheck, &QCheckBox::stateChanged, this, [=](int state){
+    connect(soloAmigosCheck, &QCheckBox::checkStateChanged, this, [=](int state){
         amigos = (state == Qt::Checked) ? "_amigos" : "";
         if (lastPressed == 1) {
             fetchIndividualRanking();

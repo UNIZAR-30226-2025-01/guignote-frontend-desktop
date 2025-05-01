@@ -385,7 +385,7 @@ void MyProfileWindow::choosePfp() {
 
 
 // Constructor: configura la ventana, la UI y carga los datos del backend.
-MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
+MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent), m_userKey(userKey) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
@@ -439,9 +439,9 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     profileLayout->setAlignment(Qt::AlignCenter);
     profileLayout->addStretch();
 
-    int pfpSize = 200;
-    QString imagePath = ":/icons/profile.png";
-    QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+    // int pfpSize = 200;
+    // QString imagePath = ":/icons/profile.png";
+    // QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
     fotoPerfil = new Icon();
     fotoPerfil->setHoverEnabled(false);
@@ -533,27 +533,22 @@ QPixmap MyProfileWindow::createCircularImage(const QPixmap &src, int size) {
     return circular;
 }
 
-// Extrae el token de autenticación desde el archivo de configuración.
+// Extrae el token de autenticación usando QSettings consistentemente.
 QString MyProfileWindow::loadAuthToken(const QString &userKey) {
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
-    QFile configFile(configPath);
-    if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        createDialog(this, "No se pudo cargar el archivo de configuración.")->show();
-        return "";
-    }
-    QString token;
-    while (!configFile.atEnd()) {
-        QString line = configFile.readLine().trimmed();
-        if (line.startsWith("token=")) {
-            token = line.mid(QString("token=").length()).trimmed();
-            break;
-        }
-    }
-    configFile.close();
+    // Usa la misma organización y nombre de aplicación/grupo que en LoginWindow
+    QSettings settings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(userKey));
+
+    // Lee el valor usando la clave correcta
+    QString token = settings.value("auth/token").toString();
+
     if (token.isEmpty()) {
-        createDialog(this, "No se encontró el token en el archivo de configuración.")->show();
+        qWarning() << "No se encontró el token para userKey:" << userKey << "en la configuración.";
+        // Mantén o ajusta tu diálogo de error si es necesario
+        createDialog(this, "No se encontró el token en la configuración.")->show();
+        return ""; // Devuelve vacío si no se encuentra
     }
+
+    qDebug() << "Token cargado para userKey:" << userKey;
     return token;
 }
 
@@ -572,7 +567,6 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
-            reply->deleteLater();
             return;
         }
         if (reply->error() == QNetworkReply::NoError) {

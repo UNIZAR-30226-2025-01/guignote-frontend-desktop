@@ -77,6 +77,7 @@ protected:
     void reject() override;
 
 private:
+    void loginSucceeded(const QString &userKey);
     QWidget *backgroundOverlay; ///< Overlay para enfocar la atención en el diálogo.
 };
 

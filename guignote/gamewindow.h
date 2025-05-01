@@ -27,8 +27,15 @@ public:
     GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
+    ~GameWindow();
 
 private:
+    void procesarRoundResultSeguro(const QJsonObject& data);
+
+    QSequentialAnimationGroup *currentRoundAnim = nullptr;
+    std::function<void()> pendingRoundResult;
+    QTimer             *hideTurnoTimer;
+    bool myTurn = false; // true si es mi turno, false en caso contrario
     int winPileCountUser = 0;
     int winPileCountOpponent = 0;
     static constexpr int winPileOffset = 15;  // desplazamiento entre cartas apiladas
@@ -38,6 +45,8 @@ private:
     bool arrastre = false;
     QTimer *hideOptionsTimer = nullptr;
     bool isMouseOverOptions = false;
+    QJsonObject pendingRoundResultData;
+
     QString gameID;
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
@@ -50,6 +59,8 @@ private:
     // 0 -> 1v1 Ranked
     // 1 -> 1v1 Friendly
     // 2 -> 2v2 (Ranked or Friendly)
+
+    QVector<int> winPileCounts = QVector<int>(4, 0);  // Uno por cada posición
 
     bool eventFilter(QObject *watched, QEvent *event) override;
     void setBackground(); // Function to set the background based on the bg value
@@ -107,6 +118,18 @@ private:
     void ocultarTurno();
     void getSettings();
     MenuWindow *menuWindowRef = nullptr;
+    // Para guardar, por cada posición, los dos 'backs' que simulan el montón
+    QMap<int, QVector<Carta*>> pileBacks;
+    // Desplazamiento en píxels entre las dos cartas del montón
+    const int pileBackOffset = 8;
+    bool roundResultInProgress = false;
+    QJsonObject pendingTurnUpdateData;
+    void processTurnUpdate(const QJsonObject &data);
+    QJsonObject pendingDrawData;
+    void animateDraw(const QJsonObject &drawData, int userID);
+    bool hasPendingDraw = false;
+    int pendingDrawUserId     = -1;
+    QVector<int>  pendingDrawUserIds;
 
 };
 
