@@ -78,6 +78,21 @@ if(BUILD_TESTING)
         tests/test_loginwindow.h
         tests/test_menuwindow.h
         tests/test_menuwindow.cpp
+        tests/test_userprofilewindow.h
+        tests/test_userprofilewindow.cpp
+        tests/test_settingswindow.h
+        tests/test_settingswindow.cpp
+        tests/test_rankingwindow.h
+        tests/test_rankingwindow.cpp
+        tests/test_myprofilewindow.h
+        tests/test_myprofilewindow.cpp
+        tests/test_inventorywindow.h
+        tests/test_inventorywindow.cpp
+        tests/test_friendswindow.h
+        tests/test_friendswindow.cpp
+
+
+
 
 
         # ← añade TODA la lógica a probar
