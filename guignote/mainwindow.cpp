@@ -13,7 +13,6 @@
 // Otras ventanas utilizadas en la aplicación
 #include "loginwindow.h"
 #include "registerwindow.h"
-#include "settingswindow.h" // Opcional, si se utiliza
 #include "icon.h"
 
 // Inclusión de librerías de Qt para gestionar layouts, widgets y efectos visuales
@@ -278,6 +277,7 @@ MainWindow::MainWindow(QWidget *parent)
     cornerBottomRight->raise();
 
     // Reposicionar los adornos en las esquinas según el tamaño actual del widget central
+    this->showFullScreen();
     repositionOrnaments();
 }
 

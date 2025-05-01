@@ -37,6 +37,7 @@ public:
      * manteniendo la relación de aspecto y establece el tamaño fijo del widget.
      */
     void setImage(const QString &imagePath, int width = 100, int height = 100);
+    void setPixmapImg(const QPixmap &pixmap, int width, int height);
 
     void setBadgeCount(int count);
 
