@@ -42,7 +42,7 @@ private:
     QHBoxLayout* createHeaderLayout();
     QVBoxLayout* createProfileLayout();
     QHBoxLayout* createBottomLayout();
-    QPixmap createCircularImage(const QString &pixmap, int size);
+    QPixmap createCircularImage(const QPixmap &src, int size);
 
     // Métodos para conexión con el backend
     QString loadAuthToken(const QString &userKey);

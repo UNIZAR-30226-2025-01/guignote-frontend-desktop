@@ -366,6 +366,7 @@ void MyProfileWindow::choosePfp() {
                 // Emitir la señal después de la actualización exitosa de la foto de perfil
                 emit pfpChangedSuccessfully();
                 qDebug() << "Foto de perfil actualizada.";
+                loadNameAndStats(key);
             }
         } else {
             // Manejo de otros errores
@@ -513,22 +514,22 @@ QHBoxLayout* MyProfileWindow::createBottomLayout() {
 
 
 // Convierte una imagen en un QPixmap circular.
-QPixmap MyProfileWindow::createCircularImage(const QString &imagePath, int size) {
-    QPixmap pixmap(imagePath);
-    if (pixmap.isNull()) {
-        qDebug() << "Error: No se pudo cargar la imagen desde " << imagePath;
-        return QPixmap();
-    }
-    pixmap = pixmap.scaled(size, size, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    QPixmap circularPixmap(size, size);
-    circularPixmap.fill(Qt::transparent);
-    QPainter painter(&circularPixmap);
+QPixmap MyProfileWindow::createCircularImage(const QPixmap &src, int size) {
+    // Escalamos a un cuadrado de “size × size” y recortamos el exceso
+    QPixmap scaled = src.scaled(size, size,
+                                Qt::KeepAspectRatioByExpanding,
+                                Qt::SmoothTransformation);
+    QPixmap circular(size, size);
+    circular.fill(Qt::transparent);
+
+    QPainter painter(&circular);
     painter.setRenderHint(QPainter::Antialiasing);
     QPainterPath path;
     path.addEllipse(0, 0, size, size);
     painter.setClipPath(path);
-    painter.drawPixmap(0, 0, size, size, pixmap);
-    return circularPixmap;
+    painter.drawPixmap(0, 0, size, size, scaled);
+
+    return circular;
 }
 
 // Extrae el token de autenticación desde el archivo de configuración.
@@ -566,7 +567,7 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/estadisticas/"));
     request.setRawHeader("Auth", token.toUtf8());
     QNetworkReply *reply = manager->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, manager]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (statusCode == 401) {
             createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
@@ -605,6 +606,42 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
                                         .arg(porcentajeVictorias, 0, 'f', 1)
                                         .arg(porcentajeDerrotas, 0, 'f', 1);
                 statsLabel->setText(statsText);
+
+                QString imageUrl = obj.value("imagen").toString();
+                qDebug() << "URL de la imagen de perfil:" << imageUrl;
+                QUrl url(imageUrl);
+                QNetworkRequest imgRequest(url);
+                QNetworkReply *imgReply = manager->get(imgRequest);
+                connect(imgReply, &QNetworkReply::finished, this, [this, imgReply]() {
+                    if (imgReply->error() == QNetworkReply::NoError) {
+                        QByteArray imgData = imgReply->readAll();
+                        qDebug() << "[ImgDownload] Tamaño de imgData:" << imgData.size();
+
+                        QPixmap pixmap;
+                        bool loaded = pixmap.loadFromData(imgData);
+                        qDebug() << "[ImgDownload] loadFromData() =" << loaded
+                                 << ", pixmap.isNull() =" << pixmap.isNull()
+                                 << ", tamaño pixmap =" << pixmap.size();
+
+                        if (!pixmap.loadFromData(imgData)) {
+                            qDebug() << "❌ No se pudo cargar pixmap de los datos. Tamaño de imgData:" << imgData.size();
+                            imgReply->deleteLater();
+                            return;
+                        }
+                        if (pixmap.isNull()) {
+                            qDebug() << "❌ El pixmap sigue siendo nulo después de loadFromData.";
+                            imgReply->deleteLater();
+                            return;
+                        }
+
+                        int diam = fotoPerfil->width();
+                        QPixmap circular = createCircularImage(pixmap, diam);
+                        fotoPerfil->setPixmapImg(circular, diam, diam);
+                    } else {
+                        qDebug() << "Error al descargar la imagen:" << imgReply->errorString();
+                    }
+                    imgReply->deleteLater();
+                });
             }
         } else {
             createDialog(this, "Error al cargar el perfil de usuario.")->show();
