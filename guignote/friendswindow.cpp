@@ -18,6 +18,8 @@
 #include <QListWidget>
 #include <QLineEdit>
 #include <QDebug>
+#include <QPainter>
+#include <QPainterPath>
 #include "friendsmessagewindow.h"
 #include "userprofilewindow.h"
 
@@ -267,13 +269,38 @@ void friendswindow::fetchFriends() {
 
 QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     QWidget *widget = new QWidget();
-    widget->setMinimumSize(300, 130);
+    widget->setMinimumSize(300, 130);  // Tamaño mínimo fijo
     widget->setStyleSheet("border-radius: 10px;");
 
     QHBoxLayout *layout = new QHBoxLayout(widget);
     layout->setContentsMargins(10, 2, 10, 2);
     layout->setSpacing(15);
 
+    // Layout para la foto de perfil y el nombre
+    QHBoxLayout *leftLayout = new QHBoxLayout();
+    leftLayout->setSpacing(5);  // Reducir el espacio entre la foto y el nombre
+
+    // Icon placeholder
+    int pfpSize = 100;
+    QString avatarUrl = amigo["imagen"].toString();  // Obtener la URL de la imagen
+    Icon *avatarIcon = new Icon();
+    avatarIcon->setHoverEnabled(false);
+    avatarIcon->setFixedSize(pfpSize, pfpSize);
+
+    // Descargar la imagen de perfil y asignarla al Icon
+    if (!avatarUrl.isEmpty()) {
+        downloadAndSetAvatar(avatarUrl, avatarIcon);
+    } else {
+        // Si no se proporciona imagen, usar una imagen predeterminada
+        QString imagePath = ":/icons/profile.png";
+        QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+        avatarIcon->setPixmapImg(circularImage, pfpSize, pfpSize);
+    }
+
+    leftLayout->addWidget(avatarIcon);
+    leftLayout->addSpacing(5);  // Reducir la distancia entre la imagen y el nombre
+
+    // Información del amigo
     QVBoxLayout *infoLayout = new QVBoxLayout();
     QString nombre = "Nombre no disponible";
     if (amigo.contains("nombre"))
@@ -284,7 +311,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
         nombre = amigo["username"].toString();
     qDebug() << "El nombre del usuario es" << nombre;
     QLabel *nameLabel = new QLabel(nombre, widget);
-    nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
+    nameLabel->setWordWrap(true);  // Permite el ajuste de texto en varias líneas
+    nameLabel->setStyleSheet("color: white; font-size: 18px; font-weight: bold;");
     infoLayout->addWidget(nameLabel);
 
     int wins = amigo.contains("victorias") ? amigo["victorias"].toInt() : 0;
@@ -295,10 +323,11 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
             .arg(wins).arg(losses).arg(ratio, 0, 'f', 2),
         widget
         );
-    statsLabel->setStyleSheet("color: white; font-size: 18px;");
+    statsLabel->setStyleSheet("color: white; font-size: 16px;");
     infoLayout->addWidget(statsLabel);
 
-    layout->addLayout(infoLayout);
+    leftLayout->addLayout(infoLayout);
+    layout->addLayout(leftLayout);
     layout->addStretch();
 
     QString friendId;
@@ -309,21 +338,28 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
 
     // Botones en horizontal con más separación
     QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->setSpacing(15);  // Más espacio entre botones
+    buttonLayout->setSpacing(10);  // Más espacio entre botones
+    buttonLayout->setContentsMargins(10, 5, 10, 5);  // Ajustar márgenes de los botones
 
+    // Botones más pequeños
     QPushButton *profileButton = new QPushButton("Perfil", widget);
     QPushButton *messageButton = new QPushButton("Mensajes", widget);
     QPushButton *deleteButton = new QPushButton("Eliminar", widget);
 
-    // Estilos idénticos para todos los botones
+    // Establecer tamaño más pequeño de los botones
+    profileButton->setFixedSize(70, 30);
+    messageButton->setFixedSize(70, 30);
+    deleteButton->setFixedSize(70, 30);
+
+    // Estilos para los botones pequeños
     QString buttonStyle =
         "QPushButton {"
         "  background-color: #1D4536;"
         "  color: #F9F9F4;"
-        "  font-size: 16px;"
-        "  padding: 8px 15px;"
+        "  font-size: 14px;"
+        "  padding: 5px 10px;"
         "  border-radius: 10px;"
-        "  min-width: 80px;"
+        "  min-width: 70px;"
         "}"
         "QPushButton:hover { background-color: #2A5C45; }";
 
@@ -331,10 +367,10 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
         "QPushButton {"
         "  background-color: #8B3A3A;"
         "  color: #F1F1F1;"
-        "  font-size: 16px;"
-        "  padding: 8px 15px;"
+        "  font-size: 14px;"
+        "  padding: 5px 10px;"
         "  border-radius: 10px;"
-        "  min-width: 80px;"
+        "  min-width: 70px;"
         "}"
         "QPushButton:hover { background-color: #C9B170; color: #1C1C1C; }";
 
@@ -348,7 +384,7 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
 
     layout->addLayout(buttonLayout);
 
-    // Conexiones
+    // Conexiones para los botones
     connect(profileButton, &QPushButton::clicked, [this]() {
         UserProfileWindow *profileWin = new UserProfileWindow(this);
         profileWin->setWindowModality(Qt::ApplicationModal);
@@ -425,6 +461,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     widget->setLayout(layout);
     return widget;
 }
+
+
 
 
 // Envía una solicitud para eliminar a un amigo.
@@ -570,15 +608,19 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     layout->setContentsMargins(10, 10, 10, 10);
     layout->setSpacing(15);
 
-    // Avatar placeholder
-    QLabel *avatarLabel = new QLabel(widget);
-    avatarLabel->setFixedSize(50, 50);
-    avatarLabel->setStyleSheet("background-color: #555; border-radius: 25px;");
-    layout->addWidget(avatarLabel);
+    // Icon placeholder
+    int pfpSize = 100;
+    QString imagePath = ":/icons/profile.png";
+    QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+
+    Icon *avatarIcon = new Icon();
+    avatarIcon->setHoverEnabled(false);
+    avatarIcon->setPixmap(circularImage);
+    avatarIcon->setFixedSize(pfpSize, pfpSize);
+    layout->addWidget(avatarIcon);
 
     // Información del usuario
     QVBoxLayout *infoLayout = new QVBoxLayout();
-    // Ajustamos el margen interno del layout para dar más espacio
     infoLayout->setContentsMargins(5, 5, 5, 5);
 
     QString nombre;
@@ -590,6 +632,7 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
         nombre = usuario["username"].toString();
     else
         nombre = "Nombre no disponible";
+
     QLabel *nameLabel = new QLabel(nombre, widget);
     nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold; padding-top: 5px; padding-bottom: 5px;");
     infoLayout->addWidget(nameLabel);
@@ -618,17 +661,63 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
         userId = QString::number(usuario["ID"].toInt());
     else
         userId = "";
-    qDebug() << "createSearchResultWidget: userId =" << userId;
     addButton->setProperty("userId", userId);
     connect(addButton, &QPushButton::clicked, this, [=]() {
         this->sendFriendRequest();
     });
     layout->addWidget(addButton);
 
+    // Descargar la imagen de avatar y asignarla al Icon
+    QString avatarUrl = usuario.contains("imagen") ? usuario["imagen"].toString() : "";
+    if (!avatarUrl.isEmpty()) {
+        downloadAndSetAvatar(avatarUrl, avatarIcon);
+    }
+
     return widget;
 }
 
+void friendswindow::downloadAndSetAvatar(const QString &imageUrl, Icon *avatarIcon) {
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkRequest request{QUrl(imageUrl)};
 
+    QNetworkReply *reply = manager->get(request);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, avatarIcon]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray imgData = reply->readAll();
+            QPixmap pixmap;
+            if (pixmap.loadFromData(imgData)) {
+                int size = avatarIcon->width();  // Usamos el tamaño del Icon
+                QPixmap circular = createCircularImage(pixmap, size);
+                avatarIcon->setPixmapImg(circular, size, size);  // Usamos el método personalizado de Icon
+            } else {
+                qDebug() << "Error al cargar la imagen.";
+            }
+        } else {
+            qDebug() << "Error al descargar la imagen: " << reply->errorString();
+        }
+        reply->deleteLater();
+    });
+}
+
+// Convierte una imagen en un QPixmap circular.
+QPixmap friendswindow::createCircularImage(const QPixmap &src, int size) {
+    // Escalamos a un cuadrado de “size × size” y recortamos el exceso
+    QPixmap scaled = src.scaled(size, size,
+                                Qt::KeepAspectRatioByExpanding,
+                                Qt::SmoothTransformation);
+    QPixmap circular(size, size);
+    circular.fill(Qt::transparent);
+
+    QPainter painter(&circular);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPainterPath path;
+    path.addEllipse(0, 0, size, size);
+    painter.setClipPath(path);
+    painter.drawPixmap(0, 0, size, size, scaled);
+
+    return circular;
+}
 
 // Crea un widget para mostrar cada solicitud de amistad.
 QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
@@ -640,15 +729,41 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     layout->setContentsMargins(10, 2, 10, 2);
     layout->setSpacing(7);
 
+    // Layout para la foto de perfil y el nombre
+    QHBoxLayout *leftLayout = new QHBoxLayout();
+
+    // Icon placeholder
+    int pfpSize = 100;
+    QString avatarUrl = solicitud["imagen"].toString();  // Obtener la URL de la imagen
+    Icon *avatarIcon = new Icon();
+    avatarIcon->setHoverEnabled(false);
+    avatarIcon->setFixedSize(pfpSize, pfpSize);
+
+    // Descargar la imagen de perfil y asignarla al Icon
+    if (!avatarUrl.isEmpty()) {
+        downloadAndSetAvatar(avatarUrl, avatarIcon);
+    } else {
+        // Si no se proporciona imagen, usar una imagen predeterminada
+        QString imagePath = ":/icons/profile.png";
+        QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+        avatarIcon->setPixmapImg(circularImage, pfpSize, pfpSize);
+    }
+
+    leftLayout->addWidget(avatarIcon);
+    leftLayout->addSpacing(10);  // Espacio entre la foto de perfil y el nombre
+
+    // Información del solicitante
     QVBoxLayout *infoLayout = new QVBoxLayout();
     QString nombre = solicitud["solicitante"].toString();
     QLabel *nameLabel = new QLabel(nombre, widget);
     nameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: bold;");
     infoLayout->addWidget(nameLabel);
 
-    layout->addLayout(infoLayout);
-    layout->addStretch();
+    leftLayout->addLayout(infoLayout);
+    layout->addLayout(leftLayout);
+    layout->addStretch();  // Espacio para el resto de los widgets
 
+    // Botón Aceptar
     QPushButton *acceptBtn = new QPushButton("Aceptar", widget);
     QString solicitudId = QString::number(solicitud["id"].toInt());
     acceptBtn->setProperty("solicitudId", solicitudId);
@@ -661,6 +776,7 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     });
     layout->addWidget(acceptBtn);
 
+    // Botón Rechazar
     QPushButton *rejectBtn = new QPushButton("Rechazar", widget);
     rejectBtn->setStyleSheet(
         "QPushButton { background-color: #8B3A3A; color: #F1F1F1; font-size: 18px; padding: 10px; border-radius: 10px; }"
@@ -675,6 +791,7 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     widget->setLayout(layout);
     return widget;
 }
+
 
 void friendswindow::sendFriendRequest() {
     QPushButton *button = qobject_cast<QPushButton*>(sender());

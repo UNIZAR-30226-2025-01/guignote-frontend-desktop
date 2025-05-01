@@ -12,6 +12,7 @@
 #include <QNetworkAccessManager>
 #include <QCloseEvent>
 #include <QJsonObject>
+#include "icon.h"
 
 class friendswindow : public QDialog {
     Q_OBJECT
@@ -65,6 +66,8 @@ private:
     void sendFriendRequest();
     void acceptRequest();
     void rejectRequest();
+    void downloadAndSetAvatar(const QString &imageUrl, Icon *avatarIcon);
+    QPixmap createCircularImage(const QPixmap &src, int size);
 
     QString userKey;
 };
