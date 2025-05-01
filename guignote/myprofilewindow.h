@@ -44,6 +44,7 @@ private:
     // Métodos para conexión con el backend
     QString loadAuthToken(const QString &userKey);
     void loadNameAndStats(const QString &userKey); // Método que consulta el backend para obtener nombre, ELO y estadísticas.
+    QString m_userKey;
 };
 
 #endif // MYPROFILEWINDOW_H

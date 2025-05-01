@@ -463,15 +463,17 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
         });
         settingsWin->exec();
     });
-    connect(friends, &Icon::clicked, this, [this, userKey]() {
+    connect(friends, &Icon::clicked, this, [=]() {
         friends->setImage(":/icons/darkenedfriends.png", 60, 60);
-        friendswindow *friendsWin = new friendswindow(userKey, this);
-        friendsWin->setModal(true);
-        connect(friendsWin, &QDialog::finished, [this](int){
-            friends->setImage(":/icons/friends.png", 60, 60);
-        });
-        friendsWin->exec();
+        auto *fw = new friendswindow(userKey, this);
+        // Conectamos la señal de solicitudes
+        connect(fw, &friendswindow::friendRequestsCountChanged,
+                friends, &Icon::setBadgeCount);
+        fw->setModal(true);
+        fw->exec();
+        friends->setImage(":/icons/friends.png", 60, 60);
     });
+
     connect(exit, &Icon::clicked, this, [this]() {
         exit->setImage(":/icons/darkeneddoor.png", 60, 60);
         QDialog *confirmDialog = new QDialog(this);

@@ -21,6 +21,10 @@ public:
 public slots:
     void removeFriend(const QString &friendId);
 
+signals:
+    // Emite cada vez que cambie el número de solicitudes
+    void friendRequestsCountChanged(int count);
+
 private:
     // Layout principal y componentes del encabezado
     QVBoxLayout *mainLayout;

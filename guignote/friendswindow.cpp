@@ -499,6 +499,8 @@ void friendswindow::fetchRequests() {
                     requestsListWidget->addItem(item);
                     requestsListWidget->setItemWidget(item, widget);
                 }
+                int solicitudesCount = solicitudes.size();
+                emit friendRequestsCountChanged(solicitudesCount);
             }
         }
         reply->deleteLater();

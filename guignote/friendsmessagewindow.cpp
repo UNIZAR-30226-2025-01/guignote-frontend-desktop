@@ -157,6 +157,7 @@ void FriendsMessageWindow::onTextMessageReceived(const QString &rawMessage)
         return;
 
     appendMessage(senderId, content);
+    emit newMessageReceived(senderId);
 }
 
 void FriendsMessageWindow::sendMessage(const QString &userKey)

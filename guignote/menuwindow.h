@@ -91,6 +91,9 @@ private:
     void ensureLoggedIn();
     QString loadToken();
     void saveToken(const QString &tok);
+    Icon *friendsIcon = nullptr;
+    Icon *messagesIcon = nullptr;
+    int   unreadMessages = 0;
 };
 
 #endif // MENUWINDOW_H

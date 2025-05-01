@@ -15,6 +15,8 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QtWebSockets>
+#include <QSequentialAnimationGroup>
+#include <QPauseAnimation>
 #include <QPoint>//
 
 
@@ -461,6 +463,14 @@ void GameWindow::setupGameElements(QJsonObject msg) {
     for (Posicion* posW : posiciones) {
         pilaCount[posW] = 0;
     }
+    winPileCounts.clear();
+    winPileCounts.resize(posiciones.size());
+    winPileCounts.fill(0);
+
+    pileBacks.clear();
+    for (int i = 0; i < posiciones.size(); ++i)
+        pileBacks[i] = {};
+
 }
 
 void GameWindow::repositionHands(){
@@ -690,28 +700,31 @@ void GameWindow::setupGameState(QJsonObject s0){
 }
 
 void GameWindow::recibirMensajes(const QString &mensaje) {
+    qDebug() << "⟶ WS raw message:" << mensaje;
+
     QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
     if (!doc.isObject()) return;
 
     QJsonObject obj = doc.object();
     QString type = obj.value("type").toString();
+    qDebug() << "⟶ type =" << type;
+
     QJsonObject data = obj.value("data").toObject();
 
     if (type == "turn_update") {
-        int jugadorId = data["jugador"].toObject()["id"].toInt();
-        QString nombre = data["jugador"].toObject()["nombre"].toString();
-
-        if (jugadorId == player_id) {
-            posiciones[0]->setLock(false);
-            mostrarTurno("Es tu turno", true);
-        } else {
-            posiciones[0]->setLock(true);
-            mostrarTurno("Es el turno de " + nombre, false);
+        // Si aún estamos animando el resultado de la ronda, lo guardamos
+        if (roundResultInProgress) {
+           pendingTurnUpdateData = obj["data"].toObject();
+           return;
         }
+        // Si no, lo procesamos inmediatamente
+        processTurnUpdate(obj["data"].toObject());
     }
 
 
     else if (type == "start_game") {
+        qDebug() << "   ▶ start_game: data =" << data;
+
         if(data.contains("chat_id")) {
             chatID = QString::number(data["chat_id"].toInt());
         }
@@ -727,12 +740,18 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 
     else if (type == "card_played") {
         int jugadorId = data["jugador"].toObject()["id"].toInt();
+        qDebug() << "   ▶ card_played de jugadorId=" << jugadorId;
+
         int idx       = playerPosMap.value(jugadorId, -1);
         if (idx < 0) return;
 
         if (jugadorId == player_id) {
+            qDebug() << "       → Ignoro mi propio card_played";
+
             return;
         }
+        qDebug() << "       → Procesando carta del oponente";
+
 
         // --- Sólo oponente a partir de aquí ---
 
@@ -740,6 +759,8 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         QPoint start = backCarta->mapTo(this, QPoint(0,0));
 
         manos[idx]->eliminarCarta(0);
+        manos[idx]->mostrarMano();
+        qApp->processEvents();
 
         QString palo = data["carta"].toObject()["palo"].toString();
         int valor    = data["carta"].toObject()["valor"].toInt();
@@ -782,77 +803,242 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
                  posWidget->setCard(carta);
                  backCarta->deleteLater();
              });
+
              moveAnim->start(QAbstractAnimation::DeleteWhenStopped);
          }
         // 6) Desbloqueamos siguiente
         int siguiente = (idx + 1) % posiciones.size();
         posiciones[siguiente]->setLock(false);
+
     }
 
 
     else if (type == "round_result") {
-        // 1) Info del ganador
-        int ganadorId      = data["ganador"].toObject()["id"].toInt();
-        QString ganadorNom = data["ganador"].toObject()["nombre"].toString();
+        qDebug() << "   ▶ round_result: data =" << data;
+        // Antes de cualquier animación:
+        roundResultInProgress = true;
 
-        // 2) Overlay anunciador
-        mostrarTurno(QString("¡Gana la baza: %1!").arg(ganadorNom),
-                     ganadorId == player_id);
+        pendingRoundResult = [=]() {
+            // 1) Info del ganador
+            int ganadorId      = data["ganador"].toObject()["id"].toInt();
+            QString ganadorNom = data["ganador"].toObject()["nombre"].toString();
 
-        // 3) Extraer **tanto** cartaActual **como** cualquier hija directa
-        struct Slot { Posicion* posW; Carta* c; QPoint start; };
-        QVector<Slot> slotList;
-        for (Posicion* posW : posiciones) {
-            // 3a) Si hay cartaActual, la cogemos
-            if (Carta* c = posW->cartaActual) {
-                QPoint g = c->mapToGlobal(QPoint(0,0));
-                QPoint start = mapFromGlobal(g);
-                slotList.append({ posW, c, start });
-                posW->cartaActual = nullptr;
-                c->setParent(this);
-                c->move(start);
-                c->show(); c->raise();
+            qDebug() << ">>> round_result recibido. ganadorId =" << ganadorId
+                     << ", nombre =" << ganadorNom;
+            // 2) Overlay anunciador
+            if (ganadorId == player_id) {
+                // Mensaje para quien gana
+                mostrarTurno(QString("¡Has ganado la mano!"), true);
+            } else {
+                // Mensaje para quien pierde
+                mostrarTurno(QString("¡%1 ha ganado la mano!").arg(ganadorNom), false);
             }
-            // 3b) Y buscamos cualquier otra Carta hija directa
-            auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
-            for (Carta* c : std::as_const(hijas)) {
-                QPoint g = c->mapToGlobal(QPoint(0,0));
-                QPoint start = mapFromGlobal(g);
-                slotList.append({ posW, c, start });
-                c->setParent(this);
-                c->move(start);
-                c->show(); c->raise();
-            }
+
+            // 3) Extraer **tanto** cartaActual **como** cualquier hija directa
+            struct Slot { Posicion* posW; Carta* c; QPoint start; };
+            QVector<Slot> slotList;
+            QSet<Carta*> yaProcesadas;
+                for (Posicion* posW : posiciones) {
+                    // 3a) Si hay cartaActual, la cogemos
+                if (Carta* c = posW->cartaActual) {
+                    QPoint g = c->mapToGlobal(QPoint(0,0));
+                    QPoint start = mapFromGlobal(g);
+                    slotList.append({ posW, c, start });
+                    posW->cartaActual = nullptr; // Desvincular lógicamente
+                    c->setParent(this);          // Reparentar (desvincular visualmente)
+                    c->move(start);              // Asegurar posición tras reparentar
+                    c->show(); c->raise();
+                    yaProcesadas.insert(c);
+                }
+                    // 3b) Y buscamos cualquier otra Carta hija directa
+                auto hijas = posW->findChildren<Carta*>(QString(), Qt::FindDirectChildrenOnly);
+                    for (Carta* c : std::as_const(hijas)) {
+                       // Añadimos una comprobación para evitar procesar dos veces la misma carta
+                        // si hubiera algún timing extraño entre cartaActual=nullptr y findChildrenç
+                        if (yaProcesadas.contains(c)) continue;
+                        bool already_processed = false;
+                        for(const auto& slot : slotList) {
+                            if (slot.c == c) {
+                                already_processed = true;
+                                break;
+                            }
+                        }
+                        if (already_processed) continue;
+
+                        QPoint g = c->mapToGlobal(QPoint(0,0));
+                        QPoint start = mapFromGlobal(g);
+                        slotList.append({ posW, c, start });
+                        c->setParent(this);          // Reparentar (desvincular visualmente)
+                        c->move(start);              // Asegurar posición tras reparentar
+                        c->show(); c->raise();
+                        yaProcesadas.insert(c);
+                }
+            // Forzar actualización visual del widget Posicion después de quitarle las cartas.
+            posW->update();
+            // *************************
         }
+            // 4) Desbloquear
+            for (Posicion* posW : posiciones)
+                posW->setLock(false);
+            // 5) Actualizamos posiciones
+            int ganadorPos = playerPosMap.value(ganadorId, 0);
+            QPoint base;
 
-        // 4) Desbloquear
-        for (Posicion* posW : posiciones)
-            posW->setLock(false);
+            // detectamos 2-jugadores por posiciones.size()
+            if (posiciones.size() == 2) {
+                // 2 players: 0 = yo abajo-derecha, 1 = rival arriba-izquierda
+                if (ganadorPos == 0) {
+                    base = QPoint(
+                        width()  - winPileMargin - cardSize,
+                        height() - winPileMargin - cardSize
+                        );
+                } else {
+                    base = QPoint(
+                        winPileMargin,
+                        winPileMargin
+                        );
+                }
+            }
+            else {
+                // 4 players: 0=abajo-derecha, 1=arriba-centro, 2=izquierda, 3=derecha
+                switch (ganadorPos) {
+                case 0:
+                    base = QPoint(
+                        width()  - winPileMargin - cardSize,
+                        height() - winPileMargin - cardSize
+                        );
+                    break;
+                case 1:
+                    base = QPoint(
+                        (width()  - cardSize) / 2,
+                        winPileMargin
+                        );
+                    break;
+                case 2:
+                    base = QPoint(
+                        winPileMargin,
+                        (height() - cardSize) / 2
+                        );
+                    break;
+                case 3:
+                    base = QPoint(
+                        width()  - winPileMargin - cardSize,
+                        (height() - cardSize) / 2
+                        );
+                    break;
+                default:
+                    base = QPoint(winPileMargin, winPileMargin);
+                }
+            }
+            qDebug() << "→ posiciones.size() =" << posiciones.size()
+                     << "ganadorPos =" << ganadorPos
+                     << "→ base =" << base;
+            int &count = winPileCounts[ganadorPos];  // Usa un array/vector de contadores por posición
+            qDebug() << "Contador previo (winPileCounts[" << ganadorPos << "]) =" << count;
 
-        // 5) Animar hacia la esquina sólo sota/rey, el resto se destruye
-        const bool userWon = (ganadorId == player_id);
-        QPoint base = userWon
-                          ? QPoint(width()  - winPileMargin - cardSize,
-                                   height() - winPileMargin - cardSize)
-                          : QPoint(winPileMargin, winPileMargin);
-        int &count = userWon ? winPileCountUser : winPileCountOpponent;
 
-        for (const Slot &sl : slotList) {
-            Carta* c = sl.c;
-            c->hideFace();
-            bool keep = (c->num == "10" || c->num == "12");
-            QPoint dst = base + QPoint(count * winPileOffset,
-                                       count * winPileOffset);
-            if (keep) ++count;
-            auto *anim = new QPropertyAnimation(c, "pos", this);
-            anim->setDuration(500);
-            anim->setStartValue(sl.start);
-            anim->setEndValue(dst);
-            connect(anim, &QPropertyAnimation::finished, [c, keep]() {
-                if (!keep) c->deleteLater();
+            // Creamos una animación secuencial de 3 fases:
+            auto *seq = new QSequentialAnimationGroup(this);
+
+            // Por ahora lo quito que se ve raro
+            // // FASE 1: “Pelea” — pequeñas sacudidas en el centro
+            // auto *fight = new QParallelAnimationGroup(seq);
+            // srand(QTime::currentTime().msec());
+            // for (const Slot &sl : slotList) {
+            //     Carta* c = sl.c;
+            //     QPoint orig = sl.start;
+            //     c->hideFace();
+            //     int dx = (rand() % 41) - 20;  // -20..+20 px
+            //     int dy = (rand() % 41) - 20;
+            //     auto *a = new QPropertyAnimation(c, "pos");
+            //     a->setDuration(300);
+            //     a->setStartValue(orig);
+            //     a->setEndValue(orig + QPoint(dx, dy));
+            //     a->setEasingCurve(QEasingCurve::InOutQuad);
+            //     fight->addAnimation(a);
+            // }
+            // seq->addAnimation(fight);
+
+            // FASE 2: volver al centro
+            auto *ret = new QParallelAnimationGroup(seq);
+            for (const Slot &sl : slotList) {
+                Carta* c = sl.c;
+                auto *a = new QPropertyAnimation(c, "pos");
+                a->setDuration(300);
+                a->setStartValue(c->pos());
+                a->setEndValue(sl.start);
+                a->setEasingCurve(QEasingCurve::InOutQuad);
+                ret->addAnimation(a);
+            }
+            seq->addAnimation(ret);
+
+            // PAUSA antes de mostrar mensaje
+            auto *pause = new QPauseAnimation(200, seq);
+            seq->addAnimation(pause);
+            connect(pause, &QPauseAnimation::finished, this, [=](){
+                if (ganadorId == player_id)
+                    mostrarTurno("¡Has ganado la mano!", true);
+                else
+                    mostrarTurno(QString("¡%1 ha ganado la mano!").arg(ganadorNom), false);
             });
-            anim->start(QAbstractAnimation::DeleteWhenStopped);
-        }
+
+            // FASE 3: mover a la pila de triunfo
+            auto *move = new QParallelAnimationGroup(seq);
+            for (const Slot &sl : slotList) {
+                Carta* c = sl.c;
+                bool keep = (c->num == "10" || c->num == "12");
+                QPoint dst = base + QPoint(count * winPileOffset,
+                                           count * winPileOffset);
+                if (keep) ++count;
+                auto *a = new QPropertyAnimation(c, "pos");
+                a->setDuration(500);
+                a->setStartValue(c->pos());
+                a->setEndValue(dst);
+                a->setEasingCurve(QEasingCurve::InOutQuad);
+                move->addAnimation(a);
+                connect(a, &QPropertyAnimation::finished, [c, keep](){
+                    if (!keep) c->deleteLater();
+                });
+            }
+            seq->addAnimation(move);
+
+            // Al acabar, regenerar los reversos y refrescar manos
+            connect(move, &QParallelAnimationGroup::finished, this, [=]() {
+                for (Carta* oldBack : pileBacks[ganadorPos])
+                    oldBack->deleteLater();
+                pileBacks[ganadorPos].clear();
+                for (int i = 0; i < 2; ++i) {
+                    Carta* back = new Carta(this, this, "0", "", cardSize, 0, false);
+                    QPoint p = base + QPoint(i * pileBackOffset, i * pileBackOffset);
+                    back->move(p); back->show();
+                    pileBacks[ganadorPos].append(back);
+                }
+                for (Mano* m : manos) m->mostrarMano();
+                repositionHands();
+                update();
+                // Acabamos de procesar el resultado de la ronda: liberamos la marca
+                roundResultInProgress = false;
+                // Si había un turn_update pendiente, lo procesamos ahora
+                if (!pendingTurnUpdateData.isEmpty()) {
+                    processTurnUpdate(pendingTurnUpdateData);
+                    pendingTurnUpdateData = QJsonObject();
+               }
+            });
+
+            seq->start(QAbstractAnimation::DeleteWhenStopped);
+            pendingRoundResult = nullptr;
+
+            for (Mano* mano : manos) {
+                mano->mostrarMano();  // Forzar actualización de todas las manos
+            }
+            repositionHands();       // Sincronizar posiciones globales
+            update();                // Redibujar toda la ventana
+
+            repositionHands();
+        };
+
+        QTimer::singleShot(550, this, pendingRoundResult);
+        pendingRoundResult = nullptr;
     }
 
 
@@ -862,31 +1048,75 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
 
 
     else if (type == "phase_update") {
+        qDebug() << "   ▶ phase_update: mensaje =" << data["message"].toString();
+
         arrastre = true;
         mostrarTurno(data["message"].toString(), false);
     }
 
     else if (type == "card_drawn") {
-        QString palo = data["carta"].toObject()["palo"].toString();
-        int valor    = data["carta"].toObject()["valor"].toInt();
+        qDebug() << "   ▶ card_drawn: data =" << data;
+        // ▶ Retrasar animación de robo hasta que termine el movimiento de la pila
+        QJsonObject drawData = data;
+        QTimer::singleShot(800, this, [this, drawData]() {
+            // -- código original de card_drawn --
+            QString palo = drawData["carta"].toObject()["palo"].toString();
+            int valor    = drawData["carta"].toObject()["valor"].toInt();
+            QPoint start = deck->mapTo(this,
+                                       QPoint((deck->width()  - cardSize) / 2,
+                                              (deck->height() - cardSize) / 2));
 
-        if (data["usuario"].toObject().value("id").toInt() == player_id) {
-            // me toca a mí
-            Carta* carta = new Carta(this, this, QString::number(valor), palo, cardSize, 0);
-            addCartaPorId(carta);
-            manos[0]->añadirCarta(carta);
-        } else {
-            // oponente, sólo añadimos reverso
-            int idx = playerPosMap.value(
-                data["usuario"].toObject().value("id").toInt(), -1);
-            if (idx >= 0) {
-                Carta* back = new Carta(this, this, "0", "", cardSize, 0);
-                manos[idx]->añadirCarta(back);
+            // Determinar mano
+            int userId = player_id;
+            Mano* mano = manos[0];
+            if (drawData.contains("usuario")) {
+                userId = drawData["usuario"].toObject().value("id").toInt();
+                if (userId != player_id) {
+                    int idx = playerPosMap.value(userId, -1);
+                    if (idx >= 0) mano = manos[idx];
+                    else return;
+                }
             }
-        }
-        // Actualizar mazo
-        deck->cartaRobada();
+
+            // Crear carta
+            bool faceUp = (userId == player_id);
+            Carta* carta = new Carta(this, this,
+                                     faceUp ? QString::number(valor) : QString("0"),
+                                     palo,
+                                     cardSize,
+                                     /*skin=*/0,
+                                     /*faceUp=*/faceUp);
+            addCartaPorId(carta);
+
+            // Añadir a la mano y fijar layout
+            mano->añadirCarta(carta);
+            mano->mostrarMano();
+            QPoint finalPos = carta->pos();
+
+            // Animar desde el mazo hasta la mano
+            carta->move(start);
+            carta->show();
+            carta->raise();
+            auto *anim = new QPropertyAnimation(carta, "pos", this);
+            anim->setDuration(500);
+            anim->setStartValue(start);
+            anim->setEndValue(finalPos);
+            anim->setEasingCurve(QEasingCurve::OutQuad);
+            connect(anim, &QPropertyAnimation::finished, [=]() {
+                mano->mostrarMano();
+            });
+            anim->start(QAbstractAnimation::DeleteWhenStopped);
+
+            // Actualizar mazo
+            deck->cartaRobada();
+            deck->actualizarVisual();
+        });
+        return;
     }
+
+
+
+
 
     else if (type == "player_left") {
         QString msg = data["message"].toString();
@@ -894,6 +1124,8 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         qDebug() << nombre << "se desconectó." << msg;
     }
     else if (type == "end_game") {
+        qDebug() << "   ▶ end_game: data =" << data;
+
         QString msg    = data["message"].toString();
         int ganadorEq  = data["ganador_equipo"].toInt();
         int p1 = data["puntos_equipo_1"].toInt();
@@ -910,6 +1142,20 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         qDebug() << "Mensaje desconocido:" << mensaje;
     }
 }
+
+void GameWindow::processTurnUpdate(const QJsonObject &data) {
+    int jugadorId = data["jugador"].toObject()["id"].toInt();
+    QString nombre = data["jugador"].toObject()["nombre"].toString();
+
+    if (jugadorId == player_id) {
+        posiciones[0]->setLock(false);
+        mostrarTurno("Es tu turno", true);
+    } else {
+        posiciones[0]->setLock(true);
+        mostrarTurno("Es el turno de " + nombre, false);
+    }
+}
+
 
 void GameWindow::getSettings() {
     QString config = "Sota, Caballo y Rey_" + usr;
