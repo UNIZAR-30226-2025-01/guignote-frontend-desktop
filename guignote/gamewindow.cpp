@@ -40,6 +40,10 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
     player_id=id;
     cardSize = 175;
     this->ws = ws;
+    hasPendingDraw     = false;
+    pendingDrawUserId  = -1;
+    pendingDrawData    = QJsonObject();
+
     QObject::connect(ws, &QWebSocket::textMessageReceived,
                      this, &GameWindow::recibirMensajes,
                      Qt::UniqueConnection);
@@ -747,78 +751,132 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     }
 
     else if (type == "card_played") {
-        int jugadorId = data["jugador"].toObject()["id"].toInt();
-        qDebug() << "   ▶ card_played de jugadorId=" << jugadorId;
-
-        int idx       = playerPosMap.value(jugadorId, -1);
+        int jugadorId    = data["jugador"].toObject()["id"].toInt();
+        bool esAutomatica = data["automatica"].toBool(false);
+        int idx          = playerPosMap.value(jugadorId, -1);
         if (idx < 0) return;
 
-        if (jugadorId == player_id) {
-            qDebug() << "       → Ignoro mi propio card_played";
-
+        // Si soy yo y no es jugada automática, la ignoro (ya la animé al hacer clic)
+        if (jugadorId == player_id && !esAutomatica) {
+            qDebug() << "       → Ignoro mi propio card_played manual";
             return;
         }
-        qDebug() << "       → Procesando carta del oponente";
+
+        // --- Aquí procesamos tanto las jugadas del oponente como las automáticas propias ---
+        QPoint start;
+        Carta* cartaASacar = nullptr;
+
+        if (jugadorId == player_id) {
+            // 1) Extrae palo/valor del JSON
+            QJsonObject cartaJson = data["carta"].toObject();
+            QString paloServ = cartaJson["palo"].toString();
+            QString numServ  = QString::number(cartaJson["valor"].toInt());
+
+            // 2) Busca en mi mano la carta con ese palo+valor
+            Mano* miMano = manos[0];
+            int foundIdx = -1;
+            for (int i = 0; i < miMano->cartas.size(); ++i) {
+                Carta* c = miMano->cartas[i];
+                if (c->num == numServ && c->suit == paloServ) {
+                    foundIdx = i;
+                    break;
+                }
+            }
+            // si no la encuentra (por seguridad), usa la primera
+            if (foundIdx < 0) foundIdx = 0;
+
+            // 3) Ahora extrae esa carta concreta
+            cartaASacar = miMano->cartas[foundIdx];
+            start = cartaASacar->mapTo(this, QPoint(0,0));
+
+            // 4) La eliminas de la mano lógica y la refrescas
+            miMano->eliminarCarta(foundIdx);
+            miMano->mostrarMano();
+            qApp->processEvents();
+
+            // 5) Sigue con el mismo código de animación:
+            cartaASacar->setParent(this);
+            cartaASacar->move(start);
+            cartaASacar->show();
+            cartaASacar->raise();
+
+            Posicion* posWidget = posiciones[0];
+            QPoint dst = posWidget->mapTo(this,
+                                          QPoint((posWidget->width() - cartaASacar->width())/2,
+                                                 (posWidget->height() - cartaASacar->height())/2));
 
 
-        // --- Sólo oponente a partir de aquí ---
 
-        Carta* backCarta = manos[idx]->cartas.first();
-        QPoint start = backCarta->mapTo(this, QPoint(0,0));
-
-        manos[idx]->eliminarCarta(0);
-        manos[idx]->mostrarMano();
-        qApp->processEvents();
-
-        QString palo = data["carta"].toObject()["palo"].toString();
-        int valor    = data["carta"].toObject()["valor"].toInt();
-        // 1) Creamos la carta ya en modo “cara arriba”
-        Carta* carta = new Carta(this, this,
-                                 QString::number(valor),
-                                 palo,
-                                 cardSize,
-                                 /*skin=*/0,
-                                 /*faceUp=*/true);
-        addCartaPorId(carta);
-        carta->move(start);
-        carta->show();
-        carta->raise();
-
-
-        // 2) Calculamos el destino: centro de la Posicion
-        Posicion* posWidget = posiciones[idx];
-        QPoint dst = posWidget->mapTo(this,
-                                      QPoint((posWidget->width()  - carta->width())/2,
-                                             (posWidget->height() - carta->height())/2));
-
-        // 3) Flip‐anim: rotación Y de 0→180º
-        {
-            auto *flip = new QPropertyAnimation(carta, "rotationY", this);
-            flip->setDuration(500);
-            flip->setStartValue(0.0);
-            flip->setEndValue(180.0);
-            flip->setEasingCurve(QEasingCurve::InOutQuad);
-            flip->start(QAbstractAnimation::DeleteWhenStopped);
-        }
-
-        // 4) Animamos simultáneamente el movimiento
-        {
-            auto *moveAnim = new QPropertyAnimation(carta, "pos", this);
+            auto *moveAnim = new QPropertyAnimation(cartaASacar, "pos", this);
             moveAnim->setDuration(500);
             moveAnim->setStartValue(start);
             moveAnim->setEndValue(dst);
             connect(moveAnim, &QPropertyAnimation::finished, [=]() {
-                posWidget->setCard(carta);
-                backCarta->deleteLater();
+                posWidget->setCard(cartaASacar);
             });
-
             moveAnim->start(QAbstractAnimation::DeleteWhenStopped);
-        }
-        // 6) Desbloqueamos siguiente
+
+            // desbloquea el siguiente turno…
+            posiciones[1 % posiciones.size()]->setLock(false);
+        }  else {
+        // 1) Nos quedamos con el puntero al dorso que vamos a animar
+        Carta* backCarta = manos[idx]->cartas.first();
+        // 1b) Capturamos la posición de ese dorso (antes de eliminarlo)
+        start = backCarta->mapTo(this, QPoint(0,0));
+
+        // 2) Lo eliminamos de la mano lógica
+        manos[idx]->eliminarCarta(0);
+        // 3) También lo eliminamos del widget (evita el “fantasma”)
+        backCarta->deleteLater();
+
+        // 4) Actualizamos visualmente la mano
+        manos[idx]->mostrarMano();
+        qApp->processEvents();
+
+        // 5) Creamos la carta cara‐arriba y la añadimos
+        int valor     = data["carta"].toObject()["valor"].toInt();
+        QString palo  = data["carta"].toObject()["palo"].toString();
+        cartaASacar   = new Carta(this, this,
+                                QString::number(valor),
+                                palo,
+                                cardSize,
+                                /*skin=*/0,
+                                /*faceUp=*/true);
+        addCartaPorId(cartaASacar);
+    }
+
+
+        // A partir de aquí, animamos 'cartaASacar' desde start hasta el centro de la posición:
+        cartaASacar->move(start);
+        cartaASacar->show();
+        cartaASacar->raise();
+
+        Posicion* posWidget = posiciones[idx];
+        QPoint dst = posWidget->mapTo(this,
+                                      QPoint((posWidget->width()  - cartaASacar->width())/2,
+                                             (posWidget->height() - cartaASacar->height())/2));
+
+
+
+        // Movimiento
+        auto *moveAnim = new QPropertyAnimation(cartaASacar, "pos", this);
+        moveAnim->setDuration(500);
+        moveAnim->setStartValue(start);
+        moveAnim->setEndValue(dst);
+        connect(moveAnim, &QPropertyAnimation::finished, [=]() {
+            posWidget->setCard(cartaASacar);
+            // si era back de oponente, borramos el back original
+            if (jugadorId != player_id) {
+                // backCarta ya fue eliminado arriba
+            }
+        });
+        moveAnim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        // Finalmente desbloqueamos el siguiente turno
         int siguiente = (idx + 1) % posiciones.size();
         posiciones[siguiente]->setLock(false);
-
     }
+
 
 
     else if (type == "round_result") {
@@ -1036,12 +1094,16 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             });
 
             connect(fadeOut, &QPropertyAnimation::finished, this, [this]() {
-                if (hasPendingDraw) {
-                    animateDraw(pendingDrawData, pendingDrawUserId);
+                if (!hasPendingDraw) return;
+                QTimer::singleShot(500, this, [this]() {
+                    for (int id : pendingDrawUserIds)
+                        animateDraw(pendingDrawData, id);
                     hasPendingDraw = false;
-                    pendingDrawUserId = -1;
-                }
-            }, Qt::SingleShotConnection);
+                    pendingDrawUserIds.clear();
+                });
+            });
+
+
 
 
             seq->start(QAbstractAnimation::DeleteWhenStopped);
@@ -1073,34 +1135,39 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         mostrarTurno(data["message"].toString(), false);
     }
 
-    // --- Reemplaza el bloque existente de card_drawn por esto ---
     else if (type == "card_drawn") {
-        // si estamos en medio del resultado de la ronda, lo almacenamos
-        if (roundResultInProgress) {
-            pendingDrawData      = data;
-            pendingDrawUserId    = data.contains("usuario")
-                                    ? data["usuario"].toObject().value("id").toInt()
-                                    : data.contains("jugador")
-                                          ? data["jugador"].toObject().value("id").toInt()
-                                          : player_id;
-            hasPendingDraw       = true;
-        } else {
-            // Extraer ID de quién roba: puede venir como "usuario" o "jugador"
-            int userId = player_id;
-            if (data.contains("usuario")) {
-                userId = data["usuario"].toObject().value("id").toInt();
-            }
-            else if (data.contains("jugador")) {
-                userId = data["jugador"].toObject().value("id").toInt();
-            }
+        // Extraer ID de quién roba
+        int userId = player_id;
+        if (data.contains("usuario"))
+            userId = data["usuario"].toObject().value("id").toInt();
+        else if (data.contains("jugador"))
+            userId = data["jugador"].toObject().value("id").toInt();
 
-            // Llamamos a la sobrecarga con userId
-            QTimer::singleShot(800, this, [this, data, userId]() {
-                animateDraw(data, userId);
-            });
+        // Lista de todos a animar
+        QVector<int> drawIds;
+        drawIds.append(userId);
+        // Si quieres también animar a los demás:
+        for (auto it = playerPosMap.constBegin(); it != playerPosMap.constEnd(); ++it)
+            if (it.key() != userId)
+                drawIds.append(it.key());
+
+        if (roundResultInProgress) {
+            // guardamos TODO el paquete + IDs pendientes
+            pendingDrawData    = data;
+            pendingDrawUserIds = drawIds;
+            hasPendingDraw     = true;
+        } else {
+            // animamos ahora mismo para cada uno
+            for (int id : drawIds) {
+                QTimer::singleShot(800, this, [=]() {
+                    animateDraw(data, id);
+                });
+            }
         }
         return;
     }
+
+
 
 
 

@@ -123,6 +123,8 @@ private:
     void animateDraw(const QJsonObject &drawData, int userID);
     bool hasPendingDraw = false;
     int pendingDrawUserId     = -1;
+    QVector<int>  pendingDrawUserIds;
+
 };
 
 #endif // GAMEWINDOW_H
