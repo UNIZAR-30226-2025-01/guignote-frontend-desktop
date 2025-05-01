@@ -27,12 +27,8 @@ public:
     GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef);
     void addCartaPorId(Carta *c);
     Carta* getCartaPorId(QString id);
-    ~GameWindow();
 
 private:
-    void procesarRoundResultSeguro(const QJsonObject& data);
-
-    QSequentialAnimationGroup *currentRoundAnim = nullptr;
     std::function<void()> pendingRoundResult;
     QTimer             *hideTurnoTimer;
     bool myTurn = false; // true si es mi turno, false en caso contrario
@@ -45,8 +41,6 @@ private:
     bool arrastre = false;
     QTimer *hideOptionsTimer = nullptr;
     bool isMouseOverOptions = false;
-    QJsonObject pendingRoundResultData;
-
     QString gameID;
     int bg; // Number that indicates which skin of the background is being used [0,1,2...]
     int gameType; // Number that indicates whether the game is 1v1, 2v2, friendly, or normal.
