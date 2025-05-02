@@ -61,36 +61,31 @@ int main(int argc, char *argv[])
         }
     });
 
+    // Leer credenciales guardadas
     QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
     QString user = settings.value("auth/user", "").toString();
     QString pass = settings.value("auth/pass", "").toString();
 
-
-    // Si no hay credenciales, mostramos la pantalla de inicio de sesión
+    // 1) Si no hay credenciales → flujo normal
     if (user.isEmpty() || pass.isEmpty()) {
-        MainWindow w;
-        // Leer la configuración de modo de visualización
-        bool fullscreen = settings.value("graphics/fullscreen", false).toBool();
-        if (fullscreen)
-            w.showFullScreen();
-        else
-            w.show();
-
-        return a.exec();
-    }
-
-    // Si hay credenciales, intentamos hacer login
-    QString token;
-    bool ok = tryLogin(user, pass, token);
-    if (ok) {
-        // Guardamos el token para usarlo en las peticiones si lo necesitas
-        settings.setValue("auth/token", token);
-        LoadingWindow *l = new LoadingWindow(user);    // Mostramos la pantalla de carga
-        l->show();
-        return a.exec();
-    } else {
         MainWindow w;
         w.show();
         return a.exec();
     }
+
+    // 2) Si hay credenciales, intento login automático
+    QString token;
+    if (tryLogin(user, pass, token)) {
+        settings.setValue("auth/token", token);
+        // Muestro directamente el LoadingWindow
+        LoadingWindow *l = new LoadingWindow(user);
+        l->show();
+        return a.exec();
+    } else {
+        // Si falla, vuelvo al login manual
+        MainWindow w;
+        w.show();
+        return a.exec();
+    }
+
 }
