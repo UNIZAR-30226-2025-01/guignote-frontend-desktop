@@ -7,7 +7,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPropertyAnimation>
 #include <QPushButton>
+#include <QGraphicsOpacityEffect>
 
 class InventoryWindow : public QDialog
 {
@@ -20,8 +22,21 @@ private:
     QListWidget *sidebar;
     QStackedWidget *stackedWidget;
     QPushButton *closeButton;
+    // Para las animaciones de fade al cambiar pestaña
+    QPropertyAnimation *fadeOutAnim;
+    QPropertyAnimation *fadeInAnim;
+
+    QGraphicsOpacityEffect *deckEffect;
+    QGraphicsOpacityEffect *matEffect;
+
 
     void setupUI();
+
+private slots:
+    void onTabChanged(int index);
+
 };
+
+
 
 #endif // INVENTORYWINDOW_H

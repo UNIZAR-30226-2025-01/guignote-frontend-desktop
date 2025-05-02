@@ -268,11 +268,14 @@ LoginWindow::LoginWindow(QWidget *parent)
                         QString token = respObj["token"].toString();
                         QString userKey = userOrEmail;
 
-                        // ← INICIO SNIPPET
+                        // ← INICIO SNIPPET CORREGIDO
                         QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
-                        // Guardar token (opcional, pero recomendable)
-                        settings.setValue("auth/token", token);
-                        // Guardar si recordamos o no
+                        // Guardar token en settings específicos por usuario (opcional)
+                        QSettings userSettings("Grace Hopper",
+                                               QString("Sota, Caballo y Rey_%1").arg(userKey));
+                        userSettings.setValue("auth/token", token);
+
+                        // Guardado de “recordar” y credenciales en el QSettings base
                         settings.setValue("auth/remember", rememberCheck->isChecked());
                         if (rememberCheck->isChecked()) {
                             settings.setValue("auth/user", userOrEmail);
@@ -281,7 +284,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                             settings.remove("auth/user");
                             settings.remove("auth/pass");
                         }
-                        // ← FIN SNIPPET
+                        // ← FIN SNIPPET CORREGIDO
 
                         // OBTENER EL MAIN WINDOW (padre real)
                         QMainWindow *mainWin = qobject_cast<QMainWindow*>(this->parentWidget());

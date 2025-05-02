@@ -76,7 +76,8 @@ int main(int argc, char *argv[])
     // 2) Si hay credenciales, intento login automático
     QString token;
     if (tryLogin(user, pass, token)) {
-        settings.setValue("auth/token", token);
+        QSettings userSettings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(user));
+        userSettings.setValue("auth/token", token);
         // Muestro directamente el LoadingWindow
         LoadingWindow *l = new LoadingWindow(user);
         l->show();
