@@ -17,6 +17,9 @@
 class MyProfileWindow : public QDialog {
     Q_OBJECT
 
+signals:
+    void pfpChangedSuccessfully();  // Señal para indicar que la foto de perfil se cambió exitosamente
+
 public:
     /**
      * @brief Constructor de la ventana de perfil.
@@ -39,12 +42,20 @@ private:
     QHBoxLayout* createHeaderLayout();
     QVBoxLayout* createProfileLayout();
     QHBoxLayout* createBottomLayout();
-    QPixmap createCircularImage(const QString &imagePath, int size);
+    QPixmap createCircularImage(const QPixmap &src, int size);
 
     // Métodos para conexión con el backend
     QString loadAuthToken(const QString &userKey);
     void loadNameAndStats(const QString &userKey); // Método que consulta el backend para obtener nombre, ELO y estadísticas.
-    QString m_userKey;
+    void delUsr(const QString &userKey);    // Metodo que borra tu cuenta
+
+    QString key;
+
+    QDialog* createDialogLogOut(QWidget *parent, const QString &message);
+    QDialog* createDialogBorrarUsr(QWidget *parent, const QString &message);
+    QDialog* createDialogSetPfp(QWidget *parent, const QString &message);
+
+    void choosePfp();
 };
 
 #endif // MYPROFILEWINDOW_H

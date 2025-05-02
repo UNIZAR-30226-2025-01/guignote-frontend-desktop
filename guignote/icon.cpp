@@ -67,6 +67,16 @@ void Icon::setImage(const QString &imagePath, int width, int height) {
     shakeAnim->setKeyValueAt(1.0,   pos());
 }
 
+void Icon::setPixmapImg(const QPixmap &pixmap, int width, int height) {
+    originalPixmap = pixmap;
+    baseWidth = width;
+    baseHeight = height;
+    QLabel::setPixmap(pixmap.scaled(width, height,
+                                    Qt::KeepAspectRatio,
+                                    Qt::SmoothTransformation));
+    setFixedSize(width, height);
+}
+
 /**
  * @brief Maneja el evento de clic del mouse.
  * @param event Evento de tipo QMouseEvent que contiene la información del clic.
