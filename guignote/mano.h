@@ -4,6 +4,9 @@
 #include <QVector>
 #include "carta.h"  // ✅ Incluido aquí porque usamos objetos reales (no solo punteros)
 
+const int MIN_SPACING = 15;
+const int MARGIN = 8;
+
 class Mano
 {
 public:
@@ -20,6 +23,7 @@ public:
 private:
     int num_cards;
     int pos;
+
 };
 
 #endif // MANO_H
