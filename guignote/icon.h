@@ -5,7 +5,6 @@
 #include <QWidget>
 #include <QMouseEvent>
 #include <QPixmap>
-#include <qpropertyanimation.h>
 
 /**
  * @brief Widget interactivo para mostrar un icono.
@@ -39,11 +38,6 @@ public:
     void setImage(const QString &imagePath, int width = 100, int height = 100);
     void setPixmapImg(const QPixmap &pixmap, int width, int height);
 
-    void setBadgeCount(int count);
-
-    // Fuerza la vibración
-    void shake();
-
 signals:
     /**
      * @brief Señal emitida cuando el icono es clickeado.
@@ -65,17 +59,12 @@ protected:
 
     void enterEvent(QEnterEvent *event) override;
     void leaveEvent(QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-
 
 private:
     QPixmap originalPixmap;
     bool hoverEnabled;
     int baseWidth{0};
     int baseHeight{0};
-    QLabel           *badgeLabel;
-    QPropertyAnimation *shakeAnim;
-    int               badgeCount = 0;
 };
 
 #endif // ICON_H

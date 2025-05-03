@@ -182,7 +182,7 @@ QDialog* MyProfileWindow::createDialogBorrarUsr(QWidget *parent, const QString &
     QObject::connect(yesButton, &QPushButton::clicked, [this, dialog]() {
         // Borrar Usuario
 
-        delUsr(key);
+        delUsr(m_userKey);
 
         // LogOut inmediatamente despues
         dialog->close();
@@ -306,7 +306,7 @@ void MyProfileWindow::choosePfp() {
     qDebug() << "Imagen añadida al QHttpMultiPart.";
 
     // Obtener el token de autenticación
-    QString token = loadAuthToken(key);
+    QString token = loadAuthToken(m_userKey);
     if (token.isEmpty()) {
         createDialog(this, "No se encontró el token de autenticación.")->show();
         return;
@@ -367,7 +367,7 @@ void MyProfileWindow::choosePfp() {
                 // Emitir la señal después de la actualización exitosa de la foto de perfil
                 emit pfpChangedSuccessfully();
                 qDebug() << "Foto de perfil actualizada.";
-                loadNameAndStats(key);
+                loadNameAndStats(m_userKey);
             }
         } else {
             // Manejo de otros errores
@@ -393,7 +393,7 @@ MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDia
 
     setupUI();
     loadNameAndStats(userKey); // Se llama a la función que carga nombre, ELO y estadísticas.
-    key = userKey;
+    m_userKey = userKey;
 }
 
 // Configura la UI dividiéndola en secciones.
@@ -439,14 +439,13 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     profileLayout->setAlignment(Qt::AlignCenter);
     profileLayout->addStretch();
 
-    // int pfpSize = 200;
-    // QString imagePath = ":/icons/profile.png";
-    // QPixmap circularImage = createCircularImage(imagePath, pfpSize);
+    int pfpSize = 200;
+    QString imagePath = ":/icons/profile.png";
+    QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
-    fotoPerfil = new Icon();
+    fotoPerfil = new Icon(this);
     fotoPerfil->setHoverEnabled(false);
-    fotoPerfil->setPixmap(circularImage);
-    fotoPerfil->setFixedSize(pfpSize, pfpSize);
+    fotoPerfil->setPixmapImg(circularImage, pfpSize, pfpSize);
     connect(fotoPerfil, &Icon::clicked, [=]() {
         createDialogSetPfp(this, "¿Cambiar foto de perfil?")->show();
     });

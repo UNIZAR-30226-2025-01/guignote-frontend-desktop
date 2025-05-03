@@ -49,7 +49,7 @@ private:
     void loadNameAndStats(const QString &userKey); // Método que consulta el backend para obtener nombre, ELO y estadísticas.
     void delUsr(const QString &userKey);    // Metodo que borra tu cuenta
 
-    QString key;
+    QString m_userKey;
 
     QDialog* createDialogLogOut(QWidget *parent, const QString &message);
     QDialog* createDialogBorrarUsr(QWidget *parent, const QString &message);
