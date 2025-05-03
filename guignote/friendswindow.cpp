@@ -283,9 +283,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     // Icon placeholder
     int pfpSize = 100;
     QString avatarUrl = amigo["imagen"].toString();  // Obtener la URL de la imagen
-    Icon *avatarIcon = new Icon();
+    Icon *avatarIcon = new Icon(this);
     avatarIcon->setHoverEnabled(false);
-    avatarIcon->setFixedSize(pfpSize, pfpSize);
 
     // Descargar la imagen de perfil y asignarla al Icon
     if (!avatarUrl.isEmpty()) {
@@ -622,10 +621,9 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QString imagePath = ":/icons/profile.png";
     QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
-    Icon *avatarIcon = new Icon();
+    Icon *avatarIcon = new Icon(this);
     avatarIcon->setHoverEnabled(false);
-    avatarIcon->setPixmap(circularImage);
-    avatarIcon->setFixedSize(pfpSize, pfpSize);
+    avatarIcon->setPixmapImg(circularImage, pfpSize, pfpSize);
     layout->addWidget(avatarIcon);
 
     // Información del usuario
@@ -744,9 +742,8 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     // Icon placeholder
     int pfpSize = 100;
     QString avatarUrl = solicitud["imagen"].toString();  // Obtener la URL de la imagen
-    Icon *avatarIcon = new Icon();
+    Icon *avatarIcon = new Icon(this);
     avatarIcon->setHoverEnabled(false);
-    avatarIcon->setFixedSize(pfpSize, pfpSize);
 
     // Descargar la imagen de perfil y asignarla al Icon
     if (!avatarUrl.isEmpty()) {

@@ -466,9 +466,6 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     connect(friends, &Icon::clicked, this, [=]() {
         friends->setImage(":/icons/darkenedfriends.png", 60, 60);
         auto *fw = new friendswindow(userKey, this);
-        // Conectamos la señal de solicitudes
-        connect(fw, &friendswindow::friendRequestsCountChanged,
-                friends, &Icon::setBadgeCount);
         fw->setModal(true);
         fw->exec();
         friends->setImage(":/icons/friends.png", 60, 60);

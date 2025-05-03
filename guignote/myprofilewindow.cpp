@@ -443,10 +443,9 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     QString imagePath = ":/icons/profile.png";
     QPixmap circularImage = createCircularImage(imagePath, pfpSize);
 
-    fotoPerfil = new Icon();
+    fotoPerfil = new Icon(this);
     fotoPerfil->setHoverEnabled(false);
-    fotoPerfil->setPixmap(circularImage);
-    fotoPerfil->setFixedSize(pfpSize, pfpSize);
+    fotoPerfil->setPixmapImg(circularImage, pfpSize, pfpSize);
     connect(fotoPerfil, &Icon::clicked, [=]() {
         createDialogSetPfp(this, "¿Cambiar foto de perfil?")->show();
     });
