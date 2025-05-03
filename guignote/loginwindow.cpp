@@ -266,32 +266,37 @@ LoginWindow::LoginWindow(QWidget *parent)
                     // Si se recibe un token, se procede a abrir el menú en el mismo espacio que MainWindow.
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
-                        qDebug() << "Token recibido:" << token;
-                        QString userKey = userOrEmail; // Este es el input del usuario
-                        QSettings settings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(userKey));
-                        settings.setValue("auth/token", token);
-                        settings.setValue("auth/remember", rememberCheck->isChecked());
+                        QString userKey = userOrEmail;
 
-                        // Si se ha marcado "Recordar contraseña", guardamos también el usuario y la contraseña.
+                        // ← INICIO SNIPPET CORREGIDO
+                        QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+                        // Guardar token en settings específicos por usuario (opcional)
+                        QSettings userSettings("Grace Hopper",
+                                               QString("Sota, Caballo y Rey_%1").arg(userKey));
+                        userSettings.setValue("auth/token", token);
+
+                        // Guardado de “recordar” y credenciales en el QSettings base
+                        settings.setValue("auth/remember", rememberCheck->isChecked());
                         if (rememberCheck->isChecked()) {
                             settings.setValue("auth/user", userOrEmail);
                             settings.setValue("auth/pass", contrasegna);
                         } else {
-                            // Opcional: Si no se quiere recordar, asegurarse de borrar posibles credenciales previas.
                             settings.remove("auth/user");
                             settings.remove("auth/pass");
                         }
-                        LoadingWindow *loadWin = new LoadingWindow(userKey, this);
-                        // Si existe una ventana padre (MainWindow), se reemplaza el widget central por el menú.
-                        if (this->parentWidget()) {
-                            QMainWindow *mainWin = qobject_cast<QMainWindow*>(this->parentWidget());
-                            if (mainWin) {
-                                mainWin->setCentralWidget(loadWin);
-                            }
-                            this->close();
+                        // ← FIN SNIPPET CORREGIDO
+
+                        // OBTENER EL MAIN WINDOW (padre real)
+                        QMainWindow *mainWin = qobject_cast<QMainWindow*>(this->parentWidget());
+                        if (mainWin) {
+                            // CREAMOS EL LOADINGWINDOW con mainWin como padre
+                            LoadingWindow *loadWin = new LoadingWindow(userKey, mainWin);
+                            mainWin->setCentralWidget(loadWin);
+                            loadWin->show();
+                            this->close();   // cierra solo el LoginWindow, loadWin sobrevive
                         } else {
-                            // Si no hay ventana padre, se muestra el menú en una nueva ventana.
-                            loadWin->move(this->geometry().center() - loadWin->rect().center());
+                            // Si no hay MainWindow, lo mostramos sin padre
+                            LoadingWindow *loadWin = new LoadingWindow(userKey);
                             loadWin->show();
                             this->close();
                         }

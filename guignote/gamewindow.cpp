@@ -25,6 +25,10 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
 
 void GameWindow::addCartaPorId(Carta* c){
     cartasPorId[c->idGlobal] = c;
+    // Cuando Qt destruya la Carta, la quitamos del mapa automáticamente
+    connect(c, &QObject::destroyed, this, [id = c->idGlobal]() {
+        GameWindow::cartasPorId.remove(id);
+    });
 }
 
 Carta* GameWindow::getCartaPorId(QString id){
@@ -756,9 +760,21 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         int idx          = playerPosMap.value(jugadorId, -1);
         if (idx < 0) return;
 
-        // Si soy yo y no es jugada automática, la ignoro (ya la animé al hacer clic)
         if (jugadorId == player_id && !esAutomatica) {
-            qDebug() << "       → Ignoro mi propio card_played manual";
+            // Como ya animaste la carta al hacer clic, aquí sólo la quitamos de la mano
+            QJsonObject cartaJson = data["carta"].toObject();
+            QString paloServ = cartaJson["palo"].toString();
+            QString numServ  = QString::number(cartaJson["valor"].toInt());
+            Mano* miMano = manos[0];
+            // Busca y elimina esa carta de mi mano
+            for (int i = 0; i < miMano->cartas.size(); ++i) {
+                Carta* c = miMano->cartas[i];
+                if (c->num == numServ && c->suit == paloServ) {
+                    miMano->eliminarCarta(i);
+                    break;
+                }
+            }
+            // No hacemos más animaciones aquí
             return;
         }
 
@@ -786,7 +802,7 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
             if (foundIdx < 0) foundIdx = 0;
 
             // 3) Ahora extrae esa carta concreta
-            cartaASacar = miMano->cartas[foundIdx];
+            Carta* cartaASacar = miMano->cartas[foundIdx];
             start = cartaASacar->mapTo(this, QPoint(0,0));
 
             // 4) La eliminas de la mano lógica y la refrescas
@@ -1071,7 +1087,6 @@ GameWindow::~GameWindow() {
     ws->disconnect(this);
     this->disconnect();
     // 3) Limpiar cartas estáticas
-    qDeleteAll(cartasPorId);
     cartasPorId.clear();
 }
 

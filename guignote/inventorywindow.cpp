@@ -1,130 +1,333 @@
 #include "inventorywindow.h"
-#include <QListWidget>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
 
-InventoryWindow::InventoryWindow(QWidget *parent)
-    : QDialog(parent)
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QLabel>
+#include <QPainterPath>
+#include <QStackedWidget>
+#include <QGraphicsDropShadowEffect>
+#include <QStyle>
+#include <QApplication>
+#include <QGraphicsOpacityEffect>
+#include <QPropertyAnimation>
+#include <QEasingCurve>
+#include <QPainter>
+#include <QEnterEvent>
+#include <QListWidget>
+#include <QFrame>
+
+/* ------------------------------------------------------------------ */
+/*  ESTILO QSS COMÚN PARA LAS TARJETAS                                */
+/* ------------------------------------------------------------------ */
+static const char *tileQss = R"(
+    CardTile {
+        background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                                    stop:0 #37474F, stop:1 #263238);
+        border: 1px solid #455A64;
+        border-radius: 12px;
+        color: #ECEFF1;
+        font: 11px "Segoe UI Semibold";
+    }
+    CardTile:hover {
+        background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                                    stop:0 #546E7A, stop:1 #37474F);
+        border-color:#4dd0e1;
+    }
+)";
+
+/* ------------------------------------------------------------------ */
+/*  TARJETA (BOTÓN) CON ESQUINAS REDONDEADAS Y SOMBRA                 */
+/* ------------------------------------------------------------------ */
+class CardTile : public QPushButton
 {
-    // Ventana sin marco, esquinas redondeadas
+    Q_OBJECT
+public:
+    explicit CardTile(const QString &text, QWidget *parent = nullptr)
+        : QPushButton(text, parent)
+    {
+        setFixedSize(150, 110);
+        setStyleSheet(tileQss);
+        setObjectName("CardTile");
+        setFocusPolicy(Qt::NoFocus);
+        shadow = new QGraphicsDropShadowEffect(this);
+        shadow->setBlurRadius(18);
+        shadow->setOffset(0, 4);
+        shadow->setColor(QColor(0,0,0,160));
+        setGraphicsEffect(shadow);
+    }
+
+protected:
+    /* --- animamos solo blur y offset; la geometría no cambia --- */
+    void enterEvent(QEnterEvent *e) override {
+        elevate(28, 6);
+        QPushButton::enterEvent(e);
+    }
+    void leaveEvent(QEvent *e) override {
+        elevate(18, 4);
+        QPushButton::leaveEvent(e);
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+
+        const int radius = 12;
+        QPainterPath path;
+        path.addRoundedRect(rect(), radius, radius);
+        p.setClipPath(path);
+
+        QColor back = underMouse() ? QColor("#546E7A") : QColor("#37474F");
+        p.fillPath(path, back);
+
+        p.setPen(QPen(QColor("#455A64"), 1));
+        p.drawPath(path);
+
+        p.setPen(Qt::white);
+        p.setFont(QFont("Segoe UI", 10, QFont::Bold));
+        p.drawText(rect(), Qt::AlignCenter, text());
+    }
+
+private:
+    void elevate(qreal blur, qreal y)
+    {
+        auto animate = [this](const char *prop, const QVariant &v) {
+            auto *a = new QPropertyAnimation(shadow, prop, this);
+            a->setDuration(160);
+            a->setStartValue(shadow->property(prop));
+            a->setEndValue(v);
+            a->setEasingCurve(QEasingCurve::OutCubic);
+            a->start(QAbstractAnimation::DeleteWhenStopped);
+        };
+        animate("blurRadius", blur);
+        animate("offset", QPointF(0, y));
+    }
+
+    QGraphicsDropShadowEffect *shadow;
+};
+
+/* ------------------------------------------------------------------ */
+/*  LISTA LATERAL (NavList)                                           */
+/* ------------------------------------------------------------------ */
+class NavList : public QListWidget
+{
+    Q_OBJECT
+public:
+    explicit NavList(QWidget *parent = nullptr) : QListWidget(parent)
+    {
+        setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setFrameShape(QFrame::NoFrame);
+        setSpacing(4);
+
+        setStyleSheet(R"(
+            NavList {
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                                            stop:0 #263238, stop:1 #1e1e1e);
+                color: #ECEFF1;
+                font: 16px "Segoe UI";
+            }
+            NavList::item            { padding: 12px 24px; }
+            NavList::item:selected,
+            NavList::item:hover      { background: transparent; }
+        )");
+
+        indicator = new QWidget(this);
+        indicator->setFixedWidth(4);
+        indicator->setStyleSheet("background:#4dd0e1; border-radius:2px;");
+        indicator->hide();
+
+        connect(this, &QListWidget::currentRowChanged,
+                this, &NavList::animateIndicator);
+    }
+
+private slots:
+    void animateIndicator(int row)
+    {
+        if (row < 0) return;
+        QRect r = visualItemRect(item(row));
+        if (!indicator->isVisible()) {
+            indicator->setGeometry(0, r.top(), 4, r.height());
+            indicator->show();
+        }
+        auto *a = new QPropertyAnimation(indicator, "geometry", this);
+        a->setDuration(250);
+        a->setStartValue(indicator->geometry());
+        a->setEndValue(QRect(0, r.top(), 4, r.height()));
+        a->setEasingCurve(QEasingCurve::OutCubic);
+        a->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+private:
+    QWidget *indicator;
+};
+
+/* ------------------------------------------------------------------ */
+/*  FUNCIÓN AUXILIAR DE OPACIDAD (sin cambios)                         */
+/* ------------------------------------------------------------------ */
+static QGraphicsOpacityEffect *makeFadeEffect(QWidget *w)
+{
+    auto *eff = new QGraphicsOpacityEffect(w);
+    eff->setOpacity(1.0);
+    eff->setEnabled(false);
+    w->setGraphicsEffect(eff);
+    return eff;
+}
+
+/* ------------------------------------------------------------------ */
+/*  TRANSICIÓN ENTRE PÁGINAS (sin cambios)                            */
+/* ------------------------------------------------------------------ */
+static void slidePages(QStackedWidget *stack, int nextIdx,
+                       int ms = 300, int dir = +1)
+{
+    if (nextIdx == stack->currentIndex()) return;
+
+    QWidget *fromW = stack->currentWidget();
+    QWidget *toW   = stack->widget(nextIdx);
+
+    const int w = stack->width();
+    const int h = stack->height();
+
+    QRect start(dir * w, 0, w, h);
+    QRect end  (0,        0, w, h);
+
+    toW->setGeometry(start);
+    toW->show();
+    toW->raise();
+
+    auto move = [&](QWidget *w, const QRect &ini, const QRect &fin){
+        auto *a = new QPropertyAnimation(w, "geometry", stack);
+        a->setDuration(ms);
+        a->setStartValue(ini);
+        a->setEndValue(fin);
+        a->setEasingCurve(QEasingCurve::InOutQuad);
+        return a;
+    };
+    auto *aOut = move(fromW, QRect(0, 0, w, h),
+                      QRect(-dir * w, 0, w, h));
+    auto *aIn  = move(toW,   start, end);
+
+    QObject::connect(aIn, &QPropertyAnimation::finished, stack, [=]{
+        stack->setCurrentIndex(nextIdx);
+        fromW->setGeometry(0, 0, w, h);
+        toW  ->setGeometry(0, 0, w, h);
+    });
+
+    aOut->start(QAbstractAnimation::DeleteWhenStopped);
+    aIn ->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+/* ------------------------------------------------------------------ */
+/*  CONSTRUCTOR / DESTRUCTOR DE INVENTORYWINDOW                       */
+/* ------------------------------------------------------------------ */
+InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
+{
+    /* ---------- Ventana base ---------- */
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
-    setAttribute(Qt::WA_StyledBackground, true);
-    setStyleSheet("background-color: #171718; border-radius: 30px;");
+    setAttribute(Qt::WA_TranslucentBackground);
     setFixedSize(800, 600);
 
-    // --- 1) Layout vertical contenedor principal ---
-    QVBoxLayout *containerLayout = new QVBoxLayout;
-    containerLayout->setContentsMargins(0, 0, 0, 0);
-    containerLayout->setSpacing(0);
+    QWidget *container = new QWidget(this);
+    container->setObjectName("container");
+    container->setStyleSheet("#container{background:#1e1e1e;border-radius:20px;}");
+    container->setGeometry(rect());
 
-    // --- 2) Layout horizontal para la fila superior con la cruz ---
-    QHBoxLayout *topLayout = new QHBoxLayout;
-    topLayout->setContentsMargins(10, 10, 10, 0);
-        // Ajusta estos márgenes si quieres más/menos espacio en el borde superior
-    topLayout->setSpacing(0);
+    auto *shadow = new QGraphicsDropShadowEffect(this);
+    shadow->setBlurRadius(20);
+    shadow->setOffset(0,4);
+    shadow->setColor(QColor(0,0,0,160));
+    setGraphicsEffect(shadow);
 
-    // Botón de cierre (cruz)
+    QVBoxLayout *root = new QVBoxLayout(container);
+    root->setContentsMargins(0,0,0,0);
+
+    /* ---------- Barra superior ---------- */
+    QHBoxLayout *top = new QHBoxLayout;
+    top->setContentsMargins(10,10,10,0);
     closeButton = new QPushButton;
     closeButton->setIcon(QIcon(":/icons/cross.png"));
-    closeButton->setIconSize(QSize(18, 18));
-    closeButton->setFixedSize(30, 30);
+    closeButton->setIconSize(QSize(18,18));
+    closeButton->setFixedSize(30,30);
     closeButton->setStyleSheet(
-        "QPushButton { background-color: #c2c2c3; border: none; border-radius: 15px; }"
-        "QPushButton:hover { background-color: #9b9b9b; }"
-        );
-    connect(closeButton, &QPushButton::clicked, this, &InventoryWindow::close);
+        "QPushButton{background:#444;border:none;border-radius:15px;}"
+        "QPushButton:hover{background:#ff5c5c;}");
+    connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
+    top->addStretch();
+    top->addWidget(closeButton);
+    root->addLayout(top);
 
-    // Empuja la cruz a la derecha
-    topLayout->addStretch();
-    topLayout->addWidget(closeButton);
+    /* ---------- Barra lateral + páginas ---------- */
+    QHBoxLayout *main = new QHBoxLayout;
+    main->setContentsMargins(10,0,10,10);
 
-    containerLayout->addLayout(topLayout);
+    sidebar = new NavList;
+    auto *sideShadow = new QGraphicsDropShadowEffect(sidebar);
+    sideShadow->setBlurRadius(30);
+    sideShadow->setOffset(4,0);
+    sideShadow->setColor(QColor(0,0,0,180));
+    sidebar->setGraphicsEffect(sideShadow);
+    sidebar->setFixedWidth(220);
 
-    // --- 3) Layout horizontal principal (sidebar + stackedWidget) ---
-    QHBoxLayout *mainLayout = new QHBoxLayout;
-    mainLayout->setContentsMargins(10, 0, 10, 10);
-        // Ajusta márgenes laterales (10) y el inferior (10)
-    mainLayout->setSpacing(10);
+    sidebar->addItem(new QListWidgetItem(qApp->style()->standardIcon(
+                                             QStyle::SP_DialogYesButton), "Barajas"));
+    sidebar->addItem(new QListWidgetItem(qApp->style()->standardIcon(
+                                             QStyle::SP_FileDialogDetailedView), "Tapetes"));
+    main->addWidget(sidebar);
 
-    // SIDEBAR
-    sidebar = new QListWidget;
-    sidebar->setFixedWidth(200);
-    sidebar->setStyleSheet(
-        "QListWidget { background-color: #2d2d2d; color: #ffffff; border: none; }"
-        "QListWidget::item { padding: 15px; }"
-        "QListWidget::item:selected { background-color: #575757; }"
-        );
-    sidebar->addItem("Barajas");
-    sidebar->addItem("Tapetes");
-    mainLayout->addWidget(sidebar);
-
-    // STACKED WIDGET
     stackedWidget = new QStackedWidget;
-    mainLayout->addWidget(stackedWidget);
+    main->addWidget(stackedWidget, 1);
+    root->addLayout(main);
 
-    // --- Página 1: Barajas ---
+    /* ====================  Página 1 : Barajas ==================== */
     QWidget *deckPage = new QWidget;
-    QVBoxLayout *deckLayout = new QVBoxLayout(deckPage);
-    deckLayout->setContentsMargins(0, 0, 0, 0);
-    deckLayout->setAlignment(Qt::AlignTop);
+    deckPage->setStyleSheet("background:#1e1e1e;");
+    makeFadeEffect(deckPage);
 
-    QLabel *deckLabel = new QLabel("Gestión de Barajas");
-    deckLabel->setStyleSheet("color: #ffffff; font-size: 24px; font-weight: bold;");
-    deckLabel->setAlignment(Qt::AlignCenter);
-    deckLayout->addWidget(deckLabel);
+    QVBoxLayout *vDeck = new QVBoxLayout(deckPage);
+    vDeck->setAlignment(Qt::AlignTop);
+    QLabel *lblDeck = new QLabel("Gestión de Barajas");
+    lblDeck->setStyleSheet("color:#fff;font-size:24px;font-weight:bold;");
+    vDeck->addWidget(lblDeck, 0, Qt::AlignHCenter);
 
-    // Dummys
-    QGridLayout *deckPlaceholderLayout = new QGridLayout;
-    deckPlaceholderLayout->setSpacing(20);
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            QFrame *placeholder = new QFrame;
-            placeholder->setFixedSize(150, 100);
-            placeholder->setStyleSheet("border: 2px solid white; border-radius: 5px; background-color: transparent;");
-            deckPlaceholderLayout->addWidget(placeholder, i, j, Qt::AlignCenter);
-        }
-    }
-    deckLayout->addLayout(deckPlaceholderLayout);
+    QGridLayout *gridDeck = new QGridLayout;
+    gridDeck->setSpacing(15);
+    for (int i = 0; i < 6; ++i)
+        gridDeck->addWidget(new CardTile(QString("Baraja %1").arg(i+1)),
+                            i/3, i%3);
+    vDeck->addLayout(gridDeck);
     stackedWidget->addWidget(deckPage);
 
-    // --- Página 2: Tapetes ---
+    /* ====================  Página 2 : Tapetes ==================== */
     QWidget *matPage = new QWidget;
-    QVBoxLayout *matLayout = new QVBoxLayout(matPage);
-    matLayout->setContentsMargins(0, 0, 0, 0);
-    matLayout->setAlignment(Qt::AlignTop);
+    matPage->setStyleSheet("background:#1e1e1e;");
+    makeFadeEffect(matPage);
 
-    QLabel *matLabel = new QLabel("Gestión de Tapetes");
-    matLabel->setStyleSheet("color: #ffffff; font-size: 24px; font-weight: bold;");
-    matLabel->setAlignment(Qt::AlignCenter);
-    matLayout->addWidget(matLabel);
+    QVBoxLayout *vMat = new QVBoxLayout(matPage);
+    vMat->setAlignment(Qt::AlignTop);
+    QLabel *lblMat = new QLabel("Gestión de Tapetes");
+    lblMat->setStyleSheet("color:#fff;font-size:24px;font-weight:bold;");
+    vMat->addWidget(lblMat, 0, Qt::AlignHCenter);
 
-    // Dummys
-    QGridLayout *matPlaceholderLayout = new QGridLayout;
-    matPlaceholderLayout->setSpacing(20);
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            QFrame *placeholder = new QFrame;
-            placeholder->setFixedSize(150, 100);
-            placeholder->setStyleSheet("border: 2px solid white; border-radius: 5px; background-color: transparent;");
-            matPlaceholderLayout->addWidget(placeholder, i, j, Qt::AlignCenter);
-        }
-    }
-    matLayout->addLayout(matPlaceholderLayout);
+    QGridLayout *gridMat = new QGridLayout;
+    gridMat->setSpacing(15);
+    for (int i = 0; i < 6; ++i)
+        gridMat->addWidget(new CardTile(QString("Tapete %1").arg(i+1)),
+                           i/3, i%3);
+    vMat->addLayout(gridMat);
     stackedWidget->addWidget(matPage);
 
-    // Seleccionar por defecto la sección de Barajas
+    /* ---------- señales ---------- */
     sidebar->setCurrentRow(0);
     connect(sidebar, &QListWidget::currentRowChanged,
-            stackedWidget, &QStackedWidget::setCurrentIndex);
-
-    // Agregar el layout principal (sidebar + stack) al contenedor
-    containerLayout->addLayout(mainLayout);
-    setLayout(containerLayout);
+            this,    &InventoryWindow::onTabChanged);
 }
 
-
-InventoryWindow::~InventoryWindow()
+void InventoryWindow::onTabChanged(int row)
 {
+    slidePages(stackedWidget, row, 350, -1);  // slide de derecha a izquierda
 }
+
+InventoryWindow::~InventoryWindow() {}
+
+#include "inventorywindow.moc"
