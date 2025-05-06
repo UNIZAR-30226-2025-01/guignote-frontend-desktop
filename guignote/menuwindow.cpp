@@ -367,6 +367,97 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
         jugarPartida( userKey, token, 4);
     });
 
+    // ------------- BOTON DE RECONEXION -------------
+
+    QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
+    QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
+    request.setRawHeader("Auth", token.toUtf8());
+    qDebug() << "Comprobamos salas reconectables...";
+
+    QNetworkReply *reply = networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        // Comprueba errores de red
+        qDebug() << "Obtenemos respuesta sobre las salas reconectables...";
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Error de red:" << reply->errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        // Lee y parsea el JSON
+        const QByteArray data = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+            qDebug() << "Error parseando JSON:" << parseError.errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        QJsonObject obj = doc.object();
+        // Verifica que exista el array "salas"
+        if (!obj.contains("salas") || !obj.value("salas").isArray()) {
+            qDebug() << "La respuesta no contiene el campo 'salas'";
+            reply->deleteLater();
+            return;
+        }
+
+        QJsonArray salas = obj.value("salas").toArray();
+        if (salas.isEmpty()) {
+            qDebug() << "No hay salas reconectables.";
+        } else {
+            qDebug() << "Salas reconectables encontradas:";
+            // Crear el botón
+            // Crear el botón
+            QPushButton *ReconnectButton = new QPushButton("Reconectarse", this);
+
+            // Establecer el estilo del botón
+            ReconnectButton->setStyleSheet(
+                "QPushButton {"
+                "   background-color: #c2c2c3;"
+                "   color: #171718;"
+                "   font-size: 20px;"
+                "   font-weight: bold;"
+                "   padding: 12px 25px;"
+                "}"
+                "QPushButton:hover {"
+                "   background-color: #9b9b9b;"
+                "}"
+                );
+
+            // Establecer una altura y anchura fija para el botón
+            ReconnectButton->setFixedSize(200, 50);  // Establece un tamaño fijo
+
+            // Conectar la señal del botón con el slot
+            connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
+                qDebug() << "YIPEEE";
+            });
+
+            // Crear un layout vertical para gestionar la disposición
+            QVBoxLayout *reconlayout = new QVBoxLayout(this);
+
+            // Crear un layout horizontal para centrar el botón
+            QHBoxLayout *hLayout = new QHBoxLayout();
+            hLayout->addStretch();  // Añadir espacio de relleno antes del botón
+            hLayout->addWidget(ReconnectButton);  // Añadir el botón al layout
+            hLayout->addStretch();  // Añadir espacio de relleno después del botón
+
+            // Agregar el layout horizontal al layout vertical
+            reconlayout->addLayout(hLayout);
+
+            // Establecer un margen en la parte inferior para mover el botón por encima
+            reconlayout->setContentsMargins(0, 0, 0, 90);  // El último valor es el margen inferior (ajústalo como desees)
+
+            // Establecer la alineación del layout vertical al fondo, pero con margen
+            reconlayout->setAlignment(Qt::AlignBottom);
+
+            // Establecer el layout en el widget
+            setLayout(reconlayout);
+
+        }
+        reply->deleteLater();
+    });
+
     // ------------- BARRAS (BARS) -------------
     bottomBar = new QFrame(this);
     topBar = new QFrame(this);

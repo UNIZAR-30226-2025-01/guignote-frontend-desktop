@@ -162,8 +162,9 @@ RegisterWindow::RegisterWindow(QWidget *parent)
         "   background-color: #9b9b9b;"
         "}";
     registerButton->setStyleSheet(buttonStyle);
-    registerButton->setFixedSize(200, 50);
+    registerButton->setFixedSize(125, 50);
     mainLayout->addWidget(registerButton, 0, Qt::AlignCenter);
+
 
     // Conexión para el botón "Crear Cuenta": valida los campos, envía una petición POST y maneja la respuesta.
     connect(registerButton, &QPushButton::clicked, this, [=]() {
