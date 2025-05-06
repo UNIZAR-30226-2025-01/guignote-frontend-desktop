@@ -29,7 +29,8 @@ private:
     QGraphicsOpacityEffect *deckEffect;
     QGraphicsOpacityEffect *matEffect;
 
-
+    QButtonGroup *deckGroup;            // ← Grupo para barajas
+    QButtonGroup *matGroup;             // ← Grupo para tapetes
     void setupUI();
 
 private slots:

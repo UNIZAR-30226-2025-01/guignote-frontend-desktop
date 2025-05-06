@@ -9,6 +9,8 @@
 #include <QStackedWidget>
 #include <QGraphicsDropShadowEffect>
 #include <QStyle>
+#include <QButtonGroup>
+#include <QSettings>
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
 #include <QPropertyAnimation>
@@ -35,6 +37,9 @@ static const char *tileQss = R"(
                                     stop:0 #546E7A, stop:1 #37474F);
         border-color:#4dd0e1;
     }
+    CardTile:checked {
+           border: 2px solid #4dd0e1;   /* Borde destacado cuando está seleccionada */
+    }
 )";
 
 /* ------------------------------------------------------------------ */
@@ -51,6 +56,12 @@ public:
         setStyleSheet(tileQss);
         setObjectName("CardTile");
         setFocusPolicy(Qt::NoFocus);
+        setCheckable(true);
+        connect(this, &QAbstractButton::toggled,
+                this, [this](bool){
+                    // Cuando cambie checked, forzamos un repaint
+                    this->update();
+                });
         shadow = new QGraphicsDropShadowEffect(this);
         shadow->setBlurRadius(18);
         shadow->setOffset(0, 4);
@@ -74,18 +85,29 @@ protected:
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
 
-        const int radius = 12;
+            const int radius = 12;
         QPainterPath path;
         path.addRoundedRect(rect(), radius, radius);
         p.setClipPath(path);
 
-        QColor back = underMouse() ? QColor("#546E7A") : QColor("#37474F");
+            // Fondo normal / hover
+            QColor back = underMouse() ? QColor("#546E7A") : QColor("#37474F");
         p.fillPath(path, back);
 
-        p.setPen(QPen(QColor("#455A64"), 1));
+            // 2) Borde distinto si está chequeada
+            QPen pen;
+        if (isChecked()) {
+            pen.setColor(QColor("#4dd0e1"));
+                pen.setWidth(3);
+            } else {
+            pen.setColor(QColor("#455A64"));
+                pen.setWidth(1);
+            }
+        p.setPen(pen);
         p.drawPath(path);
 
-        p.setPen(Qt::white);
+            // Texto siempre igual
+           p.setPen(Qt::white);
         p.setFont(QFont("Segoe UI", 10, QFont::Bold));
         p.drawText(rect(), Qt::AlignCenter, text());
     }
@@ -283,7 +305,8 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
     QWidget *deckPage = new QWidget;
     deckPage->setStyleSheet("background:#1e1e1e;");
     makeFadeEffect(deckPage);
-
+    deckGroup = new QButtonGroup(this);
+    deckGroup->setExclusive(true);
     QVBoxLayout *vDeck = new QVBoxLayout(deckPage);
     vDeck->setAlignment(Qt::AlignTop);
     QLabel *lblDeck = new QLabel("Gestión de Barajas");
@@ -292,9 +315,15 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
 
     QGridLayout *gridDeck = new QGridLayout;
     gridDeck->setSpacing(15);
-    for (int i = 0; i < 6; ++i)
-        gridDeck->addWidget(new CardTile(QString("Baraja %1").arg(i+1)),
-                            i/3, i%3);
+    for (int i = 0; i < 6; ++i) {
+        CardTile *tile = new CardTile(QString("Baraja %1").arg(i+1));
+            deckGroup->addButton(tile, i);
+            gridDeck->addWidget(tile, i/3, i%3);
+    }
+    connect(deckGroup, &QButtonGroup::idClicked,
+            this, [=](int id){
+            QSettings().setValue("selectedDeck", id);
+    });
     vDeck->addLayout(gridDeck);
     stackedWidget->addWidget(deckPage);
 
@@ -302,7 +331,8 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
     QWidget *matPage = new QWidget;
     matPage->setStyleSheet("background:#1e1e1e;");
     makeFadeEffect(matPage);
-
+    matGroup = new QButtonGroup(this);
+    matGroup->setExclusive(true);
     QVBoxLayout *vMat = new QVBoxLayout(matPage);
     vMat->setAlignment(Qt::AlignTop);
     QLabel *lblMat = new QLabel("Gestión de Tapetes");
@@ -311,9 +341,15 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
 
     QGridLayout *gridMat = new QGridLayout;
     gridMat->setSpacing(15);
-    for (int i = 0; i < 6; ++i)
-        gridMat->addWidget(new CardTile(QString("Tapete %1").arg(i+1)),
-                           i/3, i%3);
+    for (int i = 0; i < 6; ++i) {
+        CardTile *tile = new CardTile(QString("Tapete %1").arg(i+1));
+        matGroup->addButton(tile, i);
+        gridMat->addWidget(tile, i/3, i%3);
+    }
+    connect(matGroup, &QButtonGroup::idClicked,
+            this, [=](int id){
+            QSettings().setValue("selectedMat", id);
+    });
     vMat->addLayout(gridMat);
     stackedWidget->addWidget(matPage);
 
@@ -321,7 +357,15 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
     sidebar->setCurrentRow(0);
     connect(sidebar, &QListWidget::currentRowChanged,
             this,    &InventoryWindow::onTabChanged);
+
+    QSettings s;
+    int selDeck = s.value("selectedDeck", 0).toInt();
+    if (auto *b = deckGroup->button(selDeck)) b->setChecked(true);
+
+    int selMat = s.value("selectedMat", 0).toInt();
+    if (auto *b2 = matGroup->button(selMat)) b2->setChecked(true);
 }
+
 
 void InventoryWindow::onTabChanged(int row)
 {
