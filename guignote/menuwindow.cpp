@@ -18,6 +18,7 @@
 #include "friendswindow.h"
 #include "myprofilewindow.h"
 #include "rankingwindow.h"
+#include "rejoinwindow.h"
 #include <QGraphicsDropShadowEffect>
 #include <QTimer>
 #include <QNetworkAccessManager>
@@ -329,46 +330,9 @@ void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int 
     });
     rotateTimer->start(100);
        // ——————————————————————————————————————————————————————————
-
 }
 
-
-
-// Constructor de la clase MenuWindow
-MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::MenuWindow),
-    boton1v1(nullptr),
-    boton2v2(nullptr),
-    bottomBar(nullptr),
-    topBar(nullptr),
-    settings(nullptr),
-    friends(nullptr),
-    exit(nullptr),
-    usrLabel(nullptr)
-{
-    ui->setupUi(this);
-    // Activa el relleno de fondo desde la hoja de estilo
-    this->setAttribute(Qt::WA_StyledBackground, true);
-
-    token = loadAuthToken(userKey);
-    qDebug() << "Token recibido: " + token;
-    webSocket = nullptr;
-
-    // ------------- IMÁGENES DE CARTAS -------------
-    boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
-    boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
-
-    // ------------- EVENTOS DE CLICK EN CARTAS -------------
-    connect(boton1v1, &ImageButton::clicked, this, [this, userKey]() {
-        jugarPartida(userKey, token, 2);
-    });
-    connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
-        jugarPartida( userKey, token, 4);
-    });
-
-    // ------------- BOTON DE RECONEXION -------------
-
+void MenuWindow::checkRejoin(){
     QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
     request.setRawHeader("Auth", token.toUtf8());
@@ -405,11 +369,14 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
         QJsonArray salas = obj.value("salas").toArray();
         if (salas.isEmpty()) {
             qDebug() << "No hay salas reconectables.";
+            if (ReconnectButton != nullptr) {
+                delete ReconnectButton;
+                ReconnectButton = nullptr;  // Es una buena práctica poner el puntero a null después de borrarlo.
+            }
         } else {
             qDebug() << "Salas reconectables encontradas:";
-            // Crear el botón
-            // Crear el botón
-            QPushButton *ReconnectButton = new QPushButton("Reconectarse", this);
+
+            ReconnectButton = new QPushButton("Reconectarse", this);
 
             // Establecer el estilo del botón
             ReconnectButton->setStyleSheet(
@@ -429,8 +396,10 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
             ReconnectButton->setFixedSize(200, 50);  // Establece un tamaño fijo
 
             // Conectar la señal del botón con el slot
-            connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
-                qDebug() << "YIPEEE";
+            connect(ReconnectButton, &QPushButton::clicked, this, [this, salas]() {
+                RejoinWindow *rjWin = new RejoinWindow(salas, this);
+                rjWin->setModal(true);
+                rjWin->exec();
             });
 
             // Crear un layout vertical para gestionar la disposición
@@ -457,6 +426,44 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
         }
         reply->deleteLater();
     });
+}
+
+// Constructor de la clase MenuWindow
+MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
+    QWidget(parent),
+    ui(new Ui::MenuWindow),
+    boton1v1(nullptr),
+    boton2v2(nullptr),
+    bottomBar(nullptr),
+    topBar(nullptr),
+    settings(nullptr),
+    friends(nullptr),
+    exit(nullptr),
+    usrLabel(nullptr)
+{
+    ui->setupUi(this);
+    // Activa el relleno de fondo desde la hoja de estilo
+    this->setAttribute(Qt::WA_StyledBackground, true);
+
+    token = loadAuthToken(userKey);
+    qDebug() << "Token recibido: " + token;
+    webSocket = nullptr;
+
+    // ------------- IMÁGENES DE CARTAS -------------
+    boton1v1 = new ImageButton(":/images/cartaBoton.png", "Individual", this);
+    boton2v2 = new ImageButton(":/images/cartasBoton.png", "Parejas", this);
+
+    // ------------- EVENTOS DE CLICK EN CARTAS -------------
+    connect(boton1v1, &ImageButton::clicked, this, [this, userKey]() {
+        jugarPartida(userKey, token, 2);
+    });
+    connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
+        jugarPartida( userKey, token, 4);
+    });
+
+     // ------------- BOTON DE RECONEXION -------------
+
+    checkRejoin();
 
     // ------------- BARRAS (BARS) -------------
     bottomBar = new QFrame(this);

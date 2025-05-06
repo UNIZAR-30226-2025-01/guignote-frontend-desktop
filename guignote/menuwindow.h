@@ -85,6 +85,8 @@ private:
     void manejarMensaje(const QString &userKey, const QString &mensaje);
     QString usr;
     int id;
+    QPushButton *ReconnectButton;
+    void checkRejoin();
 
     QLabel* countLabel = nullptr;
 
