@@ -4,8 +4,8 @@
 #include <QVector>
 #include "carta.h"  // ✅ Incluido aquí porque usamos objetos reales (no solo punteros)
 
-const int MIN_SPACING = 15;
-const int MARGIN = 8;
+#define MARGIN 20         // Margen desde los bordes de la ventana
+#define MIN_SPACING 10    // Espaciado mínimo entre cartas
 
 class Mano
 {

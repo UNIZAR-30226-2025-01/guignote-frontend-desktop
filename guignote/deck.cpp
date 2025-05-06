@@ -5,6 +5,7 @@
 Deck::Deck(Carta* triunfo, int skin, int cardSize, QWidget *parent, QString token)
     : QWidget(parent), triunfo(triunfo), skin(skin), num(40)
 {
+    // commit
     this->token = token;
     // Fondo del mazo
     fondo = new QLabel(this);
