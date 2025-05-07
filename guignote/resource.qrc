@@ -121,5 +121,8 @@
         <file>decks/poker/1Oros.png</file>
         <file>icons/audio.png</file>
         <file>icons/darkenedaudio.png</file>
+        <file>tiles/base.png</file>
+        <file>tiles/poker.png</file>
+        <file>tiles/tapetebase.png</file>
     </qresource>
 </RCC>

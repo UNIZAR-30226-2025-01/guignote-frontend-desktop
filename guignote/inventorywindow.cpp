@@ -11,6 +11,8 @@
 #include <QStyle>
 #include <QButtonGroup>
 #include <QSettings>
+#include <QStringList>
+#include <QPixmap>
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
 #include <QPropertyAnimation>
@@ -49,8 +51,11 @@ class CardTile : public QPushButton
 {
     Q_OBJECT
 public:
-    explicit CardTile(const QString &text, QWidget *parent = nullptr)
+    explicit CardTile(const QString &text,
+                      const QPixmap &pixmap = QPixmap(),
+                      QWidget *parent = nullptr)
         : QPushButton(text, parent)
+        , m_pixmap(pixmap)
     {
         setFixedSize(150, 110);
         setStyleSheet(tileQss);
@@ -80,37 +85,52 @@ protected:
         QPushButton::leaveEvent(e);
     }
 
-    void paintEvent(QPaintEvent *) override
-    {
+    void paintEvent(QPaintEvent *) override {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
 
-            const int radius = 12;
+        // 1) Fondo y clip
+        const int radius = 12;
         QPainterPath path;
         path.addRoundedRect(rect(), radius, radius);
         p.setClipPath(path);
-
-            // Fondo normal / hover
-            QColor back = underMouse() ? QColor("#546E7A") : QColor("#37474F");
+        QColor back = underMouse() ? QColor("#546E7A") : QColor("#37474F");
         p.fillPath(path, back);
 
-            // 2) Borde distinto si está chequeada
-            QPen pen;
-        if (isChecked()) {
-            pen.setColor(QColor("#4dd0e1"));
-                pen.setWidth(3);
-            } else {
-            pen.setColor(QColor("#455A64"));
-                pen.setWidth(1);
-            }
+        // 2) Si tenemos imagen, la dibujamos a tope y salimos:
+        if (!m_pixmap.isNull()) {
+            // Deja un margen mínimo
+            QRect imgArea = rect().adjusted(5, 5, -5, -5);
+            QPixmap scaled = m_pixmap.scaled(
+                imgArea.size(),
+                Qt::KeepAspectRatioByExpanding,
+                Qt::SmoothTransformation);
+            // Centrar el scaled dentro de imgArea
+            QPoint pt(
+                imgArea.x() + (imgArea.width()  - scaled.width())/2,
+                imgArea.y() + (imgArea.height() - scaled.height())/2
+                );
+            p.drawPixmap(pt, scaled);
+
+            // Borde de selección
+            QPen pen(isChecked() ? QColor("#4dd0e1") : QColor("#455A64"),
+                     isChecked() ? 3 : 1);
+            p.setPen(pen);
+            p.drawPath(path);
+            return;  // ¡no dibujamos texto!
+        }
+
+        // 3) Si no hay imagen, dibujar borde y texto como antes
+        QPen pen(isChecked() ? QColor("#4dd0e1") : QColor("#455A64"),
+                 isChecked() ? 3 : 1);
         p.setPen(pen);
         p.drawPath(path);
 
-            // Texto siempre igual
-           p.setPen(Qt::white);
+        p.setPen(Qt::white);
         p.setFont(QFont("Segoe UI", 10, QFont::Bold));
         p.drawText(rect(), Qt::AlignCenter, text());
     }
+
 
 private:
     void elevate(qreal blur, qreal y)
@@ -128,6 +148,7 @@ private:
     }
 
     QGraphicsDropShadowEffect *shadow;
+    QPixmap m_pixmap;
 };
 
 /* ------------------------------------------------------------------ */
@@ -313,18 +334,32 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
     lblDeck->setStyleSheet("color:#fff;font-size:24px;font-weight:bold;");
     vDeck->addWidget(lblDeck, 0, Qt::AlignHCenter);
 
+    QStringList deckImages = {
+        ":/tiles/base.png",
+        ":/tiles/poker.png",
+        "", "", "", ""
+    };
     QGridLayout *gridDeck = new QGridLayout;
     gridDeck->setSpacing(15);
     for (int i = 0; i < 6; ++i) {
-        CardTile *tile = new CardTile(QString("Baraja %1").arg(i+1));
+        QPixmap pix(deckImages[i]);             // carga directa desde recurso
+        CardTile *tile = new CardTile(
+            QString("Baraja %1").arg(i+1), pix
+            );
+        bool has = !pix.isNull();
+        tile->setCheckable(has);
+        tile->setEnabled(has);
+        if (has)
             deckGroup->addButton(tile, i);
-            gridDeck->addWidget(tile, i/3, i%3);
+        gridDeck->addWidget(tile, i/3, i%3);
     }
+    vDeck->addLayout(gridDeck);
+
+    // ¡AHORA! Conecta deckGroup para guardar la selección
     connect(deckGroup, &QButtonGroup::idClicked,
             this, [=](int id){
-            QSettings().setValue("selectedDeck", id);
-    });
-    vDeck->addLayout(gridDeck);
+                QSettings().setValue("selectedDeck", id);
+            });
     stackedWidget->addWidget(deckPage);
 
     /* ====================  Página 2 : Tapetes ==================== */
@@ -339,18 +374,40 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
     lblMat->setStyleSheet("color:#fff;font-size:24px;font-weight:bold;");
     vMat->addWidget(lblMat, 0, Qt::AlignHCenter);
 
+    QStringList matImages = {
+        ":/tiles/tapetebase.png", // tapete 1
+        "", "", "", "", ""
+    };
     QGridLayout *gridMat = new QGridLayout;
     gridMat->setSpacing(15);
     for (int i = 0; i < 6; ++i) {
-        CardTile *tile = new CardTile(QString("Tapete %1").arg(i+1));
-        matGroup->addButton(tile, i);
+        // Carga directa desde recurso (queda null si ruta vacía)
+        QPixmap pix(matImages[i]);
+
+        // Construye la tarjeta con su imagen (si la hay)
+        CardTile *tile = new CardTile(
+            QString("Tapete %1").arg(i+1),
+            pix
+            );
+
+        // Solo habilitar y checkable si la pixmap no está vacía
+        bool has = !pix.isNull();
+        tile->setCheckable(has);
+        tile->setEnabled(has);
+
+        // Si tiene imagen, lo añadimos al grupo para selección
+        if (has)
+            matGroup->addButton(tile, i);
+
         gridMat->addWidget(tile, i/3, i%3);
     }
+    vMat->addLayout(gridMat);
+
+    // Conecta la selección para persistir en QSettings
     connect(matGroup, &QButtonGroup::idClicked,
             this, [=](int id){
-            QSettings().setValue("selectedMat", id);
-    });
-    vMat->addLayout(gridMat);
+                QSettings().setValue("selectedMat", id);
+            });
     stackedWidget->addWidget(matPage);
 
     /* ---------- señales ---------- */
