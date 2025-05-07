@@ -292,7 +292,7 @@ LoginWindow::LoginWindow(QWidget *parent)
                             // CREAMOS EL LOADINGWINDOW con mainWin como padre
                             LoadingWindow *loadWin = new LoadingWindow(userKey, mainWin);
                             mainWin->setCentralWidget(loadWin);
-                            loadWin->show();
+                            loadWin->showFullScreen();
                             this->close();   // cierra solo el LoginWindow, loadWin sobrevive
                         } else {
                             // Si no hay MainWindow, lo mostramos sin padre

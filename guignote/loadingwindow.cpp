@@ -131,11 +131,12 @@ void LoadingWindow::onFadeOutFinished(const QString &userKey) {
     if (mainWin) {
         MenuWindow *menuWin = new MenuWindow(userKey, mainWin);
         mainWin->setCentralWidget(menuWin);
+        mainWin->showFullScreen();
     } else {
         // Si no se tiene un QMainWindow, se crea MenuWindow con la misma geometría.
         MenuWindow *menuWin = new MenuWindow(userKey);
         menuWin->setGeometry(this->geometry());
-        menuWin->show();
+        menuWin->showFullScreen();
     }
 
     if (fadeAnimation) {
