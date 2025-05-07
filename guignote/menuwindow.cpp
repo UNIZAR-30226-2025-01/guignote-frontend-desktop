@@ -18,6 +18,7 @@
 #include "friendswindow.h"
 #include "myprofilewindow.h"
 #include "rankingwindow.h"
+#include "rejoinwindow.h"
 #include <QGraphicsDropShadowEffect>
 #include <QTimer>
 #include <QNetworkAccessManager>
@@ -328,11 +329,54 @@ void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int 
         }
     });
     rotateTimer->start(100);
-        // ——————————————————————————————————————————————————————————
-
+       // ——————————————————————————————————————————————————————————
 }
 
+void MenuWindow::checkRejoin(){
+    QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
+    QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
+    request.setRawHeader("Auth", token.toUtf8());
+    qDebug() << "Comprobamos salas reconectables...";
 
+    QNetworkReply *reply = networkManager->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        // Comprueba errores de red
+        qDebug() << "Obtenemos respuesta sobre las salas reconectables...";
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Error de red:" << reply->errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        // Lee y parsea el JSON
+        const QByteArray data = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+            qDebug() << "Error parseando JSON:" << parseError.errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        QJsonObject obj = doc.object();
+        // Verifica que exista el array "salas"
+        if (!obj.contains("salas") || !obj.value("salas").isArray()) {
+            qDebug() << "La respuesta no contiene el campo 'salas'";
+            reply->deleteLater();
+            return;
+        }
+
+        salas = obj.value("salas").toArray();
+        if (salas.isEmpty()) {
+            qDebug() << "No hay salas reconectables.";
+            ReconnectButton->hide();
+        } else {
+            qDebug() << "Salas reconectables encontradas:";
+            ReconnectButton->show();
+        }
+        reply->deleteLater();
+    });
+}
 
 // Constructor de la clase MenuWindow
 MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
@@ -345,12 +389,18 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     settings(nullptr),
     friends(nullptr),
     exit(nullptr),
-    usrLabel(nullptr)
+    usrLabel(nullptr),
+    rejoinTimer(new QTimer(this))
 {
+    connect(rejoinTimer, &QTimer::timeout,
+            this, &MenuWindow::checkRejoin);
+    rejoinTimer->start(5000);
+
     ui->setupUi(this);
     // Activa el relleno de fondo desde la hoja de estilo
     this->setAttribute(Qt::WA_StyledBackground, true);
 
+    this->userKey = userKey;
     token = loadAuthToken(userKey);
     qDebug() << "Token recibido: " + token;
     webSocket = nullptr;
@@ -366,6 +416,58 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
         jugarPartida( userKey, token, 4);
     });
+
+     // ------------- BOTON DE RECONEXION -------------
+
+    // Layout principal
+    mainLayout = new QVBoxLayout;
+    // agregamos un espacio creciente para empujar el botón abajo
+    mainLayout->addStretch();
+
+    // Creamos ya el botón (pero oculto)
+    ReconnectButton = new QPushButton("Reconectarse", this);
+    ReconnectButton->setVisible(false);
+
+    ReconnectButton->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #c2c2c3;"
+        "   color: #171718;"
+        "   font-size: 20px;"
+        "   font-weight: bold;"
+        "   padding: 12px 25px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #9b9b9b;"
+        "}"
+        );
+
+    // Establecer una altura y anchura fija para el botón
+    ReconnectButton->setFixedSize(200, 50);  // Establece un tamaño fijo
+
+    // Conectar la señal del botón con el slot
+    connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
+        RejoinWindow *rjWin = new RejoinWindow(
+            this->salas,
+            this->fondo,
+            this->userKey,
+            this->usr,
+            this
+            );
+        rjWin->setModal(true);
+        rjWin->exec();
+    });
+
+    QHBoxLayout *h = new QHBoxLayout;
+    h->addStretch();
+    h->addWidget(ReconnectButton);
+    h->addStretch();
+    mainLayout->addLayout(h);
+    mainLayout->setContentsMargins(0,0,0,90);
+    mainLayout->setAlignment(Qt::AlignBottom);
+
+    setLayout(mainLayout);
+
+    checkRejoin();
 
     // ------------- BARRAS (BARS) -------------
     bottomBar = new QFrame(this);

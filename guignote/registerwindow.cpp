@@ -165,6 +165,7 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     registerButton->setFixedSize(200, 50);
     mainLayout->addWidget(registerButton, 0, Qt::AlignCenter);
 
+
     // Conexión para el botón "Crear Cuenta": valida los campos, envía una petición POST y maneja la respuesta.
     connect(registerButton, &QPushButton::clicked, this, [=]() {
         QString nombre = usernameEdit->text().trimmed();
