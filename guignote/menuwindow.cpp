@@ -328,7 +328,7 @@ void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int 
         }
     });
     rotateTimer->start(100);
-       // ——————————————————————————————————————————————————————————
+        // ——————————————————————————————————————————————————————————
 
 }
 
