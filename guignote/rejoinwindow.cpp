@@ -4,9 +4,17 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QWebSocket>
+#include "gamewindow.h"
 
-RejoinWindow::RejoinWindow(QJsonArray jsonArray, QWidget *parent)
+RejoinWindow::RejoinWindow(QJsonArray jsonArray, int type, int fondo, QString &userKey, QString usr, QWidget *parent)
     : QDialog(parent), salas(jsonArray) {
+    this->type = type;
+    this->fondo = fondo;
+    this->usr = usr;
+    this->userKey = userKey;
+
+    token = loadAuthToken(userKey);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
@@ -103,8 +111,9 @@ void RejoinWindow::populateSalas() {
             "  background-color: #218838;"
             "}"
             );
-        connect(btn, &QPushButton::clicked, this, [idStr]() {
+        connect(btn, &QPushButton::clicked, this, [this, idStr]() {
             qDebug() << "Sala" << idStr << "pulsada";
+            rejoin(idStr);
         });
 
         // ——— Montamos la fila dentro del contenedor ———
@@ -119,4 +128,125 @@ void RejoinWindow::populateSalas() {
     }
 }
 
+void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
+    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
+    if (!doc.isObject()) {
+        qWarning() << "❌ Mensaje no es JSON válido.";
+        return;
+    }
 
+    QWidget *w = parentWidget();
+    MenuWindow *menuWin = qobject_cast<MenuWindow*>(w);
+
+    QJsonObject root = doc.object();
+    QString tipo = root.value("type").toString();
+    QJsonObject data = root.value("data").toObject();
+
+    if (tipo == "player_joined") {
+        QString nombre = data["usuario"].toObject()["nombre"].toString();
+        int id = data["usuario"].toObject()["id"].toInt();
+        int chatId = data["chat_id"].toInt();
+
+        qDebug() << "ChatID: " << chatId;
+
+        qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
+
+        if(nombre == usr){
+            this->id = id;
+        }
+    }
+
+    else if (tipo == "start_game") {
+        int mazoRestante = data["mazo_restante"].toInt();
+        bool faseArrastre = data["fase_arrastre"].toBool();
+        int chatId = data["chat_id"].toInt();
+
+        QJsonObject cartaTriunfo = data["carta_triunfo"].toObject();
+        QString paloTriunfo = cartaTriunfo["palo"].toString();
+        int valorTriunfo = cartaTriunfo["valor"].toInt();
+
+        QJsonArray cartasJugador = data["mis_cartas"].toArray();
+        QJsonArray jugadores = data["jugadores"].toArray();
+
+        qDebug() << "🎮 Inicio de partida";
+        qDebug() << "🃏 Triunfo:" << paloTriunfo << valorTriunfo;
+        qDebug() << "📦 Cartas en mazo:" << mazoRestante;
+        qDebug() << "💬 Chat ID:" << chatId;
+
+        int numJugadores = jugadores.size();
+
+        int type = -1;
+
+        switch (numJugadores) {
+        case 2:
+            type = 1;
+            break;
+        case 4:
+            type = 2;
+            break;
+        default:
+            break;
+        }
+
+        // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
+        GameWindow *gameWindow = new GameWindow(userKey, type, 1, data, id, webSocket, usr, menuWin);
+        // Le damos la misma posición y tamaño que el MenuWindow
+        gameWindow->setGeometry(w->geometry());
+        gameWindow->show();
+
+        QWidget *top = this->window();
+        top->close();
+    }
+}
+
+
+// Función para extraer el token de autenticación desde el archivo .conf
+QString RejoinWindow::loadAuthToken(const QString &userKey) {
+    QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
+
+    qDebug() << "userKey: " << userKey;
+
+    QFile configFile(configPath);
+    if (!configFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // Pon un qDebug() o algo para saber que falló
+        qDebug() << "No se pudo abrir el archivo de configuración en MenuWindow." << configFile.fileName();
+        return "";
+    }
+
+    QString token;
+    while (!configFile.atEnd()) {
+        QString line = configFile.readLine().trimmed();
+        if (line.startsWith("token=")) {
+            token = line.mid(QString("token=").length()).trimmed();
+            break;
+        }
+    }
+    configFile.close();
+    return token;
+}
+
+void RejoinWindow::rejoin(QString idPart) {
+
+    qDebug() << "creamos socket";
+    webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+    // conexión original
+    connect(webSocket, &QWebSocket::connected, [this]() {
+        qDebug() << "WebSocket conectado correctamente.";
+    });
+
+    connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
+        qDebug() << "Error en WebSocket:" << error;
+    });
+    connect(webSocket, &QWebSocket::textMessageReceived, this, [=](const QString &mensaje) {
+        this->manejarMensaje(userKey, mensaje);
+    });
+
+
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2")
+                      .arg(token)
+                      .arg(idPart);
+    qDebug() << "Conectando a:" << url;
+    webSocket->open(QUrl(url));
+}

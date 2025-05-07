@@ -395,6 +395,7 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     // Activa el relleno de fondo desde la hoja de estilo
     this->setAttribute(Qt::WA_StyledBackground, true);
 
+    this->userKey = userKey;
     token = loadAuthToken(userKey);
     qDebug() << "Token recibido: " + token;
     webSocket = nullptr;
@@ -440,7 +441,14 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
 
     // Conectar la señal del botón con el slot
     connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
-        RejoinWindow *rjWin = new RejoinWindow(salas, this);
+        RejoinWindow *rjWin = new RejoinWindow(
+            this->salas,
+            this->type,
+            this->fondo,
+            this->userKey,
+            this->usr,
+            this
+            );
         rjWin->setModal(true);
         rjWin->exec();
     });

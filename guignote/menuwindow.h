@@ -86,6 +86,7 @@ private:
     int jugadoresMax = 0;
     void manejarMensaje(const QString &userKey, const QString &mensaje);
     QString usr;
+    QString userKey;
     int id;
     QPushButton *ReconnectButton = nullptr;
     QJsonArray salas;
@@ -100,6 +101,10 @@ private:
     Icon *friendsIcon = nullptr;
     Icon *messagesIcon = nullptr;
     int   unreadMessages = 0;
+
+    // Skins seleccionadas
+    int type = 1;
+    int fondo = 1;
 };
 
 #endif // MENUWINDOW_H
