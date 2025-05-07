@@ -366,63 +366,13 @@ void MenuWindow::checkRejoin(){
             return;
         }
 
-        QJsonArray salas = obj.value("salas").toArray();
+        salas = obj.value("salas").toArray();
         if (salas.isEmpty()) {
             qDebug() << "No hay salas reconectables.";
-            if (ReconnectButton != nullptr) {
-                delete ReconnectButton;
-                ReconnectButton = nullptr;  // Es una buena práctica poner el puntero a null después de borrarlo.
-            }
+            ReconnectButton->hide();
         } else {
             qDebug() << "Salas reconectables encontradas:";
-
-            ReconnectButton = new QPushButton("Reconectarse", this);
-
-            // Establecer el estilo del botón
-            ReconnectButton->setStyleSheet(
-                "QPushButton {"
-                "   background-color: #c2c2c3;"
-                "   color: #171718;"
-                "   font-size: 20px;"
-                "   font-weight: bold;"
-                "   padding: 12px 25px;"
-                "}"
-                "QPushButton:hover {"
-                "   background-color: #9b9b9b;"
-                "}"
-                );
-
-            // Establecer una altura y anchura fija para el botón
-            ReconnectButton->setFixedSize(200, 50);  // Establece un tamaño fijo
-
-            // Conectar la señal del botón con el slot
-            connect(ReconnectButton, &QPushButton::clicked, this, [this, salas]() {
-                RejoinWindow *rjWin = new RejoinWindow(salas, this);
-                rjWin->setModal(true);
-                rjWin->exec();
-            });
-
-            // Crear un layout vertical para gestionar la disposición
-            QVBoxLayout *reconlayout = new QVBoxLayout(this);
-
-            // Crear un layout horizontal para centrar el botón
-            QHBoxLayout *hLayout = new QHBoxLayout();
-            hLayout->addStretch();  // Añadir espacio de relleno antes del botón
-            hLayout->addWidget(ReconnectButton);  // Añadir el botón al layout
-            hLayout->addStretch();  // Añadir espacio de relleno después del botón
-
-            // Agregar el layout horizontal al layout vertical
-            reconlayout->addLayout(hLayout);
-
-            // Establecer un margen en la parte inferior para mover el botón por encima
-            reconlayout->setContentsMargins(0, 0, 0, 90);  // El último valor es el margen inferior (ajústalo como desees)
-
-            // Establecer la alineación del layout vertical al fondo, pero con margen
-            reconlayout->setAlignment(Qt::AlignBottom);
-
-            // Establecer el layout en el widget
-            setLayout(reconlayout);
-
+            ReconnectButton->show();
         }
         reply->deleteLater();
     });
@@ -462,6 +412,48 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     });
 
      // ------------- BOTON DE RECONEXION -------------
+
+    // Layout principal
+    mainLayout = new QVBoxLayout;
+    // agregamos un espacio creciente para empujar el botón abajo
+    mainLayout->addStretch();
+
+    // Creamos ya el botón (pero oculto)
+    ReconnectButton = new QPushButton("Reconectarse", this);
+    ReconnectButton->setVisible(false);
+
+    ReconnectButton->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #c2c2c3;"
+        "   color: #171718;"
+        "   font-size: 20px;"
+        "   font-weight: bold;"
+        "   padding: 12px 25px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #9b9b9b;"
+        "}"
+        );
+
+    // Establecer una altura y anchura fija para el botón
+    ReconnectButton->setFixedSize(200, 50);  // Establece un tamaño fijo
+
+    // Conectar la señal del botón con el slot
+    connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
+        RejoinWindow *rjWin = new RejoinWindow(salas, this);
+        rjWin->setModal(true);
+        rjWin->exec();
+    });
+
+    QHBoxLayout *h = new QHBoxLayout;
+    h->addStretch();
+    h->addWidget(ReconnectButton);
+    h->addStretch();
+    mainLayout->addLayout(h);
+    mainLayout->setContentsMargins(0,0,0,90);
+    mainLayout->setAlignment(Qt::AlignBottom);
+
+    setLayout(mainLayout);
 
     checkRejoin();
 

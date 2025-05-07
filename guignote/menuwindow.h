@@ -12,6 +12,8 @@
 #include <QEvent>
 #include <QPushButton>
 #include <QWebSocket>
+#include <QVBoxLayout>
+#include <QJsonArray>
 
 class ImageButton;
 class Icon;
@@ -85,7 +87,9 @@ private:
     void manejarMensaje(const QString &userKey, const QString &mensaje);
     QString usr;
     int id;
-    QPushButton *ReconnectButton;
+    QPushButton *ReconnectButton = nullptr;
+    QJsonArray salas;
+    QVBoxLayout *mainLayout;
     void checkRejoin();
 
     QLabel* countLabel = nullptr;

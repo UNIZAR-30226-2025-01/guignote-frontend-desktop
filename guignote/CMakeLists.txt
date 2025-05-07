@@ -91,6 +91,8 @@ if(BUILD_TESTING)
         tests/test_inventorywindow.cpp
         tests/test_friendswindow.h
         tests/test_friendswindow.cpp
+        rejoinwindow.h
+        rejoinwindow.cpp
 
 
 

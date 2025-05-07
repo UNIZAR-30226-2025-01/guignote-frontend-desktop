@@ -17,6 +17,7 @@ public:
 private:
     void setupUI();
     QHBoxLayout* createHeaderLayout();
+    void populateSalas();
 
     QJsonArray salas;
 
