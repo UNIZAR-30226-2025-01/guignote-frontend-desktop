@@ -14,6 +14,7 @@
 #include <QWebSocket>
 #include <QVBoxLayout>
 #include <QJsonArray>
+#include <QTimer>
 
 class ImageButton;
 class Icon;
@@ -103,8 +104,8 @@ private:
     int   unreadMessages = 0;
 
     // Skins seleccionadas
-    int type = 1;
     int fondo = 1;
+    QTimer *rejoinTimer;
 };
 
 #endif // MENUWINDOW_H

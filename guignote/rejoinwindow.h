@@ -13,7 +13,7 @@ class RejoinWindow : public QDialog {
     Q_OBJECT
 
 public:
-    explicit RejoinWindow(QJsonArray jsonArray, int type, int fondo, QString &userKey, QString usr, QWidget *parent = nullptr);
+    explicit RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent = nullptr);
 
 private:
     void setupUI();
@@ -28,7 +28,6 @@ private:
     QPushButton *closeButton;
     QLabel *titleLabel;
     QVBoxLayout *mainLayout;
-    int type;
     int fondo;
     QString usr;
     QString userKey;

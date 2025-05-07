@@ -389,8 +389,13 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     settings(nullptr),
     friends(nullptr),
     exit(nullptr),
-    usrLabel(nullptr)
+    usrLabel(nullptr),
+    rejoinTimer(new QTimer(this))
 {
+    connect(rejoinTimer, &QTimer::timeout,
+            this, &MenuWindow::checkRejoin);
+    rejoinTimer->start(5000);
+
     ui->setupUi(this);
     // Activa el relleno de fondo desde la hoja de estilo
     this->setAttribute(Qt::WA_StyledBackground, true);
@@ -443,7 +448,6 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
         RejoinWindow *rjWin = new RejoinWindow(
             this->salas,
-            this->type,
             this->fondo,
             this->userKey,
             this->usr,

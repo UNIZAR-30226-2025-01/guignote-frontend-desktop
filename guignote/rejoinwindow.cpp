@@ -7,9 +7,8 @@
 #include <QWebSocket>
 #include "gamewindow.h"
 
-RejoinWindow::RejoinWindow(QJsonArray jsonArray, int type, int fondo, QString &userKey, QString usr, QWidget *parent)
+RejoinWindow::RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent)
     : QDialog(parent), salas(jsonArray) {
-    this->type = type;
     this->fondo = fondo;
     this->usr = usr;
     this->userKey = userKey;
@@ -173,10 +172,18 @@ void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje
         qDebug() << "📦 Cartas en mazo:" << mazoRestante;
         qDebug() << "💬 Chat ID:" << chatId;
 
+        // — Nuevo: listamos id y número de cartas de cada jugador —
+        for (const QJsonValue &v : jugadores) {
+            if (!v.isObject()) continue;
+            QJsonObject jo = v.toObject();
+            int pid        = jo.value("id").toInt();
+            int numCartas  = jo.value("num_cartas").toInt();
+            qDebug() << "👤 Jugador" << pid << "→" << numCartas << "cartas";
+        }
+
         int numJugadores = jugadores.size();
-
+        qDebug() << "hay " << numJugadores << " jugadores";
         int type = -1;
-
         switch (numJugadores) {
         case 2:
             type = 1;
@@ -188,15 +195,17 @@ void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje
             break;
         }
 
-        // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
-        GameWindow *gameWindow = new GameWindow(userKey, type, 1, data, id, webSocket, usr, menuWin);
-        // Le damos la misma posición y tamaño que el MenuWindow
+        // — Construimos el GameWindow y lo colocamos donde estaba el menú —
+        GameWindow *gameWindow = new GameWindow(
+            userKey, type, 1, data, id, webSocket, usr, menuWin
+            );
         gameWindow->setGeometry(w->geometry());
         gameWindow->show();
 
         QWidget *top = this->window();
         top->close();
     }
+
 }
 
 
