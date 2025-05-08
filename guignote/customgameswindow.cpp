@@ -18,7 +18,7 @@
 #include <QString>
 #include <QNetworkAccessManager>
 
-CustomGamesWindow::CustomGamesWindow(const QString &userKey, QWidget *parent)
+CustomGamesWindow::CustomGamesWindow(const QString &userKey, QString usr, int fondo, QWidget *parent)
     : QDialog(parent)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -28,6 +28,8 @@ CustomGamesWindow::CustomGamesWindow(const QString &userKey, QWidget *parent)
 
     networkManager = new QNetworkAccessManager(this);
     this->userKey = userKey;
+    this->usr = usr;
+    this->fondo = fondo;
     token = loadAuthToken(userKey);
     setupUI();
 
@@ -118,7 +120,7 @@ void CustomGamesWindow::setupUI() {
         "QPushButton:hover { background-color: #45A049; }"
         );
     connect(createGameButton, &QPushButton::clicked, this, [this](){
-        CrearCustomGame *createWin = new CrearCustomGame(userKey, this);
+        CrearCustomGame *createWin = new CrearCustomGame(userKey, usr, fondo, this);
         createWin->setModal(true);
         createWin->exec();
     });

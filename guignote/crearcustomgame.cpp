@@ -1,4 +1,5 @@
 #include "crearcustomgame.h"
+#include "gamewindow.h"
 #include <QListWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -15,8 +16,10 @@
 #include <QDebug>
 #include <QString>
 #include <QNetworkAccessManager>
+#include <QGraphicsDropShadowEffect>
+#include <QApplication>
 
-CrearCustomGame::CrearCustomGame(QString &userKey, QDialog *parent)
+CrearCustomGame::CrearCustomGame(QString &userKey, QString usr, int fondo, QDialog *parent)
     : QDialog(parent)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -24,6 +27,9 @@ CrearCustomGame::CrearCustomGame(QString &userKey, QDialog *parent)
     setStyleSheet("background-color: #222; border-radius: 30px; padding: 20px;");
     setFixedSize(500, 450);
 
+    this->userKey = userKey;
+    this->usr = usr;
+    this->fondo = fondo;
     networkManager = new QNetworkAccessManager(this);
 
     token = loadAuthToken(userKey);
@@ -84,12 +90,33 @@ void CrearCustomGame::setupUI(){
     amigosLayout->addWidget(soloAmigos);
     mainLayout->addLayout(amigosLayout);
 
+    // ——— “Capacidad” ———
+    QHBoxLayout *capacidadLayout = new QHBoxLayout();
+    capacidadLayout->addWidget(new QLabel("Capacidad", this));
+    ind = new QCheckBox("Individual", this);
+    par = new QCheckBox("Parejas", this);
+    ind->setChecked(individual);
+    par->setChecked(!individual);
+    connect(ind, &QCheckBox::stateChanged, this, [this](int s){
+        if (s == Qt::Checked) {
+            individual = true;
+            par->setChecked(false);
+        }
+    });
+    connect(par, &QCheckBox::stateChanged, this, [this](int s){
+        if (s == Qt::Checked) {
+            individual = false;
+            ind->setChecked(false);
+        }
+    });
+
+
     // ——— “Tiempo por turno” ———
     QHBoxLayout *tiempoLayout = new QHBoxLayout();
     tiempoLayout->addWidget(new QLabel("Tiempo por turno", this));
-    t15s = new QCheckBox("15", this);
-    t30s = new QCheckBox("30", this);
-    t60s = new QCheckBox("60", this);
+    t15s = new QCheckBox("15s", this);
+    t30s = new QCheckBox("30s", this);
+    t60s = new QCheckBox("60s", this);
     // estados iniciales
     t15s->setChecked(tiempo == 15);
     t30s->setChecked(tiempo == 30);
@@ -154,6 +181,7 @@ void CrearCustomGame::setupUI(){
                  << "tiempo:"      << tiempo
                  << "revueltasB:"  << revueltasB
                  << "arrastreB:"   << arrastreB;
+        crearPartida();
     });
     mainLayout->addWidget(crearBtn, 0, Qt::AlignCenter);
 
@@ -187,3 +215,265 @@ QString CrearCustomGame::loadAuthToken(const QString &userKey) {
     }
     return token;
 }
+
+void CrearCustomGame::crearPartida(){
+
+    // Inicializamos contadores
+    int capacidad;
+
+    if (individual) { capacidad = 2; } else { capacidad = 4; }
+
+    jugadoresCola = 1;
+    jugadoresMax  = capacidad;
+
+    qDebug() << "creamos socket";
+    webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+    // conexión original
+    connect(webSocket, &QWebSocket::connected, [this]() {
+        qDebug() << "WebSocket conectado correctamente.";
+    });
+
+    connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
+        qDebug() << "Error en WebSocket:" << error;
+    });
+    connect(webSocket, &QWebSocket::textMessageReceived, this, [=](const QString &mensaje) {
+        this->manejarMensaje(userKey, mensaje);
+    });
+ws://188.165.76.134:8000/ws/partida/?token=TU_TOKEN&es_personalizada=true&capacidad=4&solo_amigos=true&tiempo_turno=60&permitir_revueltas=true&reglas_arrastre=true
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&solo_amigos=%3&tiempo_turno=%4&permitir_revueltas=%5&reglas_arrastre=%6")
+                      .arg(token)
+                      .arg(capacidad)
+                      .arg(soloAmigosB)
+                      .arg(tiempo)
+                      .arg(revueltasB)
+                      .arg(arrastreB);
+    qDebug() << "Conectando a:" << url;
+    webSocket->open(QUrl(url));
+
+
+    // ————————————— Mostrar cuadro modal mientras busca partida —————————————
+    if (searchingDialog) {
+        searchingDialog->deleteLater();
+    }
+    searchingDialog = new QDialog(this);
+    searchingDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    searchingDialog->setModal(true);
+    searchingDialog->setStyleSheet(
+        "QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }"
+        );
+
+    // sombra
+    QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(searchingDialog);
+    dialogShadow->setBlurRadius(10);
+    dialogShadow->setColor(QColor(0,0,0,80));
+    dialogShadow->setOffset(4,4);
+    searchingDialog->setGraphicsEffect(dialogShadow);
+
+    QVBoxLayout *searchLayout = new QVBoxLayout(searchingDialog);
+
+    // título grande
+    QLabel *searchLabel = new QLabel("Buscando oponente...", searchingDialog);
+    searchLabel->setStyleSheet(
+        "color: white;"
+        "font-size: 28px;"
+        "background: transparent;"
+        );
+    searchLabel->setAlignment(Qt::AlignCenter);
+    searchLayout->addWidget(searchLabel);
+
+    // contador (1/Capacidad)
+    countLabel = new QLabel(
+        QString("(%1/%2)").arg(jugadoresCola).arg(jugadoresMax),
+        searchingDialog
+        );
+    countLabel->setStyleSheet("color: white; font-size: 20px; background: transparent;");
+    countLabel->setAlignment(Qt::AlignCenter);
+    searchLayout->addWidget(countLabel);
+
+    // candados giratorios
+    QHBoxLayout *iconsLayout = new QHBoxLayout();
+    iconsLayout->setSpacing(15);
+    iconsLayout->setAlignment(Qt::AlignCenter);
+
+    QVector<QLabel*> lockIcons;
+    for (int i = 0; i < 3; ++i) {
+        QLabel *icon = new QLabel(searchingDialog);
+        icon->setStyleSheet("background: transparent;");
+        icon->setPixmap(
+            QPixmap(":/images/app_logo_white.png")
+                .scaled(50,50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            );
+        iconsLayout->addWidget(icon);
+        lockIcons.append(icon);
+    }
+    searchLayout->addLayout(iconsLayout);
+
+    // botón cancelar
+    QPushButton *cancelButton = new QPushButton("Cancelar", searchingDialog);
+    cancelButton->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #c2c2c3;"
+        "  color: #171718;"
+        "  border-radius: 15px;"
+        "  font-size: 20px;"
+        "  font-weight: bold;"
+        "  padding: 12px 25px;"
+        "}"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    cancelButton->setFixedSize(140,45);
+    searchLayout->addWidget(cancelButton, 0, Qt::AlignCenter);
+
+    searchingDialog->adjustSize();
+    searchingDialog->move(this->geometry().center() - searchingDialog->rect().center());
+    searchingDialog->show();
+
+    // cerrar socket y diálogo al cancelar
+    connect(cancelButton, &QPushButton::clicked, [this]() {
+        if (webSocket) {
+            webSocket->close();
+            webSocket->deleteLater();
+            webSocket = nullptr;
+        }
+        if (searchingDialog) {
+            searchingDialog->close();
+            searchingDialog->deleteLater();
+            searchingDialog = nullptr;
+        }
+    });
+
+    // animación de giro (más lenta)
+    QTimer *rotateTimer = new QTimer(searchingDialog);
+    connect(rotateTimer, &QTimer::timeout, [lockIcons]() {
+        static int angle = 0;
+        angle = (angle + 10) % 360;
+        for (QLabel *icon : lockIcons) {
+            QPixmap orig(":/images/app_logo_white.png");
+            QTransform tr; tr.rotate(angle);
+            icon->setPixmap(
+                orig.transformed(tr, Qt::SmoothTransformation)
+                    .scaled(50,50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                );
+        }
+    });
+    rotateTimer->start(100);
+        // ——————————————————————————————————————————————————————————
+}
+
+void CrearCustomGame::manejarMensaje(const QString &userKey, const QString &mensaje) {
+    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
+    if (!doc.isObject()) {
+        qWarning() << "❌ Mensaje no es JSON válido.";
+        return;
+    }
+
+    QJsonObject root = doc.object();
+    QString tipo = root.value("type").toString();
+    QJsonObject data = root.value("data").toObject();
+
+    if (tipo == "player_joined") {
+        QString nombre = data["usuario"].toObject()["nombre"].toString();
+        int id = data["usuario"].toObject()["id"].toInt();
+        int chatId = data["chat_id"].toInt();
+        jugadoresCola = data.value("jugadores").toInt();
+        jugadoresMax = data.value("capacidad").toInt();
+
+        qDebug() << "ChatID: " << chatId;
+        qDebug() << "(" << jugadoresCola << "/" << jugadoresMax << ")";
+
+        // Actualizamos el contador en el diálogo
+        if (searchingDialog && countLabel) {
+            countLabel->setText(
+                QString("(%1/%2)").arg(jugadoresCola).arg(jugadoresMax)
+                );
+        }
+
+        qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
+
+        if(nombre == usr){
+            this->id = id;
+        }
+
+        if (mensajeCola) {
+            QString nuevoTexto = QString("Esperando en cola... (%1/%2)")
+            .arg(jugadoresCola)
+                .arg(jugadoresMax);
+            mensajeCola->setText(nuevoTexto);
+            mensajeCola->adjustSize();
+
+            // Recalcular posición centrada
+            int x = (this->width() - mensajeCola->width()) / 2;
+            int y = this->height() - mensajeCola->height() - 80;
+            mensajeCola->move(x, y);
+            mensajeCola->raise();
+        }
+    }
+
+    else if (tipo == "start_game") {
+        // — cerrar cuadro “Buscando oponente” si está abierto —
+        if (searchingDialog) {
+            searchingDialog->close();
+            searchingDialog->deleteLater();
+            searchingDialog = nullptr;
+        }
+        int mazoRestante = data["mazo_restante"].toInt();
+        bool faseArrastre = data["fase_arrastre"].toBool();
+        int chatId = data["chat_id"].toInt();
+
+        QJsonObject cartaTriunfo = data["carta_triunfo"].toObject();
+        QString paloTriunfo = cartaTriunfo["palo"].toString();
+        int valorTriunfo = cartaTriunfo["valor"].toInt();
+
+        QJsonArray cartasJugador = data["mis_cartas"].toArray();
+        QJsonArray jugadores = data["jugadores"].toArray();
+
+        qDebug() << "🎮 Inicio de partida";
+        qDebug() << "🃏 Triunfo:" << paloTriunfo << valorTriunfo;
+        qDebug() << "📦 Cartas en mazo:" << mazoRestante;
+        qDebug() << "💬 Chat ID:" << chatId;
+
+        int numJugadores = jugadores.size();
+
+        int type = -1;
+
+        switch (numJugadores) {
+        case 2:
+            type = 1;
+            break;
+        case 4:
+            type = 2;
+            break;
+        default:
+            break;
+        }
+
+        // Get the current size of MenuWindow
+        QSize windowSize = this->size();  // Get the size of MenuWindow
+
+
+        // 1) Obtener widget padre y abuelo
+        QWidget *padre   = parentWidget();
+        QWidget *abuelo  = padre ? padre->parentWidget() : nullptr;
+
+        // 2) Intentar hacer cast a MenuWindow
+        MenuWindow *menu = qobject_cast<MenuWindow*>(abuelo);
+        if (!menu) {
+            qWarning() << "CrearCustomGame no tiene un abuelo de tipo MenuWindow!";
+            return;
+        }
+        // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
+        GameWindow *gameWindow = new GameWindow(userKey, type, fondo, data, id, webSocket, usr, menu);
+        // Le damos la misma posición y tamaño que el MenuWindow
+        gameWindow->setGeometry(menu->geometry());
+        gameWindow->show();
+
+        // Cierra todo top-level widget excepto nuestro gameWindow
+        for (QWidget *w : QApplication::topLevelWidgets()) {
+            if (w != gameWindow) {
+                w->close();
+            }
+        }
+    }
+}
+

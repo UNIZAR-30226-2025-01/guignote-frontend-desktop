@@ -15,7 +15,7 @@ class CustomGamesWindow : public QDialog
 {
     Q_OBJECT
 public:
-    CustomGamesWindow(const QString &userKey, QWidget *parent);
+    CustomGamesWindow(const QString &userKey, QString usr, int fondo, QWidget *parent);
 private:
     // UI
     QVBoxLayout *mainLayout;
@@ -31,6 +31,9 @@ private:
     QString loadAuthToken(const QString &userKey);
     void setupUI();
     bool soloAmigos = false;
+    int fondo;
+
+    QString usr;
 
     void fetchAllGames();
     void fetchFriendGames();

@@ -217,9 +217,10 @@ void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int 
     });
 
 
-    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&es_personalizada=%3")
                       .arg(token)
-                      .arg(capacidad);
+                      .arg(capacidad)
+                      .arg(false);
     qDebug() << "Conectando a:" << url;
     webSocket->open(QUrl(url));
 
@@ -663,7 +664,7 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
         customGames->setImage(":/icons/darkenedgameslist.png", 50, 50);
 
         // Crear pantalla nueva aquí.
-        CustomGamesWindow *cstgmWin = new CustomGamesWindow(userKey, this);
+        CustomGamesWindow *cstgmWin = new CustomGamesWindow(userKey, usr, fondo, this);
         cstgmWin->setModal(true);
 
         connect(cstgmWin, &QDialog::finished, [this, cstgmWin](int){
