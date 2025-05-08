@@ -41,6 +41,8 @@ set(PROJECT_SOURCES
 
 qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}
     rejoinwindow.h rejoinwindow.cpp
+    customgameswindow.h customgameswindow.cpp
+    crearcustomgame.h crearcustomgame.cpp
 
 
 
@@ -93,6 +95,8 @@ if(BUILD_TESTING)
         tests/test_friendswindow.cpp
         rejoinwindow.h
         rejoinwindow.cpp
+        customgameswindow.h customgameswindow.cpp
+        crearcustomgame.h crearcustomgame.cpp
 
 
 

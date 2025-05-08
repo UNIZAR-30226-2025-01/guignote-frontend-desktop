@@ -19,6 +19,7 @@
 #include "myprofilewindow.h"
 #include "rankingwindow.h"
 #include "rejoinwindow.h"
+#include "customgameswindow.h"
 #include <QGraphicsDropShadowEffect>
 #include <QTimer>
 #include <QNetworkAccessManager>
@@ -180,7 +181,7 @@ void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) 
         QSize windowSize = this->size();  // Get the size of MenuWindow
 
         // — Construimos el GameWindow y lo colocamos exactamente donde estaba el menú —
-        GameWindow *gameWindow = new GameWindow(userKey, type, 1, data, id, webSocket, usr, this);
+        GameWindow *gameWindow = new GameWindow(userKey, type, fondo, data, id, webSocket, usr, this);
         // Le damos la misma posición y tamaño que el MenuWindow
         gameWindow->setGeometry(this->geometry());
         gameWindow->show();
@@ -336,14 +337,14 @@ void MenuWindow::checkRejoin(){
     QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
     request.setRawHeader("Auth", token.toUtf8());
-    qDebug() << "Comprobamos salas reconectables...";
+    //qDebug() << "Comprobamos salas reconectables...";
 
     QNetworkReply *reply = networkManager->get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         // Comprueba errores de red
-        qDebug() << "Obtenemos respuesta sobre las salas reconectables...";
+        //qDebug() << "Obtenemos respuesta sobre las salas reconectables...";
         if (reply->error() != QNetworkReply::NoError) {
-            qDebug() << "Error de red:" << reply->errorString();
+            //qDebug() << "Error de red:" << reply->errorString();
             reply->deleteLater();
             return;
         }
@@ -353,7 +354,7 @@ void MenuWindow::checkRejoin(){
         QJsonParseError parseError;
         QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
         if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-            qDebug() << "Error parseando JSON:" << parseError.errorString();
+            //qDebug() << "Error parseando JSON:" << parseError.errorString();
             reply->deleteLater();
             return;
         }
@@ -361,17 +362,17 @@ void MenuWindow::checkRejoin(){
         QJsonObject obj = doc.object();
         // Verifica que exista el array "salas"
         if (!obj.contains("salas") || !obj.value("salas").isArray()) {
-            qDebug() << "La respuesta no contiene el campo 'salas'";
+            //qDebug() << "La respuesta no contiene el campo 'salas'";
             reply->deleteLater();
             return;
         }
 
         salas = obj.value("salas").toArray();
         if (salas.isEmpty()) {
-            qDebug() << "No hay salas reconectables.";
+            //qDebug() << "No hay salas reconectables.";
             ReconnectButton->hide();
         } else {
-            qDebug() << "Salas reconectables encontradas:";
+            //qDebug() << "Salas reconectables encontradas:";
             ReconnectButton->show();
         }
         reply->deleteLater();
@@ -658,11 +659,18 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
 
         rankingWin->exec();
     });
-    connect(customGames, &Icon::clicked, this, [this](){
+    connect(customGames, &Icon::clicked, this, [userKey, this](){
         customGames->setImage(":/icons/darkenedgameslist.png", 50, 50);
 
         // Crear pantalla nueva aquí.
+        CustomGamesWindow *cstgmWin = new CustomGamesWindow(userKey, this);
+        cstgmWin->setModal(true);
 
+        connect(cstgmWin, &QDialog::finished, [this, cstgmWin](int){
+            customGames->setImage(":/icons/gameslist.png", 50, 50);
+        });
+
+        cstgmWin->exec();
     });
 
 
