@@ -240,7 +240,7 @@ void CrearCustomGame::crearPartida(){
     connect(webSocket, &QWebSocket::textMessageReceived, this, [=](const QString &mensaje) {
         this->manejarMensaje(userKey, mensaje);
     });
-    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&solo_amigos=%3&tiempo_turno=%4&permitir_revueltas=%5&reglas_arrastre=%6$es_personalizada=%7")
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&solo_amigos=%3&tiempo_turno=%4&permitir_revueltas=%5&reglas_arrastre=%6&es_personalizada=%7")
                       .arg(token)
                       .arg(capacidad)
                       .arg(soloAmigosB  ? "true" : "false")
