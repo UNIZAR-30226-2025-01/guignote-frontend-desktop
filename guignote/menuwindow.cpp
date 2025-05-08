@@ -220,7 +220,7 @@ void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int 
     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&es_personalizada=%3")
                       .arg(token)
                       .arg(capacidad)
-                      .arg(false);
+                      .arg("false");
     qDebug() << "Conectando a:" << url;
     webSocket->open(QUrl(url));
 
