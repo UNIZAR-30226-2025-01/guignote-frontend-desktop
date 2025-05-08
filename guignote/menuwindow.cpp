@@ -548,33 +548,35 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     exit = new Icon(this);
     inventory = new Icon(this);
     rankings = new Icon(this);
+    customGames = new Icon(this);
 
     settings->setImage(":/icons/audio.png", 50, 50);
-    friends->setImage(":/icons/friends.png", 60, 60);
-    exit->setImage(":/icons/door.png", 60, 60);
+    friends->setImage(":/icons/friends.png", 50, 50);
+    exit->setImage(":/icons/door.png", 50, 50);
     inventory->setImage(":/icons/chest.png", 50, 50);
     rankings->setImage(":/icons/trophy.png", 50, 50);
+    customGames->setImage(":/icons/gameslist.png", 50, 50);
 
     // ------------- EVENTOS DE CLICK EN ICONOS -------------
     connect(settings, &Icon::clicked, [=]() {
-        settings->setImage(":/icons/darkenedaudio.png", 60, 60);
+        settings->setImage(":/icons/darkenedaudio.png", 50, 50);
         SettingsWindow *settingsWin = new SettingsWindow(this, this, usr);
         settingsWin->setModal(true);
         connect(settingsWin, &QDialog::finished, [this](int){
-            settings->setImage(":/icons/audio.png", 60, 60);
+            settings->setImage(":/icons/audio.png", 50, 50);
         });
         settingsWin->exec();
     });
     connect(friends, &Icon::clicked, this, [=]() {
-        friends->setImage(":/icons/darkenedfriends.png", 60, 60);
+        friends->setImage(":/icons/darkenedfriends.png", 50, 50);
         auto *fw = new friendswindow(userKey, this);
         fw->setModal(true);
         fw->exec();
-        friends->setImage(":/icons/friends.png", 60, 60);
+        friends->setImage(":/icons/friends.png", 50, 50);
     });
 
     connect(exit, &Icon::clicked, this, [this]() {
-        exit->setImage(":/icons/darkeneddoor.png", 60, 60);
+        exit->setImage(":/icons/darkeneddoor.png", 50, 50);
         QDialog *confirmDialog = new QDialog(this);
         confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
         confirmDialog->setModal(true);
@@ -622,7 +624,7 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
             confirmDialog->close();
         });
         connect(confirmDialog, &QDialog::finished, [=](int) {
-            exit->setImage(":/icons/door.png", 60, 60);
+            exit->setImage(":/icons/door.png", 50, 50);
         });
         confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
         confirmDialog->show();
@@ -636,25 +638,31 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
         centerTimer->start();
     });
     connect(inventory, &Icon::clicked, this, [this]() {
-        inventory->setImage(":/icons/darkenedchest.png", 60, 60);
+        inventory->setImage(":/icons/darkenedchest.png", 50, 50);
         InventoryWindow *inventoryWin = new InventoryWindow(this);
         inventoryWin->setModal(true);
         connect(inventoryWin, &QDialog::finished, [this](int){
-            inventory->setImage(":/icons/chest.png", 60, 60);
+            inventory->setImage(":/icons/chest.png", 50, 50);
         });
         inventoryWin->exec();
     });
     connect(rankings, &Icon::clicked, this, [this, userKey]() {
-        rankings->setImage(":/icons/darkenedtrophy.png", 60, 60);
+        rankings->setImage(":/icons/darkenedtrophy.png", 50, 50);
 
         RankingWindow *rankingWin = new RankingWindow(userKey, this);
         rankingWin->setModal(true);
 
         connect(rankingWin, &QDialog::finished, [this, rankingWin](int){
-            rankings->setImage(":/icons/trophy.png", 60, 60);
+            rankings->setImage(":/icons/trophy.png", 50, 50);
         });
 
         rankingWin->exec();
+    });
+    connect(customGames, &Icon::clicked, this, [this](){
+        customGames->setImage(":/icons/darkenedgameslist.png", 50, 50);
+
+        // Crear pantalla nueva aquí.
+
     });
 
 
@@ -819,40 +827,43 @@ void MenuWindow::repositionBars() {
 
 // Función para reposicionar los iconos
 void MenuWindow::repositionIcons() {
-    int barWidth = bottomBar->width();
+    // 1) Recolectamos los widgets en un array
+    QList<QWidget*> icons = {
+        friends,
+        customGames,
+        rankings,
+        inventory,
+        settings,
+        exit
+    };
+
+    // 2) Datos de la barra
+    int barX      = bottomBar->pos().x();
+    int barY      = bottomBar->pos().y();
+    int barWidth  = bottomBar->width();
     int barHeight = bottomBar->height();
-    QPoint barPos = bottomBar->pos();
-    int barX = barPos.x();
-    int barY = barPos.y();
 
-    int margen = 20;
+    // 3) Sumar anchos de todos los iconos
+    int totalIconsWidth = 0;
+    for (QWidget* w : icons) {
+        totalIconsWidth += w->width();
+    }
 
-    int iconWidth = settings->width();
-    int iconHeight = settings->height();
-    int exitWidth = exit->width();
-    int exitHeight = exit->height();
+    // 4) Calcular huecos: (número de widgets + 1)
+    int gaps = icons.size() + 1;
+    int spacing = (barWidth - totalIconsWidth) / gaps;
 
-    int totalIconsWidth = 4 * iconWidth + exitWidth;
-    int spacing = (barWidth - totalIconsWidth) / 6;
+    // 5) Calcular Y centrados (exit puede tener altura distinta)
+    int yCommon = barY + (barHeight - settings->height()) / 2;
+    int yExit   = barY + (barHeight - exit->height())     / 2;
 
-    int yCommon = barY + (barHeight - iconHeight) / 2;
-    int yExit = barY + (barHeight - exitHeight) / 2;
-
+    // 6) Colocar iterativamente
     int x = barX + spacing;
-
-    friends->move(x, yCommon);
-    x += iconWidth + spacing;
-
-    rankings->move(x, yCommon);
-    x += iconWidth + spacing;
-
-    inventory->move(x, yCommon);
-    x += iconWidth + spacing;
-
-    settings->move(x, yCommon);
-    x += iconWidth + spacing;
-
-    exit->move(x, yExit);
+    for (QWidget* w : icons) {
+        int y = (w == exit ? yExit : yCommon);
+        w->move(x, y);
+        x += w->width() + spacing;
+    }
 }
 
 // Función para recolocar y reposicionar todos los elementos

@@ -124,5 +124,8 @@
         <file>tiles/base.png</file>
         <file>tiles/poker.png</file>
         <file>tiles/tapetebase.png</file>
+        <file>../../../../../../../Downloads/gameslist.png</file>
+        <file>icons/gameslist.png</file>
+        <file>icons/darkenedgameslist.png</file>
     </qresource>
 </RCC>

@@ -106,41 +106,6 @@ void UserProfileWindow::setupUI() {
 
     imageLayout->addWidget(statsLabel);
     mainLayout->addLayout(imageLayout);
-
-    // ------------- BOTONES INFERIORES -------------
-    QHBoxLayout *buttonsLayout = new QHBoxLayout();
-
-    QPushButton *leftButton = new QPushButton("Partida Amistosa", this);
-    leftButton->setStyleSheet(
-        "QPushButton { background-color: #1D4536; color: #F9F9F4; font-size: 18px; padding: 10px; border-radius: 5px; "
-        "border: 2px solid #006400; }"
-        "QPushButton:hover { background-color: #2A5C45; }"
-        );
-    leftButton->setFixedSize(200, 50);
-
-    QPushButton *rightButton = new QPushButton("Jugar en Equipo", this);
-    rightButton->setStyleSheet(
-        "QPushButton { background-color: #1D4536; color: #F9F9F4; font-size: 18px; padding: 10px; border-radius: 5px; "
-        "border: 2px solid #006400; }"
-        "QPushButton:hover { background-color: #2A5C45; }"
-        );
-    rightButton->setFixedSize(200, 50);
-
-    buttonsLayout->addWidget(leftButton, 0, Qt::AlignLeft);
-    buttonsLayout->addStretch();
-    buttonsLayout->addWidget(rightButton, 0, Qt::AlignRight);
-
-    // ------------- CONEXIONES DE BOTONES -------------
-    connect(leftButton, &QPushButton::clicked, this, []() {
-        qDebug() << "Botón Partida Amistosa presionado";
-    });
-
-    connect(rightButton, &QPushButton::clicked, this, []() {
-        qDebug() << "Botón Jugar en Equipo presionado";
-    });
-
-    mainLayout->addLayout(buttonsLayout);
-    setLayout(mainLayout);
 }
 
 /**
