@@ -46,7 +46,7 @@ private:
     void fetchAllGames();
     void fetchFriendGames();
     void manejarMensaje(const QString &userKey, const QString &mensaje);
-    void joinGame(QString idPart);
+    void joinGame(QString idPart, int cap);
 };
 
 #endif // CUSTOMGAMESWINDOW_H

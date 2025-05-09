@@ -250,9 +250,10 @@ void CustomGamesWindow::fetchAllGames() {
                 "  background-color: #218838;"
                 "}"
                 );
-            connect(rejoinButton, &QPushButton::clicked, this, [this, idSala]() {
+            int cap = capacidad;
+            connect(rejoinButton, &QPushButton::clicked, this, [this, idSala, cap]() {
                 qDebug() << "Joining Room ID:" << idSala;
-                joinGame(QString::number(idSala));
+                joinGame(QString::number(idSala), cap);
             });
 
             // ——— Montamos la fila dentro del contenedor ———
@@ -380,9 +381,10 @@ void CustomGamesWindow::fetchFriendGames() {
                 "  background-color: #218838;"
                 "}"
                 );
-            connect(joinButton, &QPushButton::clicked, this, [this, idSala]() {
+            int cap = capacidad;
+            connect(joinButton, &QPushButton::clicked, this, [this, idSala, cap]() {
                 qDebug() << "Joining Room ID:" << idSala;
-                joinGame(QString::number(idSala));
+                joinGame(QString::number(idSala), cap);
             });
 
             // ——— Montamos la fila dentro del contenedor ———
@@ -493,7 +495,7 @@ void CustomGamesWindow::manejarMensaje(const QString &userKey, const QString &me
 
 }
 
-void CustomGamesWindow::joinGame(QString idPart){
+void CustomGamesWindow::joinGame(QString idPart, int cap){
     jugadoresCola = 1;
 
     qDebug() << "creamos socket";
@@ -511,9 +513,10 @@ void CustomGamesWindow::joinGame(QString idPart){
         this->manejarMensaje(userKey, mensaje);
     });
 
-    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2")
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2&capacidad=%3")
                       .arg(token)
-                      .arg(idPart);
+                      .arg(idPart)
+                      .arg(cap);
     qDebug() << "Conectando a:" << url;
     webSocket->open(QUrl(url));
 
@@ -546,15 +549,6 @@ void CustomGamesWindow::joinGame(QString idPart){
         );
     searchLabel->setAlignment(Qt::AlignCenter);
     searchLayout->addWidget(searchLabel);
-
-    // contador (1/Capacidad)
-    countLabel = new QLabel(
-        QString("(%1/%2)").arg(jugadoresCola).arg(capacidad),
-        searchingDialog
-        );
-    countLabel->setStyleSheet("color: white; font-size: 20px; background: transparent;");
-    countLabel->setAlignment(Qt::AlignCenter);
-    searchLayout->addWidget(countLabel);
 
     // candados giratorios
     QHBoxLayout *iconsLayout = new QHBoxLayout();
