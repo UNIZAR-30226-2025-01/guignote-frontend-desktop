@@ -12,6 +12,9 @@
 #include <QEvent>
 #include <QPushButton>
 #include <QWebSocket>
+#include <QVBoxLayout>
+#include <QJsonArray>
+#include <QTimer>
 
 class ImageButton;
 class Icon;
@@ -84,7 +87,12 @@ private:
     int jugadoresMax = 0;
     void manejarMensaje(const QString &userKey, const QString &mensaje);
     QString usr;
+    QString userKey;
     int id;
+    QPushButton *ReconnectButton = nullptr;
+    QJsonArray salas;
+    QVBoxLayout *mainLayout;
+    void checkRejoin();
 
     QLabel* countLabel = nullptr;
 
@@ -94,6 +102,10 @@ private:
     Icon *friendsIcon = nullptr;
     Icon *messagesIcon = nullptr;
     int   unreadMessages = 0;
+
+    // Skins seleccionadas
+    int fondo = 1;
+    QTimer *rejoinTimer;
 };
 
 #endif // MENUWINDOW_H
