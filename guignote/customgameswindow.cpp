@@ -198,7 +198,7 @@ void CustomGamesWindow::fetchAllGames() {
             QJsonObject salaObject = value.toObject();
             QString nombreSala = salaObject["nombre"].toString();
             int idSala = salaObject["id"].toInt();
-            int capacidad = salaObject["capacidad"].toInt();
+            capacidad = salaObject["capacidad"].toInt();
             int numJugadores = salaObject["num_jugadores"].toInt();
 
             // ——— Crear un contenedor con fondo más claro ———
@@ -238,7 +238,7 @@ void CustomGamesWindow::fetchAllGames() {
             personalizacionLabel->setStyleSheet("color: white; font-size: 14px;");
 
             // ——— Botón verde Rejoin ———
-            QPushButton *rejoinButton = new QPushButton("Rejoin", container);
+            QPushButton *rejoinButton = new QPushButton("Unirse", container);
             rejoinButton->setStyleSheet(
                 "QPushButton {"
                 "  background-color: #28a745;"
@@ -258,8 +258,8 @@ void CustomGamesWindow::fetchAllGames() {
             // ——— Montamos la fila dentro del contenedor ———
             row->addWidget(label);
             row->addStretch();
-            row->addWidget(rejoinButton);  // Añadir el botón "Rejoin"
             row->addWidget(personalizacionLabel);  // Añadir la etiqueta de personalización
+            row->addWidget(rejoinButton);  // Añadir el botón "Rejoin"
             container->setLayout(row);
 
             // ——— Añadimos un pequeño margen vertical entre contenedores ———
@@ -331,7 +331,7 @@ void CustomGamesWindow::fetchFriendGames() {
             QJsonObject salaObject = value.toObject();
             QString nombreSala = salaObject["nombre"].toString();
             int idSala = salaObject["id"].toInt();
-            int capacidad = salaObject["capacidad"].toInt();
+            capacidad = salaObject["capacidad"].toInt();
             int numJugadores = salaObject["num_jugadores"].toInt();
 
             // ——— Crear un contenedor con fondo más claro ———
@@ -419,6 +419,8 @@ void CustomGamesWindow::manejarMensaje(const QString &userKey, const QString &me
         QString nombre = data["usuario"].toObject()["nombre"].toString();
         int id = data["usuario"].toObject()["id"].toInt();
         int chatId = data["chat_id"].toInt();
+        jugadoresCola = data.value("jugadores").toInt();
+        capacidad = data.value("capacidad").toInt();
 
         qDebug() << "ChatID: " << chatId;
 
@@ -426,6 +428,12 @@ void CustomGamesWindow::manejarMensaje(const QString &userKey, const QString &me
 
         if(nombre == usr){
             this->id = id;
+        }
+
+        if (searchingDialog && countLabel) {
+            countLabel->setText(
+                QString("(%1/%2)").arg(jugadoresCola).arg(capacidad)
+                );
         }
     }
 
@@ -486,6 +494,8 @@ void CustomGamesWindow::manejarMensaje(const QString &userKey, const QString &me
 }
 
 void CustomGamesWindow::joinGame(QString idPart){
+    jugadoresCola = 1;
+
     qDebug() << "creamos socket";
     webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
 
@@ -536,6 +546,15 @@ void CustomGamesWindow::joinGame(QString idPart){
         );
     searchLabel->setAlignment(Qt::AlignCenter);
     searchLayout->addWidget(searchLabel);
+
+    // contador (1/Capacidad)
+    countLabel = new QLabel(
+        QString("(%1/%2)").arg(jugadoresCola).arg(capacidad),
+        searchingDialog
+        );
+    countLabel->setStyleSheet("color: white; font-size: 20px; background: transparent;");
+    countLabel->setAlignment(Qt::AlignCenter);
+    searchLayout->addWidget(countLabel);
 
     // candados giratorios
     QHBoxLayout *iconsLayout = new QHBoxLayout();

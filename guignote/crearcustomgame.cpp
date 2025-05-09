@@ -25,7 +25,7 @@ CrearCustomGame::CrearCustomGame(QString &userKey, QString usr, int fondo, QDial
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet("background-color: #222; border-radius: 30px; padding: 20px;");
-    setFixedSize(500, 450);
+    setFixedSize(650, 550);
 
     this->userKey = userKey;
     this->usr = usr;
@@ -109,7 +109,9 @@ void CrearCustomGame::setupUI(){
             ind->setChecked(false);
         }
     });
-
+    capacidadLayout->addWidget(ind);
+    capacidadLayout->addWidget(par);
+    mainLayout->addLayout(capacidadLayout);
 
     // ——— “Tiempo por turno” ———
     QHBoxLayout *tiempoLayout = new QHBoxLayout();
@@ -191,6 +193,8 @@ void CrearCustomGame::setupUI(){
     t60s->setStyleSheet(checkboxStyle);
     revueltas->setStyleSheet(checkboxStyle);
     arrastre->setStyleSheet(checkboxStyle);
+    ind->setStyleSheet(checkboxStyle);
+    par->setStyleSheet(checkboxStyle);
 }
 
 QString CrearCustomGame::loadAuthToken(const QString &userKey) {

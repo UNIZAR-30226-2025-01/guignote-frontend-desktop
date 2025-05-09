@@ -29,13 +29,16 @@ private:
     QString userKey;
     QString token;
     QNetworkAccessManager *networkManager;
-    QWebSocket *webSocket;
+    QWebSocket *webSocket = nullptr;
 
     QString loadAuthToken(const QString &userKey);
     void setupUI();
     bool soloAmigos = false;
     int fondo;
     QDialog *searchingDialog = nullptr;
+    QLabel *countLabel = nullptr;
+    int capacidad;
+    int jugadoresCola;
 
     QString usr;
     int id;

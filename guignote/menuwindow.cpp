@@ -195,11 +195,6 @@ void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) 
 }
 
 void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int capacidad) {
-    if (webSocket != nullptr) {
-        qDebug() << "Spam Protection";
-        return;
-    }
-
     // Inicializamos contadores
     jugadoresCola = 1;
     jugadoresMax  = capacidad;
