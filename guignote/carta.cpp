@@ -62,6 +62,7 @@ QPixmap Carta::selectPixmap(int skin) const {
         ruta += num + suit;
 
     ruta += ".png";
+    qDebug() << "🔍 Intentando cargar:" << ruta; // 👈 AÑADE ESTO
     QPixmap pixmap(ruta);
     if (pixmap.isNull())
         qWarning() << "Carta::selectPixmap: no existe" << ruta;

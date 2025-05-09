@@ -15,7 +15,7 @@ class InventoryWindow : public QDialog
 {
     Q_OBJECT
 public:
-    explicit InventoryWindow(QWidget *parent = nullptr);
+    explicit InventoryWindow(QWidget *parent = nullptr, QString usr="");
     ~InventoryWindow();
 
 private:

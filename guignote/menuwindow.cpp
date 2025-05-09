@@ -637,7 +637,7 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     });
     connect(inventory, &Icon::clicked, this, [this]() {
         inventory->setImage(":/icons/darkenedchest.png", 60, 60);
-        InventoryWindow *inventoryWin = new InventoryWindow(this);
+        InventoryWindow *inventoryWin = new InventoryWindow(this,usr);
         inventoryWin->setModal(true);
         connect(inventoryWin, &QDialog::finished, [this](int){
             inventory->setImage(":/icons/chest.png", 60, 60);

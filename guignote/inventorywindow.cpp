@@ -264,7 +264,7 @@ static void slidePages(QStackedWidget *stack, int nextIdx,
 /* ------------------------------------------------------------------ */
 /*  CONSTRUCTOR / DESTRUCTOR DE INVENTORYWINDOW                       */
 /* ------------------------------------------------------------------ */
-InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
+InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
 {
     /* ---------- Ventana base ---------- */
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -358,7 +358,9 @@ InventoryWindow::InventoryWindow(QWidget *parent) : QDialog(parent)
     // ¡AHORA! Conecta deckGroup para guardar la selección
     connect(deckGroup, &QButtonGroup::idClicked,
             this, [=](int id){
-                QSettings().setValue("selectedDeck", id);
+        QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
+        QSettings settings("Grace Hopper", config);
+        settings.setValue("selectedDeck", id);
             });
     stackedWidget->addWidget(deckPage);
 

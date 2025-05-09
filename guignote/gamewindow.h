@@ -38,6 +38,7 @@ private:
     bool myTurn = false; // true si es mi turno, false en caso contrario
     int winPileCountUser = 0;
     int winPileCountOpponent = 0;
+    int deckSkin;
     static constexpr int winPileOffset = 15;  // desplazamiento entre cartas apiladas
     static constexpr int winPileMargin = 20;  // margen respecto a la esquina
     QHash<Posicion*, int> pilaCount;

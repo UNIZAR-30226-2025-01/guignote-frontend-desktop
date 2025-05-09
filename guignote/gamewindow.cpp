@@ -10,6 +10,7 @@
 #include <QPixmap>
 #include <QSize>
 #include <QTransform>
+#include <QSettings>
 #include <QHBoxLayout>
 #include <QGraphicsDropShadowEffect>
 #include <QPushButton>
@@ -36,7 +37,10 @@ Carta* GameWindow::getCartaPorId(QString id){
 }
 
 GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef) {
-
+    // justo al principio del constructor:
+    QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
+    QSettings settings("Grace Hopper", config);
+    this->deckSkin = settings.value("selectedDeck", 0).toInt();
     this->usr = usr;
     menuWindowRef = menuRef;
     bg = fondo;
@@ -646,7 +650,7 @@ QString GameWindow::loadAuthToken(const QString &userKey) {
  *  Añadir n backs a la mano
  */
 void GameWindow::setupGameState(QJsonObject s0){
-
+    qDebug() << "🧪 deckSkin en setupGameState =" << deckSkin;
     // Comprobamos que tenemos el id
 
     // Inicializamos deck
@@ -674,7 +678,7 @@ void GameWindow::setupGameState(QJsonObject s0){
         val = QString::number(cartaObj.value("valor").toInt());
 
         // Aquí puedes crear una instancia de tu clase Carta
-        Carta* carta = new Carta(this, this, val, palo, cardSize, 0);
+        Carta* carta = new Carta(this, this, val, palo, cardSize, deckSkin);
 
         // Y agregarla a la mano, por ejemplo:
         manos[0]->añadirCarta(carta);
@@ -852,11 +856,12 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
         // 5) Creamos la carta cara‐arriba y la añadimos
         int valor     = data["carta"].toObject()["valor"].toInt();
         QString palo  = data["carta"].toObject()["palo"].toString();
-        cartaASacar   = new Carta(this, this,
+        int skin = (jugadorId == player_id) ? deckSkin : 0;
+        cartaASacar = new Carta(this, this,
                                 QString::number(valor),
                                 palo,
                                 cardSize,
-                                /*skin=*/0,
+                                skin,
                                 /*faceUp=*/true);
         addCartaPorId(cartaASacar);
     }
@@ -1017,13 +1022,13 @@ void GameWindow::animateDraw(const QJsonObject &drawData, int userId) {
     bool faceUp = (userId == player_id);
     QString num = faceUp ? QString::number(valor) : QString("0");
     QString paloParaCarta = faceUp ? palo : "";
-
+    int skinToUse = faceUp ? deckSkin : 0;
     // 1) Crear carta pero NO mostrarla aún
     Carta* carta = new Carta(this, this,
                              num,
                              paloParaCarta,
                              cardSize,
-                             /*skin=*/0,
+                             skinToUse,
                              /*faceUp=*/faceUp);
     if (faceUp) addCartaPorId(carta);
 
