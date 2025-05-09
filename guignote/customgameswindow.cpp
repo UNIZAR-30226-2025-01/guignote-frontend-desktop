@@ -102,7 +102,7 @@ void CustomGamesWindow::setupUI() {
         }
     )";
 
-    soloAmigosCheck = new QCheckBox("Solo amigos", this);
+    soloAmigosCheck = new QCheckBox("Solo Amigos", this);
     soloAmigosCheck->setStyleSheet(checkboxStyle);
     connect(soloAmigosCheck, &QCheckBox::checkStateChanged, this, [this](){
         soloAmigos = !soloAmigos;
@@ -138,10 +138,264 @@ void CustomGamesWindow::setupUI() {
     // ...añade aquí el resto de widgets si hace falta...
 }
 
-void CustomGamesWindow::fetchAllGames(){
-    qDebug() << "fetching all games";
+void CustomGamesWindow::fetchAllGames() {
+    qDebug() << "Fetching all available games";
+
+    QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/disponibles/?solo_personalizadas=true"));
+    request.setRawHeader("Auth", token.toUtf8());  // Añadir el token de autenticación
+
+    // Realizar la solicitud GET
+    QNetworkReply *reply = networkManager->get(request);
+
+    // Conectar la señal finished() con un slot para manejar la respuesta
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        // Manejar la respuesta de la solicitud
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Error fetching available games:" << reply->errorString();
+            qDebug() << "Response code:" << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            reply->deleteLater();
+            return;
+        }
+
+        // Leer los datos JSON de la respuesta
+        QByteArray responseData = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument doc = QJsonDocument::fromJson(responseData, &parseError);
+
+        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+            qDebug() << "Error parsing JSON response:" << parseError.errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        QJsonObject jsonObject = doc.object();
+
+        // Comprobar si el campo 'salas' existe y es un array
+        if (!jsonObject.contains("salas") || !jsonObject["salas"].isArray()) {
+            qDebug() << "No 'salas' field in the response or it's not an array.";
+            reply->deleteLater();
+            return;
+        }
+
+        // Obtener el array de salas
+        QJsonArray salasArray = jsonObject["salas"].toArray();
+
+        // Limpiar la lista antes de agregar los nuevos elementos
+        for (int i = 0; i < mainLayout->count(); ++i) {
+            QLayoutItem *item = mainLayout->itemAt(i);
+            if (item != nullptr) {
+                QWidget *widget = item->widget();
+                if (widget != nullptr) {
+                    widget->deleteLater();  // Eliminar los widgets del layout
+                }
+            }
+        }
+
+        // Iterar sobre el array de salas y agregar un item por cada sala
+        for (const QJsonValue &value : salasArray) {
+            QJsonObject salaObject = value.toObject();
+            QString nombreSala = salaObject["nombre"].toString();
+            int idSala = salaObject["id"].toInt();
+            int capacidad = salaObject["capacidad"].toInt();
+            int numJugadores = salaObject["num_jugadores"].toInt();
+
+            // ——— Crear un contenedor con fondo más claro ———
+            QWidget *container = new QWidget(this);
+            container->setStyleSheet(
+                "background-color: #232326;"   // ligeramente más claro que #171718
+                "border-radius: 10px;"
+                "padding: 10px;"
+                );
+
+            // Le damos un layout horizontal
+            QHBoxLayout *row = new QHBoxLayout(container);
+            row->setContentsMargins(0, 0, 0, 0);
+            row->setSpacing(15);
+
+            // ——— Label con nombre y ocupación ———
+            QLabel *label = new QLabel(
+                QString("%1  —  %2/%3")
+                    .arg(nombreSala)
+                    .arg(numJugadores)
+                    .arg(capacidad),
+                container
+                );
+            label->setStyleSheet("color: white; font-size: 18px;");
+
+            // ——— Detalles de personalización ———
+            QString personalizacionStr;
+            if (salaObject.contains("personalizacion") && salaObject["personalizacion"].isObject()) {
+                QJsonObject personalizacion = salaObject["personalizacion"].toObject();
+                personalizacionStr = "Tiempo Turno: " + QString::number(personalizacion["tiempo_turno"].toInt()) + "s, "
+                                     + "Reglas Arrastre: " + (personalizacion["reglas_arrastre"].toBool() ? "Sí" : "No") + ", "
+                                     + "Revueltas: " + (personalizacion["permitir_revueltas"].toBool() ? "Sí" : "No") + ", "
+                                     + "Solo Amigos: " + (personalizacion["solo_amigos"].toBool() ? "Sí" : "No");
+            }
+
+            QLabel *personalizacionLabel = new QLabel(personalizacionStr, container);
+            personalizacionLabel->setStyleSheet("color: white; font-size: 14px;");
+
+            // ——— Botón verde Rejoin ———
+            QPushButton *rejoinButton = new QPushButton("Rejoin", container);
+            rejoinButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #28a745;"
+                "  color: white;"
+                "  border-radius: 5px;"
+                "  padding: 6px 12px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #218838;"
+                "}"
+                );
+            connect(rejoinButton, &QPushButton::clicked, this, [this, idSala]() {
+                qDebug() << "Rejoin to the room with ID:" << idSala;
+            });
+
+            // ——— Montamos la fila dentro del contenedor ———
+            row->addWidget(label);
+            row->addStretch();
+            row->addWidget(rejoinButton);  // Añadir el botón "Rejoin"
+            row->addWidget(personalizacionLabel);  // Añadir la etiqueta de personalización
+            container->setLayout(row);
+
+            // ——— Añadimos un pequeño margen vertical entre contenedores ———
+            mainLayout->addWidget(container);
+            mainLayout->setSpacing(10);
+        }
+
+        reply->deleteLater();  // Eliminar el reply después de procesar la respuesta
+    });
 }
 
-void CustomGamesWindow::fetchFriendGames(){
-    qDebug() << "fetching friend only games";
+
+
+void CustomGamesWindow::fetchFriendGames() {
+    qDebug() << "Fetching friend-only games";
+
+    // Crear la solicitud GET para obtener las salas de amigos
+    QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/disponibles/amigos"));
+    request.setRawHeader("Auth", token.toUtf8());  // Añadir el token de autenticación
+
+    // Realizar la solicitud GET
+    QNetworkReply *reply = networkManager->get(request);
+
+    // Conectar la señal finished() con un slot para manejar la respuesta
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        // Manejar la respuesta de la solicitud
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Error fetching friend games:" << reply->errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        // Leer los datos JSON de la respuesta
+        QByteArray responseData = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument doc = QJsonDocument::fromJson(responseData, &parseError);
+
+        if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+            qDebug() << "Error parsing JSON response:" << parseError.errorString();
+            reply->deleteLater();
+            return;
+        }
+
+        QJsonObject jsonObject = doc.object();
+
+        // Comprobar si el campo 'salas' existe y es un array
+        if (!jsonObject.contains("salas") || !jsonObject["salas"].isArray()) {
+            qDebug() << "No 'salas' field in the response or it's not an array.";
+            reply->deleteLater();
+            return;
+        }
+
+        // Obtener el array de salas
+        QJsonArray salasArray = jsonObject["salas"].toArray();
+
+        // Limpiar la lista antes de agregar los nuevos elementos
+        for (int i = 0; i < mainLayout->count(); ++i) {
+            QLayoutItem *item = mainLayout->itemAt(i);
+            if (item != nullptr) {
+                QWidget *widget = item->widget();
+                if (widget != nullptr) {
+                    widget->deleteLater();  // Eliminar los widgets del layout
+                }
+            }
+        }
+
+        // Iterar sobre el array de salas y agregar un item por cada sala
+        for (const QJsonValue &value : salasArray) {
+            QJsonObject salaObject = value.toObject();
+            QString nombreSala = salaObject["nombre"].toString();
+            int idSala = salaObject["id"].toInt();
+            int capacidad = salaObject["capacidad"].toInt();
+            int numJugadores = salaObject["num_jugadores"].toInt();
+
+            // ——— Crear un contenedor con fondo más claro ———
+            QWidget *container = new QWidget(this);
+            container->setStyleSheet(
+                "background-color: #232326;"   // ligeramente más claro que #171718
+                "border-radius: 10px;"
+                "padding: 10px;"
+                );
+
+            // Le damos un layout horizontal
+            QHBoxLayout *row = new QHBoxLayout(container);
+            row->setContentsMargins(0, 0, 0, 0);
+            row->setSpacing(15);
+
+            // ——— Label con nombre y ocupación ———
+            QLabel *label = new QLabel(
+                QString("%1  —  %2/%3")
+                    .arg(nombreSala)
+                    .arg(numJugadores)
+                    .arg(capacidad),
+                container
+                );
+            label->setStyleSheet("color: white; font-size: 18px;");
+
+            // ——— Detalles de personalización ———
+            QJsonObject personalizacion = salaObject["personalizacion"].toObject();
+            QString personalizacionStr = "Tiempo Turno: " + QString::number(personalizacion["tiempo_turno"].toInt()) + "s, "
+                                         + "Reglas Arrastre: " + (personalizacion["reglas_arrastre"].toBool() ? "Sí" : "No") + ", "
+                                         + "Revueltas: " + (personalizacion["permitir_revueltas"].toBool() ? "Sí" : "No") + ", "
+                                         + "Solo Amigos: " + (personalizacion["solo_amigos"].toBool() ? "Sí" : "No");
+
+            QLabel *personalizacionLabel = new QLabel(personalizacionStr, container);
+            personalizacionLabel->setStyleSheet("color: white; font-size: 14px;");
+
+            // ——— Botón verde Rejoin ———
+            QPushButton *joinButton = new QPushButton("Unirse", container);
+            joinButton->setStyleSheet(
+                "QPushButton {"
+                "  background-color: #28a745;"
+                "  color: white;"
+                "  border-radius: 5px;"
+                "  padding: 6px 12px;"
+                "}"
+                "QPushButton:hover {"
+                "  background-color: #218838;"
+                "}"
+                );
+            connect(joinButton, &QPushButton::clicked, this, [this, idSala]() {
+                qDebug() << "Join Room ID:" << idSala;
+            });
+
+            // ——— Montamos la fila dentro del contenedor ———
+            row->addWidget(label);
+            row->addStretch();
+            row->addWidget(personalizacionLabel);  // Añadir la etiqueta de personalización
+            row->addWidget(joinButton);
+            container->setLayout(row);
+
+            // ——— Añadimos un pequeño margen vertical entre contenedores ———
+            mainLayout->addWidget(container);
+            mainLayout->setSpacing(10);
+        }
+
+        reply->deleteLater();  // Eliminar el reply después de procesar la respuesta
+    });
 }
+
+
+

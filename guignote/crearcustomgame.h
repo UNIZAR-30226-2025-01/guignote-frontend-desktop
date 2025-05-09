@@ -42,7 +42,7 @@ private:
     int fondo;
 
     bool soloAmigosB = false;
-    int tiempo = 15;
+    int tiempo = 30;
     bool individual = true;
     bool revueltasB = true;
     bool arrastreB = true;
