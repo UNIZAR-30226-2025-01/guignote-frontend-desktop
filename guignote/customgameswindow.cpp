@@ -1,5 +1,6 @@
 #include "customgameswindow.h"
 #include "crearcustomgame.h"
+#include "gamewindow.h"
 
 #include <QListWidget>
 #include <QVBoxLayout>
@@ -17,6 +18,7 @@
 #include <QDebug>
 #include <QString>
 #include <QNetworkAccessManager>
+#include <QApplication>
 
 CustomGamesWindow::CustomGamesWindow(const QString &userKey, QString usr, int fondo, QWidget *parent)
     : QDialog(parent)
@@ -249,7 +251,8 @@ void CustomGamesWindow::fetchAllGames() {
                 "}"
                 );
             connect(rejoinButton, &QPushButton::clicked, this, [this, idSala]() {
-                qDebug() << "Rejoin to the room with ID:" << idSala;
+                qDebug() << "Joining Room ID:" << idSala;
+                joinGame(QString::number(idSala));
             });
 
             // ——— Montamos la fila dentro del contenedor ———
@@ -378,7 +381,8 @@ void CustomGamesWindow::fetchFriendGames() {
                 "}"
                 );
             connect(joinButton, &QPushButton::clicked, this, [this, idSala]() {
-                qDebug() << "Join Room ID:" << idSala;
+                qDebug() << "Joining Room ID:" << idSala;
+                joinGame(QString::number(idSala));
             });
 
             // ——— Montamos la fila dentro del contenedor ———
@@ -397,5 +401,209 @@ void CustomGamesWindow::fetchFriendGames() {
     });
 }
 
+void CustomGamesWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
+    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
+    if (!doc.isObject()) {
+        qWarning() << "❌ Mensaje no es JSON válido.";
+        return;
+    }
 
+    QWidget *w = parentWidget();
+    MenuWindow *menuWin = qobject_cast<MenuWindow*>(w);
+
+    QJsonObject root = doc.object();
+    QString tipo = root.value("type").toString();
+    QJsonObject data = root.value("data").toObject();
+
+    if (tipo == "player_joined") {
+        QString nombre = data["usuario"].toObject()["nombre"].toString();
+        int id = data["usuario"].toObject()["id"].toInt();
+        int chatId = data["chat_id"].toInt();
+
+        qDebug() << "ChatID: " << chatId;
+
+        qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
+
+        if(nombre == usr){
+            this->id = id;
+        }
+    }
+
+    else if (tipo == "start_game") {
+        int mazoRestante = data["mazo_restante"].toInt();
+        bool faseArrastre = data["fase_arrastre"].toBool();
+        int chatId = data["chat_id"].toInt();
+
+        QJsonObject cartaTriunfo = data["carta_triunfo"].toObject();
+        QString paloTriunfo = cartaTriunfo["palo"].toString();
+        int valorTriunfo = cartaTriunfo["valor"].toInt();
+
+        QJsonArray cartasJugador = data["mis_cartas"].toArray();
+        QJsonArray jugadores = data["jugadores"].toArray();
+
+        qDebug() << "🎮 Inicio de partida";
+        qDebug() << "🃏 Triunfo:" << paloTriunfo << valorTriunfo;
+        qDebug() << "📦 Cartas en mazo:" << mazoRestante;
+        qDebug() << "💬 Chat ID:" << chatId;
+
+        // — Nuevo: listamos id y número de cartas de cada jugador —
+        for (const QJsonValue &v : jugadores) {
+            if (!v.isObject()) continue;
+            QJsonObject jo = v.toObject();
+            int pid        = jo.value("id").toInt();
+            int numCartas  = jo.value("num_cartas").toInt();
+            qDebug() << "👤 Jugador" << pid << "→" << numCartas << "cartas";
+        }
+
+        int numJugadores = jugadores.size();
+        qDebug() << "hay " << numJugadores << " jugadores";
+        int type = -1;
+        switch (numJugadores) {
+        case 2:
+            type = 1;
+            break;
+        case 4:
+            type = 2;
+            break;
+        default:
+            break;
+        }
+
+        // — Construimos el GameWindow y lo colocamos donde estaba el menú —
+        GameWindow *gameWindow = new GameWindow(
+            userKey, type, 1, data, id, webSocket, usr, menuWin
+            );
+        gameWindow->setGeometry(w->geometry());
+        gameWindow->show();
+
+        for (QWidget *win : QApplication::topLevelWidgets()) {
+            if (win != gameWindow) {
+                win->close();
+            }
+        }
+    }
+
+}
+
+void CustomGamesWindow::joinGame(QString idPart){
+    qDebug() << "creamos socket";
+    webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+
+    // conexión original
+    connect(webSocket, &QWebSocket::connected, [this]() {
+        qDebug() << "WebSocket conectado correctamente.";
+    });
+
+    connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
+        qDebug() << "Error en WebSocket:" << error;
+    });
+    connect(webSocket, &QWebSocket::textMessageReceived, this, [=](const QString &mensaje) {
+        this->manejarMensaje(userKey, mensaje);
+    });
+
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2")
+                      .arg(token)
+                      .arg(idPart);
+    qDebug() << "Conectando a:" << url;
+    webSocket->open(QUrl(url));
+
+    // ————————————— Mostrar cuadro modal mientras busca partida —————————————
+    if (searchingDialog) {
+        searchingDialog->deleteLater();
+    }
+    searchingDialog = new QDialog(this);
+    searchingDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    searchingDialog->setModal(true);
+    searchingDialog->setStyleSheet(
+        "QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }"
+        );
+
+    // sombra
+    QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(searchingDialog);
+    dialogShadow->setBlurRadius(10);
+    dialogShadow->setColor(QColor(0,0,0,80));
+    dialogShadow->setOffset(4,4);
+    searchingDialog->setGraphicsEffect(dialogShadow);
+
+    QVBoxLayout *searchLayout = new QVBoxLayout(searchingDialog);
+
+    // título grande
+    QLabel *searchLabel = new QLabel("Buscando oponente...", searchingDialog);
+    searchLabel->setStyleSheet(
+        "color: white;"
+        "font-size: 28px;"
+        "background: transparent;"
+        );
+    searchLabel->setAlignment(Qt::AlignCenter);
+    searchLayout->addWidget(searchLabel);
+
+    // candados giratorios
+    QHBoxLayout *iconsLayout = new QHBoxLayout();
+    iconsLayout->setSpacing(15);
+    iconsLayout->setAlignment(Qt::AlignCenter);
+
+    QVector<QLabel*> lockIcons;
+    for (int i = 0; i < 3; ++i) {
+        QLabel *icon = new QLabel(searchingDialog);
+        icon->setStyleSheet("background: transparent;");
+        icon->setPixmap(
+            QPixmap(":/images/app_logo_white.png")
+                .scaled(50,50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+            );
+        iconsLayout->addWidget(icon);
+        lockIcons.append(icon);
+    }
+    searchLayout->addLayout(iconsLayout);
+
+    // botón cancelar
+    QPushButton *cancelButton = new QPushButton("Cancelar", searchingDialog);
+    cancelButton->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #c2c2c3;"
+        "  color: #171718;"
+        "  border-radius: 15px;"
+        "  font-size: 20px;"
+        "  font-weight: bold;"
+        "  padding: 12px 25px;"
+        "}"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    cancelButton->setFixedSize(140,45);
+    searchLayout->addWidget(cancelButton, 0, Qt::AlignCenter);
+
+    searchingDialog->adjustSize();
+    searchingDialog->move(this->geometry().center() - searchingDialog->rect().center());
+    searchingDialog->show();
+
+    // cerrar socket y diálogo al cancelar
+    connect(cancelButton, &QPushButton::clicked, [this]() {
+        if (webSocket) {
+            webSocket->close();
+            webSocket->deleteLater();
+            webSocket = nullptr;
+        }
+        if (searchingDialog) {
+            searchingDialog->close();
+            searchingDialog->deleteLater();
+            searchingDialog = nullptr;
+        }
+    });
+
+    // animación de giro (más lenta)
+    QTimer *rotateTimer = new QTimer(searchingDialog);
+    connect(rotateTimer, &QTimer::timeout, [lockIcons]() {
+        static int angle = 0;
+        angle = (angle + 10) % 360;
+        for (QLabel *icon : lockIcons) {
+            QPixmap orig(":/images/app_logo_white.png");
+            QTransform tr; tr.rotate(angle);
+            icon->setPixmap(
+                orig.transformed(tr, Qt::SmoothTransformation)
+                    .scaled(50,50, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                );
+        }
+    });
+    rotateTimer->start(100);
+        // ——————————————————————————————————————————————————————————
+}
 

@@ -10,6 +10,8 @@
 #include <QListWidget>
 #include <QDialog>
 #include <QNetworkAccessManager>
+#include <QWebSocket>
+#include <QString>
 
 class CustomGamesWindow : public QDialog
 {
@@ -27,16 +29,21 @@ private:
     QString userKey;
     QString token;
     QNetworkAccessManager *networkManager;
+    QWebSocket *webSocket;
 
     QString loadAuthToken(const QString &userKey);
     void setupUI();
     bool soloAmigos = false;
     int fondo;
+    QDialog *searchingDialog = nullptr;
 
     QString usr;
+    int id;
 
     void fetchAllGames();
     void fetchFriendGames();
+    void manejarMensaje(const QString &userKey, const QString &mensaje);
+    void joinGame(QString idPart);
 };
 
 #endif // CUSTOMGAMESWINDOW_H

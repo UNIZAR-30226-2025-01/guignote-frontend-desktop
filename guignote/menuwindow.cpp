@@ -186,8 +186,11 @@ void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) 
         gameWindow->setGeometry(this->geometry());
         gameWindow->show();
 
-        QWidget *top = this->window();
-        top->close();
+        for (QWidget *win : QApplication::topLevelWidgets()) {
+            if (win != gameWindow) {
+                win->close();
+            }
+        }
     }
 }
 
