@@ -61,6 +61,7 @@ private:
     QString friendID;
     QString usr;
     QString ownID;
+    QString m_userKey;     // guarda aquí el userKey
 };
 
 #endif // FRIENDSMESSAGEWINDOW_H

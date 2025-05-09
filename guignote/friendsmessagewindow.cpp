@@ -11,6 +11,7 @@
 #include <QJsonArray>
 #include <QListWidgetItem>
 #include <QNetworkAccessManager>
+#include <QEventLoop>
 #include <QNetworkReply>
 #include <QWebSocket>
 #include <QTimer>
@@ -162,79 +163,132 @@ void FriendsMessageWindow::onTextMessageReceived(const QString &rawMessage)
 
 void FriendsMessageWindow::sendMessage(const QString &userKey)
 {
-    QString text = messageInput->text().trimmed();
-    if (text.isEmpty()) {
-        qDebug() << "No se envía mensaje vacío.";
-        return;
-    }
+    const QString textoAEnviar = messageInput->text().trimmed();
+    if (textoAEnviar.isEmpty()) return;
 
-    // --- 1) Mostrar inmediatamente en la UI ---
-    appendMessage(ownID, text);
+    // 1) Guardar localmente ANTES de todo
+    QString appName = QString("Sota, Caballo y Rey_%1").arg(userKey);
+    QSettings cache("Grace Hopper", appName);
+    cache.beginGroup("chat");
+    cache.beginGroup(friendID);
 
-    // --- 2) Enviar por WebSocket para entrega instantánea ---
+    QStringList sentList = cache.value("sent").toStringList();
+    QString entry = QDateTime::currentDateTimeUtc().toString(Qt::ISODate)
+                    + "|" + textoAEnviar;
+    sentList << entry;
+    if (sentList.size() > 200)
+        sentList = sentList.mid(sentList.size() - 200);
+    cache.setValue("sent", sentList);
+
+    cache.endGroup();
+    cache.endGroup();
+    cache.sync();
+    qDebug() << "[QSETTINGS] Mensajes enviados:" << sentList;
+
+    // 2) Mostrar en UI
+    appendMessage(ownID, textoAEnviar);
+    messageInput->clear();
+
+    // 3) Enviar por WS
+    // 3) Enviar por WS
     if (!webSocket->isValid())
         setupWebSocketConnection(userKey);
 
-    QJsonObject wsJson{{"contenido", text}};
-    webSocket->sendTextMessage(QString::fromUtf8(QJsonDocument(wsJson).toJson()));
-    messageInput->clear();
+    // Construye explícitamente un objeto JSON
+    QJsonObject wsJson;
+    wsJson["contenido"] = textoAEnviar;
 
-    // --- 3) POST REST para guardar en el servidor ---
+    // Ahora ya no hay ambigüedad: pasas un QJsonObject
+    QJsonDocument wsDoc(wsJson);
+    webSocket->sendTextMessage(wsDoc.toJson());
+
+
+    // 4) POST REST
     QString token = loadAuthToken(userKey);
-    QNetworkRequest postReq(QUrl("http://188.165.76.134:8000/mensajes/enviar_mensaje/"));
+    QNetworkRequest postReq(QUrl("http://188.165.76.134:8000/mensajes/enviar/"));
     postReq.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     postReq.setRawHeader("Auth", token.toUtf8());
-
-    QJsonObject body;
-    body["receptor_id"] = friendID;
-    body["contenido"]    = text;
-
-    QNetworkReply *postReply = networkManager->post(postReq, QJsonDocument(body).toJson());
+    QJsonObject body{{"receptor_id", friendID},
+                     {"contenido", textoAEnviar}};
+    auto *postReply = networkManager->post(postReq, QJsonDocument(body).toJson());
     connect(postReply, &QNetworkReply::finished, this, [=]() {
-        if (postReply->error() != QNetworkReply::NoError) {
+        if (postReply->error() != QNetworkReply::NoError)
             qWarning() << "Error al guardar mensaje:" << postReply->errorString();
-        } else {
-            // opcional: refrescar lista para asegurar consistencia
-            loadMessages(userKey);
-        }
         postReply->deleteLater();
     });
 }
 
 
+
 void FriendsMessageWindow::loadMessages(const QString &userKey)
 {
     QString token = loadAuthToken(userKey);
-    if (token.isEmpty()) {
-        qWarning() << "No se pudo obtener token.";
-        return;
+    if (token.isEmpty()) return;
+
+    struct Msg { QDateTime ts; QString emisor, txt; };
+    QVector<Msg> todos;
+
+    // 2.1) Traer del servidor solo lo que te han enviado a ti
+    {
+        QUrl url(QString("http://188.165.76.134:8000/mensajes/obtener_mensajes/?receptor_id=%1")
+                     .arg(ownID));
+        QNetworkRequest req(url);
+        req.setRawHeader("Auth", token.toUtf8());
+        QNetworkReply *r = networkManager->get(req);
+
+        QEventLoop loop;
+        connect(r, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+
+        if (r->error() == QNetworkReply::NoError) {
+            QJsonArray arr = QJsonDocument::fromJson(r->readAll())
+            .object()["mensajes"].toArray();
+            for (auto v : arr) {
+                auto o = v.toObject();
+                Msg m;
+                m.emisor = QString::number(o["emisor"].toInt());
+                m.txt    = o["contenido"].toString();
+                m.ts     = QDateTime::fromString(
+                    o["fecha_envio"].toString(),
+                    "yyyy-MM-dd HH:mm:ss");
+                todos.append(m);
+            }
+        }
+        r->deleteLater();
     }
 
-    QUrl url(QString("http://188.165.76.134:8000/mensajes/obtener_mensajes/?receptor_id=%1")
-                 .arg(friendID));
-    QNetworkRequest request(url);
-    request.setRawHeader("Auth", token.toUtf8());
+    // 2.2) Añadir tus envíos locales desde QSettings
+    {
+        QString appName = QString("Sota, Caballo y Rey_%1").arg(userKey);
+        QSettings cache("Grace Hopper", appName);
+        cache.beginGroup("chat");
+        cache.beginGroup(friendID);
 
-    auto *reply = networkManager->get(request);
-    connect(reply, &QNetworkReply::finished, [=]() {
-        QByteArray data = reply->readAll();
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            qWarning() << "Error al cargar mensajes:" << reply->errorString();
-            return;
+        QStringList sentList = cache.value("sent").toStringList();
+
+        cache.endGroup();   // sale de friendID
+        cache.endGroup();   // sale de chat
+
+        for (const QString &entry : sentList) {
+            QStringList parts = entry.split('|', Qt::KeepEmptyParts);
+            if (parts.size() != 2) continue;
+            Msg m;
+            m.ts     = QDateTime::fromString(parts[0], Qt::ISODate);
+            m.emisor = ownID;
+            m.txt    = parts[1];
+            todos.append(m);
         }
-        QJsonDocument doc = QJsonDocument::fromJson(data);
-        if (!doc.isObject()) return;
-        QJsonArray arr = doc.object()["mensajes"].toArray();
-        // Limpiar y volver a añadir
-        messagesListWidget->clear();
-        for (int i = arr.size()-1; i >= 0; --i) {
-            auto obj = arr[i].toObject();
-            QString senderId = QString::number(obj["emisor"].toInt());
-            QString content  = obj["contenido"].toString();
-            appendMessage(senderId, content);
-        }
-    });
+    }
+
+    // 3) Orden cronológico
+    std::sort(todos.begin(), todos.end(),
+              [](auto &a, auto &b){ return a.ts < b.ts; });
+
+    // 4) Repoblar la UI
+    messagesListWidget->clear();
+    for (auto &m : todos)
+        appendMessage(m.emisor, m.txt);
+    messagesListWidget->scrollToBottom();
 }
 
 void FriendsMessageWindow::appendMessage(const QString &senderId,
@@ -283,10 +337,8 @@ void FriendsMessageWindow::appendMessage(const QString &senderId,
 
 QString FriendsMessageWindow::loadAuthToken(const QString &userKey)
 {
-    // Lee con QSettings en INI
-    QString path = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-                   + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
-    QSettings settings(path, QSettings::IniFormat);
+    QString appName = QString("Sota, Caballo y Rey_%1").arg(userKey);
+    QSettings settings("Grace Hopper", appName);
     return settings.value("auth/token").toString();
 }
 
