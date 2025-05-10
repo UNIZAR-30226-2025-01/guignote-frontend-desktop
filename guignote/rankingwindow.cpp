@@ -147,28 +147,27 @@ void RankingWindow::setupUI() {
     mainLayout->addLayout(filterLayout);
 
     rankingListWidget = new QListWidget(this);
+
+    rankingListWidget->setStyleSheet(R"(
     rankingListWidget->setStyleSheet(R"(
     QListWidget {
         background: transparent;
         border: none;
     }
-    QListWidget::item {
-        color: #e4e4e4;
-        padding: 10px 18px;
-        border-radius: 12px;
-        margin-bottom: 6px;
+
+    /* Eliminamos el reborde punteado que dibuja Qt cuando hay foco/selección */
+    QListWidget::item:selected {
+        outline: none;
     }
-    QListWidget::item:selected{
-        background: #c2c2c3;
-        color:  #171718;
-    }
-)");
+    )");
+
+    rankingListWidget->setSelectionMode(QAbstractItemView::NoSelection);
     rankingListWidget->setMinimumWidth(600);
     rankingListWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     rankingListWidget->setTextElideMode(Qt::ElideNone);
     rankingListWidget->setWordWrap(true);
     rankingListWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
+    rankingListWidget->setFocusPolicy(Qt::NoFocus);
     QHBoxLayout *centeredListLayout = new QHBoxLayout();
     centeredListLayout->addStretch();
     centeredListLayout->addWidget(rankingListWidget);
@@ -225,7 +224,8 @@ void RankingWindow::handleTeamRankingResponse() {
     reply->deleteLater();
 }
 
-void RankingWindow::updateRankingList(const QJsonArray &playersArray, int type) {
+void RankingWindow::updateRankingList(const QJsonArray &playersArray, int type)
+{
     rankingListWidget->clear();
 
     int position = 1;
@@ -233,43 +233,44 @@ void RankingWindow::updateRankingList(const QJsonArray &playersArray, int type) 
         QJsonObject playerObj = value.toObject();
         QString playerName = playerObj.value("nombre").toString();
 
-        int elo;
-
-        if (type == 1){
-            elo = playerObj.value("elo").toInt();
-        } else {
-            elo = playerObj.value("elo_parejas").toInt();
-        }
-
+        int elo = (type == 1)
+                      ? playerObj.value("elo").toInt()
+                      : playerObj.value("elo_parejas").toInt();
 
         QString listItemText = QString("%1º  %2 - Elo: %3")
                                    .arg(position)
                                    .arg(playerName)
                                    .arg(elo);
 
+        /* ────────────── Crear item ────────────── */
         QListWidgetItem *item = new QListWidgetItem(listItemText);
 
         /* --- tipografía base --- */
         QFont font("Montserrat", 15);
+        font.setLetterSpacing(QFont::AbsoluteSpacing, 0.6);
         item->setFont(font);
         item->setSizeHint(QSize(rankingListWidget->width() - 40, 40));
 
+        /* >>> NUEVA LÍNEA: color de texto por defecto <<< */
+        item->setForeground(QColor("#ffffff"));   // texto blanco
+
         /* --- zebra manual (posición empieza en 1) --- */
-        if (position % 2 == 1) {                                  // filas 1,3,5…
-            item->setBackground(QColor(255,255,255, 10));         // 4 % opacidad
+        if (position % 2 == 1) {                               // filas 1,3,5…
+            item->setBackground(QColor(255, 255, 255, 15));    // ~6 % opacidad
         }
 
         /* --- resaltar a mi usuario --- */
         if (playerName == currentUserName) {
-            item->setBackground(QColor("#ffd166"));               // ámbar
-            item->setForeground(QColor("#171718"));               // texto oscuro
+            item->setBackground(QColor("#3d82f6"));
+            item->setForeground(QColor("#ffffff"));            // texto casi negro
             font.setBold(true);
             item->setFont(font);
         }
 
         rankingListWidget->addItem(item);
-        position++;
+        ++position;
     }
 
     rankingListWidget->updateGeometry();
 }
+
