@@ -32,15 +32,15 @@ void GameWindow::addCartaPorId(Carta* c){
     });
 }
 
+
 Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
 GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef) {
-    // justo al principio del constructor:
     QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
-    QSettings settings("Grace Hopper", config);
-    this->deckSkin = settings.value("selectedDeck", 0).toInt();
+    QSettings appSettings("Grace Hopper", config);
+    this->deckSkin = appSettings.value("selectedDeck", 0).toInt();
     this->usr = usr;
     menuWindowRef = menuRef;
     bg = fondo;
@@ -51,6 +51,11 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
     hasPendingDraw     = false;
     pendingDrawUserId  = -1;
     pendingDrawData    = QJsonObject();
+    sfxPlayer = new QMediaPlayer(this);
+    sfxOutput = new QAudioOutput(this);
+    int effectVolume = appSettings.value("sound/effectsVolume", 50).toInt();
+    sfxOutput->setVolume(static_cast<double>(effectVolume) / 100.0);
+    sfxPlayer->setAudioOutput(sfxOutput);
 
     QObject::connect(ws, &QWebSocket::textMessageReceived,
                      this, &GameWindow::recibirMensajes,
@@ -61,6 +66,18 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
         chatID = QString::number(msg["chat_id"].toInt());
     }
     setupUI(userKey);
+    int volume = appSettings.value("sound/volume", 50).toInt();
+
+    // Crear reproductor de música
+    backgroundPlayer = new QMediaPlayer(this);
+    audioOutput = new QAudioOutput(this);
+    backgroundPlayer->setAudioOutput(audioOutput);
+
+    // Establecer volumen y archivo
+    audioOutput->setVolume(static_cast<double>(volume) / 100.0);
+    backgroundPlayer->setSource(QUrl("qrc:/bgm/partida.mp3"));
+    backgroundPlayer->setLoops(QMediaPlayer::Infinite);
+    backgroundPlayer->play();
     setupGameElements(msg);
     setMouseTracking(true);
     optionsBar->setMouseTracking(true);
@@ -1044,6 +1061,10 @@ void GameWindow::animateDraw(const QJsonObject &drawData, int userId) {
     carta->show();
     carta->raise();
 
+    // 🔊 EFECTO DE SONIDO AQUÍ
+    sfxPlayer->setSource(QUrl("qrc:/bgm/card_draw.mp3"));
+    sfxPlayer->play();
+
     // 5) Animamos de start → finalPos
     auto *anim = new QPropertyAnimation(carta, "pos", this);
     anim->setDuration(500);
@@ -1093,6 +1114,9 @@ GameWindow::~GameWindow() {
     this->disconnect();
     // 3) Limpiar cartas estáticas
     cartasPorId.clear();
+
+    if (backgroundPlayer) backgroundPlayer->stop();
+
 }
 
 void GameWindow::procesarRoundResultSeguro(const QJsonObject& data) {

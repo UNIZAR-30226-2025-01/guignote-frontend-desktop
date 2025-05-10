@@ -27,6 +27,8 @@
         <file>icons/profile.png</file>
         <file>icons/chest.png</file>
         <file>bgm/menu_jazz_lofi.mp3</file>
+        <file>bgm/partida.mp3</file>
+        <file>bgm/card_draw.mp3</file>
         <file>icons/darkenedsettings.png</file>
         <file>icons/darkenedfriends.png</file>
         <file>icons/darkenedchest.png</file>

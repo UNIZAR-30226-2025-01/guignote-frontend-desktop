@@ -186,6 +186,13 @@ void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) 
         gameWindow->show();
 
         QWidget *top = this->window();
+        // ⚠️ Parar música del menú antes de cerrar
+        if (backgroundPlayer) {
+            backgroundPlayer->stop();
+            backgroundPlayer->deleteLater();
+            backgroundPlayer = nullptr;
+        }
+
         top->close();
     }
 }

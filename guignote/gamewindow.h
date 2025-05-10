@@ -13,6 +13,8 @@
 #include <qgraphicseffect.h>
 #include "icon.h"
 #include "mano.h"
+#include <QMediaPlayer>
+#include <QAudioOutput>
 #include "deck.h"
 #include "posicion.h"
 #include "menuwindow.h"
@@ -56,6 +58,12 @@ private:
     QString usr;
     QString token;
     QWebSocket *ws;
+
+    QMediaPlayer *backgroundPlayer = nullptr;
+    QAudioOutput *audioOutput = nullptr;
+
+    QMediaPlayer *sfxPlayer;
+    QAudioOutput *sfxOutput;
 
     // 0 -> 1v1 Ranked
     // 1 -> 1v1 Friendly
