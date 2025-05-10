@@ -408,7 +408,10 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
     // Conecta la selección para persistir en QSettings
     connect(matGroup, &QButtonGroup::idClicked,
             this, [=](int id){
-                QSettings().setValue("selectedMat", id);
+                QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
+                QSettings settings("Grace Hopper", config);
+                settings.setValue("selectedMat", id);
+                settings.sync();                // (opcional) escribe al momento
             });
     stackedWidget->addWidget(matPage);
 
@@ -417,12 +420,16 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
     connect(sidebar, &QListWidget::currentRowChanged,
             this,    &InventoryWindow::onTabChanged);
 
-    QSettings s;
+    QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
+    QSettings s("Grace Hopper", config);        // ① mismo scope que al salvar
+
     int selDeck = s.value("selectedDeck", 0).toInt();
-    if (auto *b = deckGroup->button(selDeck)) b->setChecked(true);
+    if (auto *b = deckGroup->button(selDeck))   // ② restaura check
+        b->setChecked(true);
 
     int selMat = s.value("selectedMat", 0).toInt();
-    if (auto *b2 = matGroup->button(selMat)) b2->setChecked(true);
+    if (auto *b2 = matGroup->button(selMat))   // ② restaura check
+        b2->setChecked(true);
 }
 
 
