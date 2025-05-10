@@ -17,7 +17,8 @@
 #include <QString>
 
 RankingWindow::RankingWindow(const QString &userKey, QWidget *parent)
-    : QDialog(parent)
+    : QDialog(parent),
+      currentUserName(userKey)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
@@ -146,6 +147,22 @@ void RankingWindow::setupUI() {
     mainLayout->addLayout(filterLayout);
 
     rankingListWidget = new QListWidget(this);
+    rankingListWidget->setStyleSheet(R"(
+    QListWidget {
+        background: transparent;
+        border: none;
+    }
+    QListWidget::item {
+        color: #e4e4e4;
+        padding: 10px 18px;
+        border-radius: 12px;
+        margin-bottom: 6px;
+    }
+    QListWidget::item:selected{
+        background: #c2c2c3;
+        color:  #171718;
+    }
+)");
     rankingListWidget->setMinimumWidth(600);
     rankingListWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     rankingListWidget->setTextElideMode(Qt::ElideNone);
@@ -232,12 +249,23 @@ void RankingWindow::updateRankingList(const QJsonArray &playersArray, int type) 
 
         QListWidgetItem *item = new QListWidgetItem(listItemText);
 
-        QFont font = item->font();
-        font.setPointSize(16);
-        font.setBold(true);
+        /* --- tipografía base --- */
+        QFont font("Montserrat", 15);
         item->setFont(font);
-
         item->setSizeHint(QSize(rankingListWidget->width() - 40, 40));
+
+        /* --- zebra manual (posición empieza en 1) --- */
+        if (position % 2 == 1) {                                  // filas 1,3,5…
+            item->setBackground(QColor(255,255,255, 10));         // 4 % opacidad
+        }
+
+        /* --- resaltar a mi usuario --- */
+        if (playerName == currentUserName) {
+            item->setBackground(QColor("#ffd166"));               // ámbar
+            item->setForeground(QColor("#171718"));               // texto oscuro
+            font.setBold(true);
+            item->setFont(font);
+        }
 
         rankingListWidget->addItem(item);
         position++;

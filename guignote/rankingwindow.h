@@ -18,6 +18,7 @@ public:
     explicit RankingWindow(const QString &userKey, QWidget *parent = nullptr);
 
 private:
+    QString currentUserName;
     // UI
     QVBoxLayout *mainLayout;
     QLabel *titleLabel;
