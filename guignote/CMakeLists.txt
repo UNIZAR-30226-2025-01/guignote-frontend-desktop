@@ -42,13 +42,6 @@ set(PROJECT_SOURCES
 qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}
     rejoinwindow.h rejoinwindow.cpp
 
-
-
-
-
-
-
-
 )
 
 target_link_libraries(guignote PRIVATE

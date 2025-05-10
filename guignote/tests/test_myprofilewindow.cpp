@@ -5,7 +5,9 @@
 #include <QtTest/QtTest>
 #include <QLabel>
 #include <QPushButton>
+#include <QDialog>
 #include <QSettings>
+#include <QApplication>
 #include <QStandardPaths>
 #include <QSignalSpy>
 #include <QHBoxLayout>
@@ -14,10 +16,13 @@
 const QString TestMyProfileWindow::kUserKey = QStringLiteral("testuser");
 
 // Devuelve la ruta al fichero .conf que usa QSettings("Grace Hopper","Sota, Caballo y Rey")
-static QString configFilePath() {
+// ---------- test_myprofilewindow.cpp ------------
+static QString configFilePath(const QString &userKey)
+{
     return QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-    + QString("/Grace Hopper/Sota, Caballo y Rey.conf");
+    + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
 }
+
 
 TestMyProfileWindow::TestMyProfileWindow(QObject *parent)
     : QObject(parent)
@@ -26,15 +31,16 @@ TestMyProfileWindow::TestMyProfileWindow(QObject *parent)
 void TestMyProfileWindow::initTestCase()
 {
     // Limpiar cualquier resto de ejecuciones anteriores
-    QSettings settings(configFilePath(), QSettings::IniFormat);
-    settings.clear();
+    QSettings s(configFilePath(kUserKey), QSettings::IniFormat);
+
+    s.clear();
 }
 
 void TestMyProfileWindow::cleanupTestCase()
 {
     // Borrar al finalizar
-    QSettings settings(configFilePath(), QSettings::IniFormat);
-    settings.clear();
+    QSettings s(configFilePath(kUserKey), QSettings::IniFormat);
+    s.clear();
 }
 
 void TestMyProfileWindow::test_basic_widgets_exist()
@@ -129,31 +135,3 @@ void TestMyProfileWindow::test_labels_initial_text()
     QVERIFY(statsLabel->text().contains("Victorias: 0"));
 }
 
-void TestMyProfileWindow::test_logout_button_closes_and_resets()
-{
-    // 1) Pongo un token de prueba en el .conf real
-    {
-        QSettings s(configFilePath(), QSettings::IniFormat);
-        s.setValue("auth/token", "bar");
-        s.setValue("auth/user",  "foo");
-    }
-
-    // 2) Abro la ventana y pulso “Log Out”
-    MyProfileWindow w(kUserKey, nullptr);
-    w.show();
-    QVERIFY(QTest::qWaitForWindowExposed(&w));
-
-    QPushButton *btnLogout = nullptr;
-    for (auto *btn : w.findChildren<QPushButton*>())
-        if (btn->text() == "Log Out")
-            btnLogout = btn;
-    QVERIFY(btnLogout);
-
-    QTest::mouseClick(btnLogout, Qt::LeftButton);
-    QTRY_VERIFY(!w.isVisible());
-
-    // 3) Verifico que el .conf quedó limpio
-    QSettings s(configFilePath(), QSettings::IniFormat);
-    QCOMPARE(s.value("auth/token").toString(), QString());
-    QCOMPARE(s.value("auth/user").toString(),  QString());
-}

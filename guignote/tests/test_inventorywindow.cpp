@@ -86,22 +86,20 @@ void TestInventoryWindow::test_close_button_closes()
 void TestInventoryWindow::test_sidebar_pages()
 {
     w = new InventoryWindow(nullptr);
-    QListWidget *sidebar = w->findChild<QListWidget*>();
-    QStackedWidget *stack = w->findChild<QStackedWidget*>();
+    QListWidget   *sidebar = w->findChild<QListWidget*>();
+    QStackedWidget *stack  = w->findChild<QStackedWidget*>();
     QVERIFY(sidebar && stack);
 
-    // Inicialmente, índice 0
+    // índice inicial
     QCOMPARE(stack->currentIndex(), 0);
 
-    // Cambiar al segundo ítem pone página 1
+    // cambia a Tapetes
     sidebar->setCurrentRow(1);
-    QTest::qWait(50);
-    QCOMPARE(stack->currentIndex(), 1);
+    QTRY_COMPARE_WITH_TIMEOUT(stack->currentIndex(), 1, 500);
 
-    // Volver al primero
+    // vuelve a Barajas
     sidebar->setCurrentRow(0);
-    QTest::qWait(50);
-    QCOMPARE(stack->currentIndex(), 0);
+    QTRY_COMPARE_WITH_TIMEOUT(stack->currentIndex(), 0, 500);
 
     delete w;
     w = nullptr;
@@ -110,17 +108,16 @@ void TestInventoryWindow::test_sidebar_pages()
 void TestInventoryWindow::test_switching_pages_updates_stack()
 {
     w = new InventoryWindow(nullptr);
-    QListWidget *sidebar = w->findChild<QListWidget*>();
-    QStackedWidget *stack = w->findChild<QStackedWidget*>();
+    QListWidget   *sidebar = w->findChild<QListWidget*>();
+    QStackedWidget *stack  = w->findChild<QStackedWidget*>();
     QVERIFY(sidebar && stack);
 
-    // Recorremos todas las filas del sidebar y comprobamos stack
-    for (int row=0; row<sidebar->count(); ++row) {
+    for (int row = 0; row < sidebar->count(); ++row) {
         sidebar->setCurrentRow(row);
-        QTest::qWait(20);
-        QCOMPARE(stack->currentIndex(), row);
+        QTRY_COMPARE_WITH_TIMEOUT(stack->currentIndex(), row, 500);
     }
 
     delete w;
     w = nullptr;
 }
+
