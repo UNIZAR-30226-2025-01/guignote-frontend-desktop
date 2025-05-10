@@ -4,11 +4,10 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QSettings>
-#include <QStandardPaths>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QSettings>
 #include <QListWidgetItem>
 #include <QNetworkAccessManager>
 #include <QEventLoop>
@@ -20,11 +19,11 @@
 #include <QJsonObject>
 #include <QByteArray>
 
- FriendsMessageWindow::FriendsMessageWindow(const QString &userKey,
-                                            const QString &friendId,
-                                            const QString &friendName,
-                                            QWidget *parent)
-: QWidget(parent),
+FriendsMessageWindow::FriendsMessageWindow(const QString &userKey,
+                                           const QString &friendId,
+                                           const QString &friendName,
+                                           QWidget *parent)
+    : QWidget(parent),
     friendID(friendId),
     usr(friendName)
 {
@@ -119,9 +118,14 @@ void FriendsMessageWindow::setupWebSocketConnection(const QString &userKey)
         return;
     }
 
-    QString urlString = QString("ws://188.165.76.134:8000/ws/chat/%1/?token=%2")
-                            .arg(friendID, token);
-    webSocket->open(QUrl(urlString));
+    QUrl url;
+    url.setScheme("ws");
+    url.setHost("188.165.76.134");
+    url.setPort(8000);
+    url.setPath(QString("/ws/chat/%1/").arg(friendID));
+    url.setQuery(QString("token=%1").arg(token));
+
+    webSocket->open(url);
 
     connect(webSocket, &QWebSocket::connected,    this, &FriendsMessageWindow::onConnected);
     connect(webSocket, &QWebSocket::disconnected, this, &FriendsMessageWindow::onDisconnected);
@@ -141,22 +145,34 @@ void FriendsMessageWindow::onDisconnected()
 
 void FriendsMessageWindow::onTextMessageReceived(const QString &rawMessage)
 {
-    // Parsear JSON
+    // 1) Parsear el JSON recibido
     QJsonDocument doc = QJsonDocument::fromJson(rawMessage.toUtf8());
-    if (!doc.isObject()) return;
+    if (!doc.isObject())                 // no era un objeto JSON → descarta
+        return;
 
     QJsonObject obj = doc.object();
-    if (obj.contains("error")) {
+    if (obj.contains("error")) {         // el servidor manda un error
         qWarning() << "Error WS:" << obj["error"].toString();
         return;
     }
 
+    // 2) Extraer los campos que ya tenías
     QString senderId = QString::number(obj["emisor"].toInt());
     QString content  = obj["contenido"].toString();
+    QString ts       = obj["fecha_envio"].toString();   // AAAA-MM-DD HH:MM:SS
 
+    // (opcional) no muestres tu propio eco
     if (senderId == ownID)
         return;
 
+    // 3) Construir la clave única y filtrar duplicados
+    QString key = ts + "|" + senderId + "|" + content;  // ← clave compuesta
+    if (m_shownKeys.contains(key))
+        return;                         // ya se mostró → ignora
+
+    m_shownKeys.insert(key);            // marca como nuevo
+
+    // 4) Mostrar el mensaje y disparar la señal
     appendMessage(senderId, content);
     emit newMessageReceived(senderId);
 }
@@ -165,25 +181,6 @@ void FriendsMessageWindow::sendMessage(const QString &userKey)
 {
     const QString textoAEnviar = messageInput->text().trimmed();
     if (textoAEnviar.isEmpty()) return;
-
-    // 1) Guardar localmente ANTES de todo
-    QString appName = QString("Sota, Caballo y Rey_%1").arg(userKey);
-    QSettings cache("Grace Hopper", appName);
-    cache.beginGroup("chat");
-    cache.beginGroup(friendID);
-
-    QStringList sentList = cache.value("sent").toStringList();
-    QString entry = QDateTime::currentDateTimeUtc().toString(Qt::ISODate)
-                    + "|" + textoAEnviar;
-    sentList << entry;
-    if (sentList.size() > 200)
-        sentList = sentList.mid(sentList.size() - 200);
-    cache.setValue("sent", sentList);
-
-    cache.endGroup();
-    cache.endGroup();
-    cache.sync();
-    qDebug() << "[QSETTINGS] Mensajes enviados:" << sentList;
 
     // 2) Mostrar en UI
     appendMessage(ownID, textoAEnviar);
@@ -225,69 +222,59 @@ void FriendsMessageWindow::loadMessages(const QString &userKey)
     QString token = loadAuthToken(userKey);
     if (token.isEmpty()) return;
 
-    struct Msg { QDateTime ts; QString emisor, txt; };
-    QVector<Msg> todos;
+    struct Msg {
+        QDateTime ts;
+        QString   sender;
+        QString   text;
+        QString   key;        //  "<ts>|<sender>|<text>"
+    };
+    QVector<Msg> mensajes;
 
-    // 2.1) Traer del servidor solo lo que te han enviado a ti
-    {
-        QUrl url(QString("http://188.165.76.134:8000/mensajes/obtener_mensajes/?receptor_id=%1")
-                     .arg(ownID));
-        QNetworkRequest req(url);
-        req.setRawHeader("Auth", token.toUtf8());
-        QNetworkReply *r = networkManager->get(req);
+    /* --- 1. Descarga REST ------------------------------------------------ */
+    QUrl url(QString("http://188.165.76.134:8000/mensajes/obtener/?receptor_id=%1")
+                 .arg(friendID));
+    QNetworkRequest req(url);
+    req.setRawHeader("Auth", token.toUtf8());
 
-        QEventLoop loop;
-        connect(r, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-        loop.exec();
+    QNetworkReply *r = networkManager->get(req);
+    QEventLoop loop;
+    connect(r, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
 
-        if (r->error() == QNetworkReply::NoError) {
-            QJsonArray arr = QJsonDocument::fromJson(r->readAll())
-            .object()["mensajes"].toArray();
-            for (auto v : arr) {
-                auto o = v.toObject();
-                Msg m;
-                m.emisor = QString::number(o["emisor"].toInt());
-                m.txt    = o["contenido"].toString();
-                m.ts     = QDateTime::fromString(
-                    o["fecha_envio"].toString(),
-                    "yyyy-MM-dd HH:mm:ss");
-                todos.append(m);
-            }
-        }
-        r->deleteLater();
-    }
+    if (r->error() == QNetworkReply::NoError) {
+        QJsonArray arr = QJsonDocument::fromJson(r->readAll())
+        .object()["mensajes"].toArray();
 
-    // 2.2) Añadir tus envíos locales desde QSettings
-    {
-        QString appName = QString("Sota, Caballo y Rey_%1").arg(userKey);
-        QSettings cache("Grace Hopper", appName);
-        cache.beginGroup("chat");
-        cache.beginGroup(friendID);
+        for (auto v : arr) {
+            auto  o   = v.toObject();
+            QString tsStr   = o["fecha_envio"].toString();            // "AAAA-MM-DD HH:MM:SS"
+            QDateTime ts    = QDateTime::fromString(tsStr,
+                                                 "yyyy-MM-dd HH:mm:ss");
+            QString sender  = QString::number(o["emisor"].toInt());
+            QString text    = o["contenido"].toString();
+            QString key     = tsStr + "|" + sender + "|" + text;
 
-        QStringList sentList = cache.value("sent").toStringList();
-
-        cache.endGroup();   // sale de friendID
-        cache.endGroup();   // sale de chat
-
-        for (const QString &entry : sentList) {
-            QStringList parts = entry.split('|', Qt::KeepEmptyParts);
-            if (parts.size() != 2) continue;
-            Msg m;
-            m.ts     = QDateTime::fromString(parts[0], Qt::ISODate);
-            m.emisor = ownID;
-            m.txt    = parts[1];
-            todos.append(m);
+            mensajes.append({ts, sender, text, key});
         }
     }
+    r->deleteLater();
 
-    // 3) Orden cronológico
-    std::sort(todos.begin(), todos.end(),
-              [](auto &a, auto &b){ return a.ts < b.ts; });
+    /* --- 2. Ordenar por fecha ------------------------------------------- */
+    std::sort(mensajes.begin(), mensajes.end(),
+              [](const Msg &a, const Msg &b){ return a.ts < b.ts; });
 
-    // 4) Repoblar la UI
-    messagesListWidget->clear();
-    for (auto &m : todos)
-        appendMessage(m.emisor, m.txt);
+    /* --- 3. Poblar la UI, filtrando duplicados -------------------------- */
+    messagesListWidget->clear();          // borramos la lista actual
+
+    for (const Msg &m : mensajes)
+    {
+        if (m_shownKeys.contains(m.key))
+            continue;                     // ya estaba (raro, pero por si acaso)
+
+        m_shownKeys.insert(m.key);
+        appendMessage(m.sender, m.text);  // tu burbuja
+    }
+
     messagesListWidget->scrollToBottom();
 }
 
@@ -325,10 +312,29 @@ void FriendsMessageWindow::appendMessage(const QString &senderId,
     messagesListWidget->setItemWidget(item, container);
 
     QTimer::singleShot(0, this, [=]() {
+        const int bubbleMaxWidth = 500;   // sube o baja a tu gusto
+
+        // ①  Estilo común para ambas burbujas
+        QString common = QString(
+                             "padding: 10px; font-size: 16px; border-radius: 10px; "
+                             "max-width: %1px;").arg(bubbleMaxWidth);
+
+        // ②  Color según quién envía
+        if (senderId == ownID) {
+            lbl->setStyleSheet("background-color: white; color: black; " + common);
+            lay->setAlignment(lbl, Qt::AlignRight);
+        } else {
+            lbl->setStyleSheet("background-color: #1D4536; color: #F9F9F4; " + common);
+            lay->setAlignment(lbl, Qt::AlignLeft);
+        }
+
+        // ③  Calcular tamaño óptimo sin factor 0.35
         lbl->adjustSize();
-        int h = lbl->height() * 0.35;
-        if (h < 40) h = 40;
-        item->setSizeHint(QSize(400, h + 10));
+        int h = lbl->sizeHint().height();                       // alto real
+        int listW   = messagesListWidget->viewport()->width();  // ancho disponible
+        int targetW = qMin(bubbleMaxWidth, listW - 40);         // deja 20 px de margen a cada lado
+
+        item->setSizeHint(QSize(targetW, h + 10));
         messagesListWidget->scrollToBottom();
     });
 }

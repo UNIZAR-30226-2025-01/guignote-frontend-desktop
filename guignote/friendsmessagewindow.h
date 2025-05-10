@@ -56,6 +56,10 @@ private:
     QListWidget  *messagesListWidget;
     QLineEdit    *messageInput;
     QPushButton  *sendButton;
+    QSet<QString> m_shownKeys;
+
+    QDateTime wsIgnoreUntil;
+
 
     // Datos de chat
     QString friendID;
