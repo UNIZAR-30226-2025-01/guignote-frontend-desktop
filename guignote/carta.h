@@ -1,59 +1,48 @@
-// carta.h
 #ifndef CARTA_H
 #define CARTA_H
 
+#include "orientacion.h"
+#include <QString>
 #include <QLabel>
-#include <QPixmap>
-#include <QPoint>
+#include <QEnterEvent>
+#include <QEvent>
 
-class Mano;
-class GameWindow;
-
-class Carta : public QLabel
-{
+class Carta : public QLabel {
     Q_OBJECT
-
 public:
-    explicit Carta(GameWindow *gw = nullptr,
-                   QWidget *parent = nullptr,
-                   const QString &num    = "0",
-                   const QString &suit   = "",
-                   int h                  = 100,
-                   int skin               = 0,
-                   bool faceUp            = true);
+    static int skin;
 
-    void reveal();
-    void hideFace();
-    void añadirAMano(Mano* mano, int id);
-    void eliminarDeMano();
-    void setLock(bool lock);
-    QPixmap getImagen() const;
-    void setImagen(const QPixmap &pixmap, int h);
+    Carta(QWidget *parent = nullptr);
 
-    QString idGlobal;  // identificador único ("num"+"suit")
-    QString num;
-    QString suit;
-    QPixmap getOriginalPixmap() const;
+    Carta(const QString& palo, const QString& valor, QWidget *parent = nullptr);
 
-protected:
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
+    void setPaloValor(const QString& palo, const QString& valor);
+
+    QString getPalo() const;
+
+    QString getValor() const;
+
+    void setPosicion(int x, int y);
+
+    void setOrientacion(Orientacion orientacion);
+
+    bool interactuable = false;
+
+signals:
+    void cartaDobleClick(Carta* carta);
 
 private:
-    QPixmap selectPixmap(int skin) const;
+    void cargarImagen();
 
-    QPixmap frontPixmap;
-    QPixmap backPixmap;
-    QPixmap imagen;
-    QPixmap pixmapOrig;
+    QPixmap img[2];
+    QString palo, valor;
+    int posX, posY;
+    Orientacion orientacion;
 
-    bool isFaceUp;
-    bool locked;
-    bool arrastrando;
-    QPoint offsetArrastre;
-    int ID;
-    Mano* mano;
+protected:
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
 };
 
 #endif // CARTA_H

@@ -1,145 +1,81 @@
-// carta.cpp
 #include "carta.h"
-#include "mano.h"
-#include "gamewindow.h"
+#include <QGuiApplication>
+#include <QScreen>
+#include <QGraphicsOpacityEffect>
 
-#include <QMouseEvent>
-#include <QDrag>
-#include <QMimeData>
-#include <QApplication>
-#include <QDebug>
+int Carta::skin = 0;
 
-Carta::Carta(GameWindow *gw,
-             QWidget *parent,
-             const QString &num,
-             const QString &suit,
-             int h,
-             int skin,
-             bool faceUp)
-    : QLabel(parent),
-    num(num),
-    suit(suit),
-    isFaceUp(faceUp),
-    locked(true),
-    arrastrando(false),
-    ID(-1),
-    mano(nullptr)
-{
-    setAttribute(Qt::WA_DeleteOnClose);
-    setAttribute(Qt::WA_TranslucentBackground);
-    setStyleSheet("background: transparent;");
-    setMouseTracking(true);
+Carta::Carta(QWidget* parent)
+    : Carta("Back", "", parent) {}
 
-    // Selección de imagenes
-    QPixmap front = selectPixmap(skin);
-    backPixmap    = selectPixmap(0);               // asumimos que skin=0 es reverso
-    setImagen(front, h);
-
-    // Guardamos pixmaps escalados
-    frontPixmap = this->pixmap();                  // cara visible
-    pixmapOrig  = frontPixmap;
-    backPixmap  = backPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-    idGlobal = num + suit;
-    if (gw) gw->addCartaPorId(this);
+Carta::Carta(const QString& palo, const QString& valor, QWidget *parent)
+    : palo(palo), valor(valor), orientacion(Orientacion::DOWN), QLabel(parent) {
+        cargarImagen();
 }
 
-void Carta::setLock(bool lock) {
-    locked = lock;
+void Carta::setPosicion(int x, int y) {
+    this->posX = x;
+    this->posY = y;
+    this->move(posX, posY);
 }
 
-QPixmap Carta::getImagen() const {
-    return imagen;
+void Carta::setPaloValor(const QString& palo, const QString& valor) {
+    this->palo = palo;
+    this->valor = valor;
+    cargarImagen();
+    setOrientacion(this->orientacion);
+    this->show();
 }
 
-QPixmap Carta::selectPixmap(int skin) const {
-    QString ruta = ":/decks/";
-    ruta += (skin == 1 ? "poker/" : "base/");
-
-    if (num == "0")
-        ruta += "Back";
-    else
-        ruta += num + suit;
-
-    ruta += ".png";
-    qDebug() << "🔍 Intentando cargar:" << ruta; // 👈 AÑADE ESTO
-    QPixmap pixmap(ruta);
-    if (pixmap.isNull())
-        qWarning() << "Carta::selectPixmap: no existe" << ruta;
-    return pixmap;
+QString Carta::getPalo() const {
+    return palo;
 }
 
-void Carta::setImagen(const QPixmap &pixmap, int h) {
-    imagen = pixmap;
-    update();
-
-    double aspect = double(pixmap.width())/pixmap.height();
-    int newW = int(h * aspect);
-
-    setFixedSize(newW, h);
-    setPixmap(pixmap.scaled(newW, h, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+QString Carta::getValor() const {
+    return valor;
 }
 
-void Carta::reveal() {
-    isFaceUp = true;
-    setPixmap(frontPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-}
-
-void Carta::hideFace() {
-    isFaceUp = false;
-    setPixmap(backPixmap.scaled(size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-}
-
-void Carta::mousePressEvent(QMouseEvent *event) {
-    if (event->button() == Qt::LeftButton && !locked) {
-        arrastrando = true;
-        offsetArrastre = event->pos();
-    }
-    QLabel::mousePressEvent(event);
-}
-
-void Carta::mouseMoveEvent(QMouseEvent *event) {
-    if (!locked && (event->buttons() & Qt::LeftButton)) {
-        if ((event->pos() - offsetArrastre).manhattanLength() < QApplication::startDragDistance())
-            return;
-
-        QMimeData *mime = new QMimeData;
-        mime->setText(idGlobal);
-
-        QDrag drag(this);
-        drag.setMimeData(mime);
-        drag.setPixmap(pixmap());
-        drag.setHotSpot(event->pos());
-
-        hide();
-        if (drag.exec(Qt::MoveAction) == Qt::IgnoreAction)
-            show();
-    }
-    QLabel::mouseMoveEvent(event);
-}
-
-void Carta::mouseReleaseEvent(QMouseEvent *event) {
-    if (event->button() == Qt::LeftButton && !locked) {
-        arrastrando = false;
-        if (mano && ID != -1)
-            mano->mostrarMano();
-    }
-    QLabel::mouseReleaseEvent(event);
-}
-
-void Carta::añadirAMano(Mano *m, int id) {
-    mano = m;
-    ID   = id;
-}
-
-void Carta::eliminarDeMano() {
-    if (mano && ID >= 0) {
-        mano->eliminarCarta(ID);
-        ID   = -1;
-        mano = nullptr;
+void Carta::setOrientacion(Orientacion orientacion) {
+    this->orientacion = orientacion;
+    if(!img[0].isNull()) {
+        this->setPixmap(img[orientacion % 2]);
+        this->resize(img[orientacion % 2].size());
     }
 }
 
-QPixmap Carta::getOriginalPixmap() const {
-    return pixmapOrig;
+void Carta::cargarImagen() {
+    QString _skin = "base";
+    if(Carta::skin == 1) _skin = "poker";
+
+    QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
+
+    img[0] = QPixmap(":/decks/" + _skin + "/" + valor + palo + ".png")
+    .scaled(screenSize.width() * .05f, screenSize.height() * .1f, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    QTransform transform = QTransform();
+    transform.rotate(90);
+    img[1] = img[0].transformed(transform);
+    this->setPixmap(img[orientacion % 2]);
+    this->resize(img[orientacion % 2].size());
+}
+
+void Carta::enterEvent(QEnterEvent* event) {
+    if (!interactuable) return;
+    QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(this);
+    effect->setOpacity(0.33);
+    this->setGraphicsEffect(effect);
+    QLabel::enterEvent(event);
+}
+
+void Carta::leaveEvent(QEvent* event) {
+    if (!interactuable) return;
+    this->setGraphicsEffect(nullptr);
+    QLabel::leaveEvent(event);
+}
+
+void Carta::mouseDoubleClickEvent(QMouseEvent* event) {
+    if(interactuable) {
+        this->setGraphicsEffect(nullptr);
+        emit cartaDobleClick(this);
+    }
+    QLabel::mouseDoubleClickEvent(event);
 }
