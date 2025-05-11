@@ -62,6 +62,30 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int
     }
     Carta::skin = style;
 
+    // Sólo para skin "poker" (style == 1), creamos el legendLabel oculto y escalado:
+    if (style == 1) {
+        legendLabel = new QLabel(this);
+
+        // Cargamos y escalamos el pixmap a 100px de ancho (manteniendo proporción):
+        QPixmap raw(":/legends/legendpoker.png");
+        int targetW = 150;
+        int targetH = raw.height() * targetW / raw.width();
+        QPixmap scaled = raw.scaled(targetW, targetH,
+                                    Qt::KeepAspectRatio,
+                                    Qt::SmoothTransformation);
+
+        legendLabel->setPixmap(scaled);
+        legendLabel->setAttribute(Qt::WA_TranslucentBackground);
+
+        // 50% de opacidad:
+        auto *opacity = new QGraphicsOpacityEffect(legendLabel);
+        opacity->setOpacity(0.5);
+        legendLabel->setGraphicsEffect(opacity);
+
+        // Oculto hasta que empiece la partida
+        legendLabel->hide();
+    }
+
     //
     // ——— BGM DE PARTIDA ———
     //
@@ -134,6 +158,11 @@ EstadoPartida::~EstadoPartida() {
         effectPlayer = nullptr;
     }
     // Los QAudioOutput se borran automáticamente como hijos de this
+
+    if (legendLabel) {
+        legendLabel->deleteLater();
+        legendLabel = nullptr;
+    }
 
     this->limpiar();
 }
@@ -288,6 +317,14 @@ void EstadoPartida::dibujarEstado() {
 
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
     int width = screenSize.width(), height = screenSize.height();
+
+    if (legendLabel) {
+        // Lo colocamos a la izquierda, centrado verticalmente
+        int x = 0;
+        int y = height/2 - legendLabel->height()/2;
+        legendLabel->move(x, y);
+        legendLabel->raise();
+    }
 
     Jugador* yo = mapJugadores.value(miId, nullptr);
     if(!yo || !yo->mano) return;
@@ -843,6 +880,11 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
     this->setPartidaIniciada(true);
     ocultarOverlayEspera();
 
+    // — Mostrar la leyenda sólo al empezar la partida —
+    if (legendLabel) {
+        legendLabel->show();
+    }
+
     this->iniciarBotonesYEtiquetas();
     this->actualizarEstado(data);
     this->dibujarEstado();
@@ -853,6 +895,7 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
         procesarSiguienteEvento();
     });
 }
+
 
 /**
  * @brief Procesa actualización de turno ('turn_update'), muestra mensaje.

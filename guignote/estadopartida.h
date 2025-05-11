@@ -174,6 +174,8 @@ private:
     int jugadoresPausa = 0;
     bool partidaIniciada = false;
 
+    QLabel* legendLabel = nullptr;
+
     // WebSocket y eventos
     QQueue<QJsonObject> colaEventos;
     bool enEjecucion = false;
