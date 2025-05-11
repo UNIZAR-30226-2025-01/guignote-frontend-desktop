@@ -39,7 +39,7 @@ QMap<QString, Carta*> GameWindow::cartasPorId;
 /**
  * @brief Declara la función de crear un diálogo modal personalizado.
  * @param parent Widget padre.
- * @param message Texto a mostrar.
+ * @param message Texto a imprimir.
  * @param exitApp Si es true, cierra la aplicación al cerrar el diálogo.
  * @return Puntero al QDialog.
  */
