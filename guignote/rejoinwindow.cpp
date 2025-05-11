@@ -5,7 +5,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QWebSocket>
-#include "gamewindow.h"
+#include "menuwindow.h"
 
 RejoinWindow::RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent)
     : QDialog(parent), salas(jsonArray) {
@@ -196,14 +196,14 @@ void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje
         }
 
         // — Construimos el GameWindow y lo colocamos donde estaba el menú —
-        GameWindow *gameWindow = new GameWindow(
+        /*GameWindow *gameWindow = new GameWindow(
             userKey, type, 1, data, id, webSocket, usr, menuWin
             );
         gameWindow->setGeometry(w->geometry());
         gameWindow->show();
 
         QWidget *top = this->window();
-        top->close();
+        top->close();*/
     }
 
 }

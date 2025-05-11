@@ -30,12 +30,12 @@ set(PROJECT_SOURCES
     loadingwindow.cpp     loadingwindow.h
     friendsmessagewindow.cpp friendsmessagewindow.h
     rankingwindow.cpp     rankingwindow.h
-    gamewindow.cpp        gamewindow.h
-    carta.cpp             carta.h
-    mano.cpp              mano.h
-    deck.cpp              deck.h
-    posicion.cpp          posicion.h
-    gamemessagewindow.cpp gamemessagewindow.h
+    orientacion.h
+    ventanasalirpartida.h ventanasalirpartida.cpp
+    botonaccion.h botonaccion.cpp
+    estadopartida.h estadopartida.cpp
+    carta.cpp carta.h
+    mano.cpp mano.h
     resource.qrc
 )
 

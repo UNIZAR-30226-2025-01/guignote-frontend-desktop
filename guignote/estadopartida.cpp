@@ -13,12 +13,10 @@
 #include <QDialog>
 #include "ventanasalirpartida.h"
 
-EstadoPartida::EstadoPartida(QString miNombre, const QString &wsUrl, int bg, int style,
-                             std::function<void()> onSalir, QWidget *parent)
-    : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl)
-{
-    if (bg == 0)
-    {
+EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int style,
+                             std::function<void()> onSalir, QWidget* parent)
+    : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl) {
+    if(bg == 0) {
         this->setStyleSheet(R"(
             /* Fondo de la ventana con gradiente verde */
             QWidget {
@@ -30,9 +28,7 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString &wsUrl, int bg, int
                 );
             }
         )");
-    }
-    else
-    {
+    } else {
         this->setStyleSheet(R"(
             /* Fondo de la ventana con gradiente verde */
             QWidget {
@@ -48,19 +44,34 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString &wsUrl, int bg, int
     Carta::skin = style;
 }
 
-EstadoPartida::~EstadoPartida()
-{
+void EstadoPartida::init() {
+    // WebSockets
+    websocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
+    connect(websocket, &QWebSocket::connected, this, [=]() {
+        qDebug() << "WebSocket conectado.";
+    });
+
+    connect(websocket, &QWebSocket::textMessageReceived, this, [=](const QString& mensaje) {
+        this->procesarMensajeWebSocket(mensaje);
+    });
+
+    connect(websocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error) {
+        qWarning() << "Error en WebSocket:" << websocket->errorString();
+    });
+
+    qDebug() << "Conectando a:" << wsUrl;
+    websocket->open(QUrl(wsUrl));
+}
+
+EstadoPartida::~EstadoPartida() {
     qDebug() << "[DEBUG] EstadoPartida destruido.";
     this->limpiar();
 }
 
-void EstadoPartida::limpiar()
-{
+void EstadoPartida::limpiar() {
     // Borrar widgets de mano y sus datos
-    for (Jugador *jugador : jugadores)
-    {
-        if (jugador->mano)
-        {
+    for (Jugador* jugador : jugadores) {
+        if (jugador->mano) {
             jugador->mano->hide();
             jugador->mano->deleteLater();
             jugador->mano = nullptr;
@@ -71,24 +82,21 @@ void EstadoPartida::limpiar()
     mapJugadores.clear();
 
     // Limpiar cartaTriunfo si existe
-    if (cartaTriunfo)
-    {
+    if (cartaTriunfo) {
         cartaTriunfo->hide();
         cartaTriunfo->deleteLater();
         cartaTriunfo = nullptr;
     }
 
     // Limpiar mazo si existe
-    if (mazo)
-    {
+    if (mazo) {
         mazo->hide();
         mazo->deleteLater();
         mazo = nullptr;
     }
 
     // Limpiar overlay
-    if (overlay)
-    {
+    if (overlay) {
         overlay->hide();
         overlay->deleteLater();
         overlay = nullptr;
@@ -266,26 +274,22 @@ void EstadoPartida::dibujarEstado() {
     }
 }
 
-void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::function<void()> callback)
-{
+void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::function<void()> callback) {
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
     int width = screenSize.width(), height = screenSize.height();
 
-    QLabel *label = (equipo == 1) ? puntosEquipo1Label : puntosEquipo2Label;
-    int *valorPtr = (equipo == 1) ? &puntosEquipo1 : &puntosEquipo2;
+    QLabel* label = (equipo == 1) ? puntosEquipo1Label : puntosEquipo2Label;
+    int* valorPtr = (equipo == 1) ? &puntosEquipo1 : &puntosEquipo2;
 
-    if (!label || nuevoValor == *valorPtr)
-    {
-        if (callback)
-            callback();
+    if(!label || nuevoValor == *valorPtr) {
+        if (callback) callback();
         return;
     }
 
     int paso = (nuevoValor > *valorPtr) ? 1 : -1;
-    QTimer *timer = new QTimer(this);
+    QTimer* timer = new QTimer(this);
     timer->setInterval(100);
-    connect(timer, &QTimer::timeout, this, [=]() mutable
-            {
+    connect(timer, &QTimer::timeout, this, [=]() mutable {
         *valorPtr += paso;
         label->setText(QString::number(*valorPtr));
         label->adjustSize();
@@ -297,91 +301,202 @@ void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::functi
             if(equipo == 1) puntosEquipo1 = nuevoValor;
             else puntosEquipo2 = nuevoValor;
             if (callback) callback();
-        } });
+        }
+    });
 
     timer->start();
 }
 
-void EstadoPartida::onCartaDobleClick(Carta *carta)
-{
-    if (websocket)
-    {
+void EstadoPartida::onCartaDobleClick(Carta* carta) {
+    if(websocket) {
         QJsonObject msg;
         msg["accion"] = "jugar_carta";
         QJsonObject cartaJson;
         cartaJson["palo"] = carta->getPalo();
         bool ok;
         cartaJson["valor"] = carta->getValor().toInt(&ok);
-        if (!ok)
-            cartaJson["valor"] = 0;
+        if(!ok) cartaJson["valor"] = 0;
         msg["carta"] = cartaJson;
 
         this->enviarMsg(
-            msg);
+            msg
+        );
     }
     qDebug() << "Jugar carta";
+}
+
+void EstadoPartida::onCantar() {
+    if(websocket) {
+        QJsonObject msg;
+        msg["accion"] = "cantar";
+        this->enviarMsg(
+            msg
+        );
+    }
+    qDebug() << "Cantar";
+}
+
+void EstadoPartida::onCambiarSiete() {
+    if(websocket) {
+        QJsonObject msg;
+        msg["accion"] = "cambiar_siete";
+        this->enviarMsg(
+            msg
+        );
+    }
+    qDebug() << "Cambiar siete";
+}
+
+void EstadoPartida::onPausa() {
+    if(websocket) {
+        QJsonObject msg;
+        msg["accion"] = "pausa";
+        this->enviarMsg(
+            msg
+        );
+    }
+    qDebug() << "Pausa";
+}
+
+void EstadoPartida::onAnularPausa() {
+    if(websocket) {
+        QJsonObject msg;
+        msg["accion"] = "anular_pausa";
+        this->enviarMsg(
+            msg
+        );
+    }
+    qDebug() << "Reanudar";
+}
+
+void EstadoPartida::enviarMsg(QJsonObject& msg) {
+    if(websocket) {
+        QJsonDocument doc(msg);
+        QByteArray msgByteArray = doc.toJson();
+        websocket->sendTextMessage(QString::fromUtf8(msgByteArray));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
 /// Cola de eventos
 //////////////////////////////////////////////////////////////////////////////////////
 
+void EstadoPartida::recibirEvento(const QJsonObject& evento) {
+    colaEventos.enqueue(evento);
+    procesarSiguienteEvento();
+}
+
+void EstadoPartida::procesarSiguienteEvento() {
+    if (enEjecucion || colaEventos.isEmpty())
+        return;
+
+    enEjecucion = true;
+    QJsonObject evento = colaEventos.dequeue();
+    QString tipo = evento["type"].toString();
+    QJsonObject data = evento["data"].toObject();
+
+    qDebug() << "Recibido " + tipo;
+
+    if(tipo == "start_game") {
+        this->setPartidaIniciada(true);
+        procesarStartGame(data);
+    } else if (tipo == "card_played") {
+        procesarCardPlayed(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "card_drawn") {
+        procesarCardDrawn(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "turn_update") {
+        procesarTurnUpdate(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "round_result") {
+        procesarRoundResult(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "phase_update") {
+        procesarPhaseUpdate(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "pause") {
+        procesarPause(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if(tipo == "resume") {
+        procesarResume(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "end_game") {
+        procesarEndGame(data, nullptr);
+    } else if (tipo == "all_pause") {
+        procesarAllPause(data, nullptr);
+    } else if(tipo == "error") {
+        procesarError(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else {
+        enEjecucion = false;
+        procesarSiguienteEvento();
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////
 /// Procesar mensajes
 //////////////////////////////////////////////////////////////////////////////////////
 
-void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> callback) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QJsonObject cartaJson = data["carta"].toObject();
     QString paloJugado = cartaJson["palo"].toString();
     QString valorJugado = QString::number(cartaJson["valor"].toInt());
 
-    Jugador *jugador = mapJugadores.value(jugadorId, nullptr);
-    if (!jugador || !jugador->mano)
-        return;
+    Jugador* jugador = mapJugadores.value(jugadorId, nullptr);
+    if(!jugador || !jugador->mano) return;
 
-    Carta *cartaParaAnimar = nullptr;
+    Carta* cartaParaAnimar = nullptr;
     QPoint origenAnimacion;
 
     // Yo juego la carta
-    if (jugadorId == miId)
-    {
+    if(jugadorId == miId) {
         cartaParaAnimar = jugador->mano->extraerCarta(paloJugado, valorJugado);
         cartaParaAnimar->interactuable = false;
-        if (cartaParaAnimar)
-        {
+        if(cartaParaAnimar) {
             origenAnimacion = cartaParaAnimar->mapToGlobal(QPoint(0, 0));
             cartaParaAnimar->setParent(this);
-        }
-        else
-        {
+        } else {
             cartaParaAnimar = new Carta(paloJugado, valorJugado, this);
             origenAnimacion = jugador->mano->mapToGlobal(
-                QPoint(jugador->mano->width() / 2, jugador->mano->height() / 2));
+                QPoint(jugador->mano->width()/2, jugador->mano->height()/2)
+            );
         }
     }
     // Juega otro jugador
-    else
-    {
-        Carta *cartaPlaceholder = jugador->mano->pop();
-        if (cartaPlaceholder)
-        {
+    else {
+        Carta* cartaPlaceholder = jugador->mano->pop();
+        if(cartaPlaceholder) {
             origenAnimacion = cartaPlaceholder->mapToGlobal(QPoint(0, 0));
             cartaPlaceholder->hide();
             cartaPlaceholder->deleteLater();
-        }
-        else
-        {
+        } else {
             origenAnimacion = jugador->mano->mapToGlobal(
-                QPoint(jugador->mano->width() / 2, jugador->mano->height() / 2));
+                QPoint(jugador->mano->width()/2, jugador->mano->height()/2)
+            );
         }
         cartaParaAnimar = new Carta(paloJugado, valorJugado, this);
     }
 
     // Si algo va mal
-    if (!cartaParaAnimar)
-    {
+    if(!cartaParaAnimar) {
         jugador->mano->actualizarCartaJugada(paloJugado, valorJugado);
         jugador->mano->dibujar();
         this->dibujarEstado();
@@ -397,25 +512,24 @@ void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> c
     QPoint destinoAnimacion = jugador->mano->mapToGlobal(jugador->mano->getZonaDeJuego());
     QPoint destinoAnimacionLocal = this->mapFromGlobal(destinoAnimacion);
 
-    QPropertyAnimation *anim = new QPropertyAnimation(cartaParaAnimar, "pos", this);
+    QPropertyAnimation* anim = new QPropertyAnimation(cartaParaAnimar, "pos", this);
     anim->setDuration(500);
     anim->setStartValue(origenAnimacionLocal);
     anim->setEndValue(destinoAnimacionLocal);
     anim->setEasingCurve(QEasingCurve::OutCubic);
 
-    connect(anim, &QPropertyAnimation::finished, this, [=]()
-            {
+    connect(anim, &QPropertyAnimation::finished, this, [=]() {
         jugador->mano->actualizarCartaJugada(paloJugado, valorJugado);
         cartaParaAnimar->hide();
         cartaParaAnimar->deleteLater();
         jugador->mano->dibujar();
         this->dibujarEstado();
-        if (callback) callback(); });
+        if (callback) callback();
+    });
     anim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> callback) {
 
     QJsonObject cartaJson = data.value("carta").toObject();
     QString palo = cartaJson["palo"].toString();
@@ -425,37 +539,32 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
 
     // Actualizar cartas restantes en mazo central
     mazoRestante -= jugadores.size();
-    if (mazoRestante <= 0)
-        mazo->hide();
+    if(mazoRestante <= 0) mazo->hide();
 
     // Actualizar manos
-    for (Jugador *jugador : jugadores)
-    {
-        if (!jugador || !jugador->mano || jugador->mano->getNumCartas() >= 6)
+    for(Jugador* jugador : jugadores) {
+        if(!jugador || !jugador->mano || jugador->mano->getNumCartas() >= 6)
             continue;
 
-        Carta *carta = new Carta();
-        if (jugador->id == miId)
-            carta = new Carta(palo, valor);
+        Carta* carta = new Carta();
+        if(jugador->id == miId) carta = new Carta(palo, valor);
 
-        QGraphicsOpacityEffect *opacityEffect = new QGraphicsOpacityEffect(carta); // Parent effect to the card
-        opacityEffect->setOpacity(0.0);                                            // Start completely transparent
+        QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect(carta); // Parent effect to the card
+        opacityEffect->setOpacity(0.0); // Start completely transparent
         carta->setGraphicsEffect(opacityEffect);
 
         jugador->mano->agnadirCarta(carta);
         this->dibujarEstado();
 
-        QPropertyAnimation *anim = new QPropertyAnimation(opacityEffect, "opacity", animationGroup);
+        QPropertyAnimation* anim = new QPropertyAnimation(opacityEffect, "opacity", animationGroup);
         anim->setDuration(1000);
         anim->setStartValue(0.0);
-        anim->setEndValue(1.0);
-        ;
+        anim->setEndValue(1.0);;
         anim->setEasingCurve(QEasingCurve::InCubic);
         animationGroup->addAnimation(anim);
     }
 
-    connect(animationGroup, &QParallelAnimationGroup::finished, this, [=]()
-            {
+    connect(animationGroup, &QParallelAnimationGroup::finished, this, [=]() {
         if(mazoRestante <= jugadores.size()) {
             mazo->show(); cartaTriunfo->show();
 
@@ -493,21 +602,18 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
         } else {
             this->dibujarEstado();
             if (callback) callback();
-        } });
+        }
+    });
 
-    if (animationGroup->animationCount() > 0)
-    {
+    if(animationGroup->animationCount() > 0) {
         animationGroup->start(QAbstractAnimation::DeleteWhenStopped);
-    }
-    else
-    {
+    } else {
         delete animationGroup;
         this->dibujarEstado();
     }
 }
 
-void EstadoPartida::iniciarBotonesYEtiquetas()
-{
+void EstadoPartida::iniciarBotonesYEtiquetas() {
     // Puntuaciones
     puntosEquipo1Title = new QLabel("Pt. Equipo 1", this);
     puntosEquipo1Title->setStyleSheet("font-size: 32px; color: white; background-color: transparent; border: none;");
@@ -526,17 +632,19 @@ void EstadoPartida::iniciarBotonesYEtiquetas()
     puntosEquipo2Label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     // Botones acciones
-    botonCantar = new BotonAccion("Cantar", [this]()
-                                  { this->onCantar(); }, this);
+    botonCantar = new BotonAccion("Cantar", [this]() {
+        this->onCantar();
+    }, this);
 
-    botonCambiarSiete = new BotonAccion("Cambiar siete", [this]()
-                                        { this->onCambiarSiete(); }, this);
+    botonCambiarSiete = new BotonAccion("Cambiar siete", [this]() {
+        this->onCambiarSiete();
+    }, this);
 
     QString textoPausa = enPausa ? "Anular pausa" : "Solicitar pausa";
-    botonPausa = new BotonAccion(textoPausa, [this]()
-                                 {
+    botonPausa = new BotonAccion(textoPausa, [this]() {
         if(enPausa) this->onAnularPausa();
-        else this->onPausa(); }, this);
+        else this->onPausa();
+    }, this);
 
     pausadosLabel = new QLabel("0/0", this);
     pausadosLabel->setFixedSize(68, 68);
@@ -548,12 +656,12 @@ void EstadoPartida::iniciarBotonesYEtiquetas()
         "   font-size: 24px;"
         "   border: 2px solid #666;"
         "   qproperty-alignment: AlignCenter;"
-        "}");
+        "}"
+        );
     pausadosLabel->setAlignment(Qt::AlignCenter);
 }
 
-void EstadoPartida::procesarStartGame(QJsonObject data)
-{
+void EstadoPartida::procesarStartGame(QJsonObject data) {
     this->setPartidaIniciada(true);
     ocultarOverlayEspera();
 
@@ -561,21 +669,19 @@ void EstadoPartida::procesarStartGame(QJsonObject data)
     this->actualizarEstado(data);
     this->dibujarEstado();
 
-    QTimer::singleShot(250, this, [=]()
-                       {
+    QTimer::singleShot(250, this, [=]() {
         this->dibujarEstado();
         enEjecucion = false;
-        procesarSiguienteEvento(); });
+        procesarSiguienteEvento();
+    });
 }
 
-void EstadoPartida::procesarTurnUpdate(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarTurnUpdate(QJsonObject data, std::function<void()> callback) {
     QString mensaje = data.value("message").toString("Turno desconocido");
     this->mostrarMensaje(mensaje, callback);
 }
 
-void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*callback*/)
-{
+void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*callback*/) {
     int ganador = data.value("ganador_equipo").toInt();
     int puntos1 = data.value("puntos_equipo_1").toInt();
     int puntos2 = data.value("puntos_equipo_2").toInt();
@@ -586,16 +692,14 @@ void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*ca
     else
         mensaje = QString("¡Ha ganado el equipo %1!\n%2 - %3").arg(ganador).arg(puntos1).arg(puntos2);
 
-    VentanaInfo *info = new VentanaInfo(mensaje, [this]()
-                                        {
+    VentanaInfo* info = new VentanaInfo(mensaje, [this](){
         if(this->onSalir) this->onSalir();
-        this->deleteLater(); }, this);
+        this->deleteLater();
+    }, this);
 }
 
-void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> callback)
-{
-    this->mostrarMensaje("Cambio a fase de arrastre", [=]()
-                         {
+void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> callback) {
+    this->mostrarMensaje("Cambio a fase de arrastre", [=]() {
         if (!cartaTriunfo) {
             if (callback) callback();
             return;
@@ -641,11 +745,11 @@ void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> 
                 this->actualizarPuntuacion(2, puntosFinales2, callback);
         });
 
-        anim->start(QAbstractAnimation::DeleteWhenStopped); });
+        anim->start(QAbstractAnimation::DeleteWhenStopped);
+    });
 }
 
-void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> callback) {
     QJsonObject ganador = data.value("ganador").toObject();
     QString nombre = ganador.value("nombre").toString("Desconocido");
     int equipo = ganador.value("equipo").toInt(-1);
@@ -658,8 +762,7 @@ void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> 
     int puntos2 = data.value("puntos_equipo_2").toInt();
 
     // Mostrar overlay y luego actualizar puntuaciones
-    this->mostrarMensaje(mensaje, [=]()
-                         {
+    this->mostrarMensaje(mensaje, [=]() {
         int completados = 0;
         auto onDone = [this, callback]() {
             if (callback) callback();
@@ -668,14 +771,13 @@ void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> 
         if (puntos1 != puntosEquipo1)
             this->actualizarPuntuacion(1, puntos1, onDone);
         else
-            this->actualizarPuntuacion(2, puntos2, onDone); });
+            this->actualizarPuntuacion(2, puntos2, onDone);
+    });
 
-    for (Jugador *j : jugadores)
-    {
-        if (!j || !j->mano)
-            continue;
+    for(Jugador* j : jugadores) {
+        if(!j || !j->mano) continue;
 
-        Carta *copia = new Carta(j->mano->jugada()->getPalo(), j->mano->jugada()->getValor(), this);
+        Carta* copia = new Carta(j->mano->jugada()->getPalo(), j->mano->jugada()->getValor(), this);
         QPoint posGlobal = j->mano->jugada()->mapToGlobal(QPoint(0, 0));
         QPoint posLocal = this->mapFromGlobal(posGlobal);
         copia->setOrientacion(j->mano->getOrientacion());
@@ -684,68 +786,62 @@ void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> 
         copia->show();
         copia->raise();
 
-        QGraphicsOpacityEffect *effect = new QGraphicsOpacityEffect(copia);
+        QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(copia);
         copia->setGraphicsEffect(effect);
-        QPropertyAnimation *anim = new QPropertyAnimation(effect, "opacity");
+        QPropertyAnimation* anim = new QPropertyAnimation(effect, "opacity");
         anim->setDuration(1000);
         anim->setStartValue(1.0);
         anim->setEndValue(0.0);
         anim->setEasingCurve(QEasingCurve::OutCubic);
-        connect(anim, &QPropertyAnimation::finished, copia, [copia]()
-                { copia->deleteLater(); });
+        connect(anim, &QPropertyAnimation::finished, copia, [copia]() {
+            copia->deleteLater();
+        });
         anim->start(QAbstractAnimation::DeleteWhenStopped);
     }
 }
 
-void EstadoPartida::procesarPause(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarPause(QJsonObject data, std::function<void()> callback) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QString nombre = data["jugador"].toObject()["nombre"].toString();
     jugadoresPausa = data["num_solicitudes_pausa"].toInt();
-    if (jugadorId == miId)
-    {
+    if(jugadorId == miId) {
         enPausa = true;
-        if (botonPausa)
-            botonPausa->setText("Anular pausa");
+        if(botonPausa) botonPausa->setText("Anular pausa");
     }
     pausadosLabel->setText(QString("%1/%2").arg(jugadoresPausa).arg(jugadores.size()));
     QString msg = QString("%1 ha solicitado pausa").arg(nombre);
     mostrarMensaje(msg, callback);
 }
 
-void EstadoPartida::procesarResume(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarResume(QJsonObject data, std::function<void()> callback) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QString nombre = data["jugador"].toObject()["nombre"].toString();
     jugadoresPausa = data["num_solicitudes_pausa"].toInt();
-    if (jugadorId == miId)
-    {
+    if(jugadorId == miId) {
         enPausa = false;
-        if (botonPausa)
-            botonPausa->setText("Solicitar pausa");
+        if(botonPausa) botonPausa->setText("Solicitar pausa");
     }
     pausadosLabel->setText(QString("%1/%2").arg(jugadoresPausa).arg(jugadores.size()));
     QString msg = QString("%1 ha anulado su solicitud de pausa").arg(nombre);
     mostrarMensaje(msg, callback);
 }
 
-void EstadoPartida::procesarAllPause(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarAllPause(QJsonObject data, std::function<void()> callback) {
     QString mensaje = "La partida ha sido pausada";
-    VentanaInfo *info = new VentanaInfo(mensaje, [this]()
-                                        {
+    VentanaInfo* info = new VentanaInfo(mensaje, [this](){
         if(this->onSalir) this->onSalir();
-        this->deleteLater(); }, this);
+        this->deleteLater();
+    }, this);
 }
 
-void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callback)
-{
+void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callback) {
     auto *popup = new QLabel(data.value("message").toString("Error desconocido"), this);
     popup->setStyleSheet("QLabel {"
                          "background: rgba(50,50,50,220);"
                          "color: white; font-size: 18px;"
                          "padding: 6px 12px;"
-                         "border-radius: 6px; border: 1px solid #888; }");
+                         "border-radius: 6px; border: 1px solid #888; }"
+    );
     popup->adjustSize();
     popup->move(this->mapFromGlobal(QCursor::pos()));
     popup->show();
@@ -768,22 +864,21 @@ void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callba
     group->addPause(1500);
     group->addAnimation(fadeOut);
 
-    connect(group, &QSequentialAnimationGroup::finished, this, [popup, callback]()
-            {
+    connect(group, &QSequentialAnimationGroup::finished, this, [popup, callback]() {
         popup->deleteLater();
-        if (callback) callback(); });
+        if (callback) callback();
+    });
 
     group->start(QAbstractAnimation::DeleteWhenStopped);
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 /// Overlay
 //////////////////////////////////////////////////////////////////////////////////////
 
-void EstadoPartida::mostrarMensaje(const QString &msg, std::function<void()> callback, int duracion)
-{
-    if (overlay)
-    {
+void EstadoPartida::mostrarMensaje(const QString& msg, std::function<void()> callback, int duracion) {
+    if(overlay) {
         delete overlay;
         overlay = nullptr;
         overlayMsg = nullptr;
@@ -800,26 +895,26 @@ void EstadoPartida::mostrarMensaje(const QString &msg, std::function<void()> cal
     overlayMsg->setAlignment(Qt::AlignCenter);
     overlayMsg->setStyleSheet("QLabel { color: white; font-size: 64px; font-weight: bold; }");
 
-    QVBoxLayout *layout = new QVBoxLayout(overlay);
+    QVBoxLayout* layout = new QVBoxLayout(overlay);
     layout->addWidget(overlayMsg, 0, Qt::AlignCenter);
     layout->setContentsMargins(0, 0, 0, 0);
     overlay->setLayout(layout);
     overlay->show();
 
     // Animación
-    QGraphicsOpacityEffect *opacityEffect = new QGraphicsOpacityEffect(overlay);
+    QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect(overlay);
     opacityEffect->setOpacity(0.0);
     overlay->setGraphicsEffect(opacityEffect);
 
     overlay->show();
-    QSequentialAnimationGroup *group = new QSequentialAnimationGroup(this);
-    QPropertyAnimation *fadeInAnim = new QPropertyAnimation(opacityEffect, "opacity");
+    QSequentialAnimationGroup* group = new QSequentialAnimationGroup(this);
+    QPropertyAnimation* fadeInAnim = new QPropertyAnimation(opacityEffect, "opacity");
     fadeInAnim->setDuration(500);
     fadeInAnim->setStartValue(0.0);
     fadeInAnim->setEndValue(0.8);
     fadeInAnim->setEasingCurve(QEasingCurve::OutCubic);
-    QPauseAnimation *holdAnim = new QPauseAnimation(duracion);
-    QPropertyAnimation *fadeOutAnim = new QPropertyAnimation(opacityEffect, "opacity");
+    QPauseAnimation* holdAnim = new QPauseAnimation(duracion);
+    QPropertyAnimation* fadeOutAnim = new QPropertyAnimation(opacityEffect, "opacity");
     fadeOutAnim->setDuration(500);
     fadeOutAnim->setStartValue(0.8);
     fadeOutAnim->setEndValue(0.0);
@@ -828,26 +923,25 @@ void EstadoPartida::mostrarMensaje(const QString &msg, std::function<void()> cal
     group->addAnimation(holdAnim);
     group->addAnimation(fadeOutAnim);
 
-    connect(group, &QSequentialAnimationGroup::finished, this, [this, callback]()
-            {
+    connect(group, &QSequentialAnimationGroup::finished, this, [this, callback]() {
         if (overlay) {
             delete overlay;
             overlay = nullptr;
             overlayMsg = nullptr;
         }
-        if(callback) callback(); });
+        if(callback) callback();
+    });
 
     group->start(QAbstractAnimation::DeleteWhenStopped);
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 /// Overlay espera
 //////////////////////////////////////////////////////////////////////////////////////
 
-void EstadoPartida::mostrarOverlayEspera(int jugadoresCola, int jugadoresMax)
-{
-    if (overlayEspera)
-    {
+void EstadoPartida::mostrarOverlayEspera(int jugadoresCola, int jugadoresMax) {
+    if (overlayEspera) {
         overlayEspera->deleteLater();
         overlayEspera = nullptr;
         labelEspera = nullptr;
@@ -865,26 +959,57 @@ void EstadoPartida::mostrarOverlayEspera(int jugadoresCola, int jugadoresMax)
     labelEspera->setAlignment(Qt::AlignCenter);
     labelEspera->setStyleSheet("color: white; font-size: 40px; font-weight: bold;");
 
-    QVBoxLayout *layout = new QVBoxLayout(overlayEspera);
+    QVBoxLayout* layout = new QVBoxLayout(overlayEspera);
     layout->addWidget(labelEspera);
     overlayEspera->setLayout(layout);
     overlayEspera->show();
 }
 
-void EstadoPartida::actualizarOverlayEspera(int jugadoresCola, int jugadoresMax)
-{
-    if (labelEspera)
-    {
+void EstadoPartida::actualizarOverlayEspera(int jugadoresCola, int jugadoresMax) {
+    if (labelEspera) {
         labelEspera->setText(QString("Esperando jugadores... (%1/%2)").arg(jugadoresCola).arg(jugadoresMax));
     }
 }
 
-void EstadoPartida::ocultarOverlayEspera()
-{
-    if (overlayEspera)
-    {
+void EstadoPartida::ocultarOverlayEspera() {
+    if (overlayEspera) {
         overlayEspera->deleteLater();
         overlayEspera = nullptr;
         labelEspera = nullptr;
+    }
+}
+
+void EstadoPartida::manejarEventoPrePartida(const QString& tipo, const QJsonObject& data) {
+    if (tipo == "player_joined" || tipo == "player_left") {
+        int jugadoresCola = data.value("jugadores").toInt();
+        int jugadoresMax = data.value("capacidad").toInt();
+
+        if(tipo == "player_joined") {
+            QString nom = data.value("usuario").toObject().value("nombre").toString();
+            int id = data.value("usuario").toObject().value("id").toInt();
+            if(nom == miNombre) {
+                this->setMiId(id);
+            }
+        }
+
+        if (!overlayEspera) {
+            mostrarOverlayEspera(jugadoresCola, jugadoresMax);
+        } else {
+            actualizarOverlayEspera(jugadoresCola, jugadoresMax);
+        }
+    }
+}
+
+void EstadoPartida::procesarMensajeWebSocket(const QString& mensaje) {
+    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
+    if (!doc.isObject()) return;
+    QJsonObject root = doc.object();
+    QString tipo = root["type"].toString();
+    QJsonObject data = root["data"].toObject();
+
+    if (!this->getPartidaIniciada() && (tipo == "player_joined" || tipo == "player_left")) {
+        this->manejarEventoPrePartida(tipo, data);
+    } else {
+        this->recibirEvento(root);
     }
 }
