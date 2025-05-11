@@ -2,6 +2,9 @@
  * @file recoverpasswordwindow.cpp
  * @brief Implementación de la clase RecoverPasswordWindow.
  *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
  * Esta clase representa el diálogo para recuperar la contraseña del usuario. Permite al usuario
  * ingresar su correo electrónico para recibir instrucciones de recuperación. Además, se encarga de
  * mostrar un overlay semitransparente en el widget padre para enfocar la atención en el diálogo,

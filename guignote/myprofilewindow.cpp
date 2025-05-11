@@ -1,3 +1,16 @@
+/**
+ * @file myprofilewindow.cpp
+ * @brief Implementación de la clase MyProfileWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Define la ventana de perfil de usuario, donde se muestran y pueden modificar
+ * los datos del usuario (nombre, ELO, estadísticas), cambiar la foto de perfil,
+ * cerrar sesión o eliminar la cuenta. Gestiona la comunicación con el servidor
+ * para cargar y actualizar dicha información.
+ */
+
 #include "myprofilewindow.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -24,8 +37,13 @@
 #include <QHttpPart>
 
 
-// Función auxiliar para crear un diálogo modal con mensaje personalizado.
-// Si exitApp es verdadero, al cerrar se finaliza la aplicación.
+/**
+ * @brief Crea un diálogo modal genérico con un mensaje y un botón OK.
+ * @param parent Widget padre para centrar el diálogo.
+ * @param message Texto a mostrar en el diálogo.
+ * @param exitApp Si es true, al pulsar OK se cierra toda la aplicación.
+ * @return Puntero al QDialog creado.
+ */
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -69,6 +87,12 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
     return dialog;
 }
 
+/**
+ * @brief Crea un diálogo de confirmación para cerrar la sesión.
+ * @param parent Widget padre para centrar el diálogo.
+ * @param message Texto a mostrar en el diálogo.
+ * @return Puntero al QDialog con opciones Sí y No.
+ */
 QDialog* MyProfileWindow::createDialogLogOut(QWidget *parent, const QString &message) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -140,6 +164,12 @@ QDialog* MyProfileWindow::createDialogLogOut(QWidget *parent, const QString &mes
     return dialog;
 }
 
+/**
+ * @brief Crea un diálogo de confirmación para eliminar la cuenta de usuario.
+ * @param parent Widget padre para centrar el diálogo.
+ * @param message Texto a mostrar en el diálogo.
+ * @return Puntero al QDialog con opciones Sí y No.
+ */
 QDialog* MyProfileWindow::createDialogBorrarUsr(QWidget *parent, const QString &message) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -215,6 +245,12 @@ QDialog* MyProfileWindow::createDialogBorrarUsr(QWidget *parent, const QString &
     return dialog;
 }
 
+/**
+ * @brief Crea un diálogo para confirmar el cambio de foto de perfil.
+ * @param parent Widget padre para centrar el diálogo.
+ * @param message Texto a mostrar en el diálogo.
+ * @return Puntero al QDialog con opciones Sí y No.
+ */
 QDialog* MyProfileWindow::createDialogSetPfp(QWidget *parent, const QString &message) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -270,7 +306,10 @@ QDialog* MyProfileWindow::createDialogSetPfp(QWidget *parent, const QString &mes
     return dialog;
 }
 
-
+/**
+ * @brief Abre un selector de fichero para elegir una nueva foto de perfil
+ *        y la envía al servidor mediante multipart/form-data.
+ */
 void MyProfileWindow::choosePfp() {
     // Abrir el cuadro de diálogo para seleccionar un archivo de imagen
     QString filePath = QFileDialog::getOpenFileName(this, "Selecciona una foto de perfil", "", "Imágenes (*.png *.jpg *.jpeg *.bmp *.gif)");
@@ -384,7 +423,11 @@ void MyProfileWindow::choosePfp() {
 }
 
 
-// Constructor: configura la ventana, la UI y carga los datos del backend.
+/**
+ * @brief Constructor de MyProfileWindow.
+ * @param userKey Clave o identificador del usuario para cargar sus datos.
+ * @param parent Widget padre, por defecto nullptr.
+ */
 MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent), m_userKey(userKey) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
@@ -396,7 +439,12 @@ MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDia
     m_userKey = userKey;
 }
 
-// Configura la UI dividiéndola en secciones.
+/**
+ * @brief Configura la interfaz de la ventana de perfil.
+ *
+ * Divide la ventana en secciones (encabezado, perfil y pie) y crea
+ * los layouts con todos los widgets necesarios.
+ */
 void MyProfileWindow::setupUI() {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
@@ -410,7 +458,10 @@ void MyProfileWindow::setupUI() {
     setLayout(mainLayout);
 }
 
-// Crea el layout del encabezado.
+/**
+ * @brief Crea el layout del encabezado con el título "Perfil" y el botón de cierre.
+ * @return Un puntero a QHBoxLayout ya configurado.
+ */
 QHBoxLayout* MyProfileWindow::createHeaderLayout() {
     QHBoxLayout *headerLayout = new QHBoxLayout();
     titleLabel = new QLabel("Perfil", this);
@@ -433,7 +484,11 @@ QHBoxLayout* MyProfileWindow::createHeaderLayout() {
     return headerLayout;
 }
 
-// Crea el layout central: foto de perfil y etiquetas para nombre/ELO y estadísticas.
+/**
+ * @brief Crea el layout central que contiene la foto de perfil,
+ *        el nombre/ELO y las estadísticas del usuario.
+ * @return Un puntero a QVBoxLayout ya configurado.
+ */
 QVBoxLayout* MyProfileWindow::createProfileLayout() {
     QVBoxLayout *profileLayout = new QVBoxLayout();
     profileLayout->setAlignment(Qt::AlignCenter);
@@ -469,7 +524,10 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     return profileLayout;
 }
 
-// Crea el layout inferior con el botón de Log Out.
+/**
+ * @brief Crea el layout inferior con los botones "Borrar Cuenta" y "Log Out".
+ * @return Un puntero a QHBoxLayout ya configurado.
+ */
 QHBoxLayout* MyProfileWindow::createBottomLayout() {
     QHBoxLayout *bottomLayout = new QHBoxLayout();
 
@@ -513,7 +571,12 @@ QHBoxLayout* MyProfileWindow::createBottomLayout() {
 
 
 
-// Convierte una imagen en un QPixmap circular.
+/**
+ * @brief Convierte un QPixmap rectangular en uno circular.
+ * @param src Imagen original a recortar.
+ * @param size Diámetro deseado para la imagen circular.
+ * @return QPixmap resultante con recorte circular.
+ */
 QPixmap MyProfileWindow::createCircularImage(const QPixmap &src, int size) {
     // Escalamos a un cuadrado de “size × size” y recortamos el exceso
     QPixmap scaled = src.scaled(size, size,
@@ -532,7 +595,11 @@ QPixmap MyProfileWindow::createCircularImage(const QPixmap &src, int size) {
     return circular;
 }
 
-// Extrae el token de autenticación usando QSettings consistentemente.
+/**
+ * @brief Extrae el token de autenticación almacenado en QSettings.
+ * @param userKey Clave del usuario cuyo token se desea recuperar.
+ * @return Token como QString, o cadena vacía si no se encuentra.
+ */
 QString MyProfileWindow::loadAuthToken(const QString &userKey) {
     // Usa la misma organización y nombre de aplicación/grupo que en LoginWindow
     QSettings settings("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(userKey));
@@ -551,7 +618,11 @@ QString MyProfileWindow::loadAuthToken(const QString &userKey) {
     return token;
 }
 
-// Conecta con el backend para obtener el nombre, el ELO y las estadísticas, y actualiza userLabel y statsLabel.
+/**
+ * @brief Solicita al servidor nombre, ELO y estadísticas del usuario,
+ *        actualiza las etiquetas userLabel y statsLabel, y descarga la foto de perfil.
+ * @param userKey Clave del usuario para la petición.
+ */
 void MyProfileWindow::loadNameAndStats(const QString &userKey) {
     QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {
@@ -644,6 +715,10 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
     });
 }
 
+/**
+ * @brief Envía la petición al servidor para eliminar la cuenta del usuario.
+ * @param userKey Clave del usuario cuya cuenta se va a eliminar.
+ */
 void MyProfileWindow::delUsr(const QString &userKey) {
     QString token = loadAuthToken(userKey);
     if (token.isEmpty()) {

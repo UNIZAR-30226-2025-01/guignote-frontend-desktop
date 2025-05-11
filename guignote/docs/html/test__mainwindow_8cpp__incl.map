@@ -1,0 +1,21 @@
+<map id="tests/test_mainwindow.cpp" name="tests/test_mainwindow.cpp">
+<area shape="rect" id="Node000001" title=" " alt="" coords="275,5,473,31"/>
+<area shape="rect" id="Node000002" href="$test__mainwindow_8h.html" title=" " alt="" coords="5,79,153,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="327,33,141,78,140,73,326,28"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="177,79,240,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="348,33,249,76,247,71,346,28"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="265,79,371,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="367,33,338,69,333,66,363,29"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="396,79,467,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="386,29,415,66,411,70,381,33"/>
+<area shape="rect" id="Node000007" href="$mainwindow_8h.html" title="Declaración de la clase MainWindow, la ventana principal de la aplicación." alt="" coords="491,79,607,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="403,28,508,71,506,76,401,33"/>
+<area shape="rect" id="Node000009" href="$loginwindow_8h.html" title="Declaración de la clase LoginWindow, ventana de inicio de sesión de usuario." alt="" coords="631,79,746,104"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="425,28,625,73,624,78,424,33"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="42,152,117,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="82,104,82,138,77,138,77,104"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="491,152,607,177"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="551,104,551,138,546,138,546,104"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="651,152,726,177"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="691,104,691,138,686,138,686,104"/>
+</map>

@@ -2,10 +2,14 @@
  * @file mainwindow.cpp
  * @brief Implementación de la clase MainWindow.
  *
- * Esta clase representa la ventana principal de la aplicación. Se encarga de configurar la
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la ventana principal de la aplicación. Se encarga de configurar la
  * interfaz gráfica de la pantalla de inicio, estableciendo el fondo, la disposición de widgets,
  * efectos visuales y la interacción con otras ventanas como LoginWindow, RegisterWindow y SettingsWindow.
  */
+
 
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"

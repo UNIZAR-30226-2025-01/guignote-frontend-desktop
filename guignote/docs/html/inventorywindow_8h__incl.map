@@ -1,0 +1,23 @@
+<map id="inventorywindow.h" name="inventorywindow.h">
+<area shape="rect" id="Node000001" title="Declaración de la clase InventoryWindow, interfaz de gestión de inventario." alt="" coords="557,5,702,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,80,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="557,27,352,47,225,62,94,81,93,76,224,57,352,41,556,22"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="104,79,205,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="557,32,219,81,219,76,556,26"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="230,79,359,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="576,33,363,78,362,73,575,28"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="383,79,494,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="600,33,484,76,482,71,598,28"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="518,79,629,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="622,33,593,69,589,66,618,29"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="653,79,720,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="641,29,671,66,667,70,637,33"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="744,79,899,104"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="661,28,778,71,776,76,659,33"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="923,79,1029,104"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="686,28,909,74,908,79,684,33"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="1053,79,1229,104"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="703,27,1046,74,1045,79,702,32"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="1253,79,1368,104"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="702,22,937,43,1240,76,1240,81,937,48,702,27"/>
+</map>

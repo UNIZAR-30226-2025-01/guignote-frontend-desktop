@@ -1,3 +1,16 @@
+/**
+ * @file imagebutton.cpp
+ * @brief Implementación de la clase ImageButton.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de un botón basado en imagen con efecto hover,
+ * que oscurece la imagen y muestra texto al pasar el cursor, así como
+ * redimensionamiento manteniendo la relación de aspecto.
+ */
+
+
 #include "imagebutton.h"
 #include <QVBoxLayout>
 #include <QBitmap>
@@ -111,13 +124,14 @@ void ImageButton::mousePressEvent(QMouseEvent *event) {
 }
 
 /**
- * @brief Actualiza el tamaño del ImageButton.
- * @param h Nueva altura base para el escalado.
- * @return QSize Tamaño actualizado del botón.
+ * @brief Ajusta dinámicamente el tamaño del botón manteniendo la relación de aspecto.
+ * @param h Altura de referencia (por ejemplo, altura de la ventana).
+ * @return QSize Nuevo tamaño calculado para el botón.
  *
- * Calcula el nuevo tamaño del botón manteniendo la relación de aspecto de la imagen original.
- * Se establecen límites mínimos y máximos para la altura y se redimensiona el QPixmap.
+ * Escala el QPixmap original de acuerdo a la nueva altura (dividida entre 3),
+ * aplica límites mínimos y máximos, y reajusta la posición del texto centrado.
  */
+
 QSize ImageButton::updatesize(int h) {
     if (normalPixmap.isNull()) return QSize(0, 0);
 

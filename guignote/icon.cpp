@@ -1,3 +1,16 @@
+/**
+ * @file icon.cpp
+ * @brief Implementación de la clase Icon.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de una etiqueta gráfica interactiva (Icon),
+ * que gestiona la carga de imágenes, escalado y detección de eventos
+ * de clic y hover.
+ */
+
+
 #include "icon.h"
 #include <QDebug>
 
@@ -40,6 +53,16 @@ void Icon::setImage(const QString &imagePath, int width, int height) {
     setFixedSize(width, height);
 }
 
+/**
+ * @brief Asigna un QPixmap ya cargado y lo escala al tamaño dado.
+ * @param pixmap QPixmap de origen.
+ * @param width Ancho deseado del icono.
+ * @param height Altura deseada del icono.
+ *
+ * Guarda internamente el pixmap original y ajusta el QLabel
+ * para mantener el aspecto con suavizado.
+ */
+
 void Icon::setPixmapImg(const QPixmap &pixmap, int width, int height) {
     originalPixmap = pixmap;
     baseWidth = width;
@@ -63,6 +86,14 @@ void Icon::mousePressEvent(QMouseEvent *event) {
     }
 }
 
+/**
+ * @brief Agranda el icono cuando el cursor entra en su área.
+ * @param event Información del evento de entrada.
+ *
+ * Si el hover está habilitado, escala el icono un 10% respecto
+ * a su tamaño base y ajusta el QLabel.
+ */
+
 // 3) Amplía el icono al entrar el ratón
 void Icon::enterEvent(QEnterEvent *event) {
     if (!hoverEnabled) return;
@@ -78,7 +109,14 @@ void Icon::enterEvent(QEnterEvent *event) {
     QLabel::enterEvent(event); // Llamada al padre
 }
 
-// 4) Vuelve al tamaño original cuando el ratón sale
+/**
+ * @brief Restaura el tamaño original cuando el cursor sale.
+ * @param event Información del evento de salida.
+ *
+ * Si el hover está habilitado, vuelve a escalar al tamaño base
+ * y ajusta el QLabel.
+ */
+
 void Icon::leaveEvent(QEvent *event) {
     if (!hoverEnabled) return;
     setPixmap(originalPixmap.scaled(baseWidth, baseHeight,

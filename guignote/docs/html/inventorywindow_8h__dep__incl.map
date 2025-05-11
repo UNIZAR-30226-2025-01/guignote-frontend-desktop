@@ -1,0 +1,13 @@
+<map id="inventorywindow.h" name="inventorywindow.h">
+<area shape="rect" id="Node000001" title="Declaración de la clase InventoryWindow, interfaz de gestión de inventario." alt="" coords="343,5,489,31"/>
+<area shape="rect" id="Node000002" href="$moc__inventorywindow_8cpp.html" title=" " alt="" coords="15,79,227,148"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="367,37,228,81,227,76,366,32"/>
+<area shape="rect" id="Node000004" href="$inventorywindow_8cpp.html" title="Implementación de la clase InventoryWindow." alt="" coords="251,101,411,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="398,42,343,102,339,99,394,39"/>
+<area shape="rect" id="Node000005" href="$menuwindow_8cpp.html" title="Implementación de la clase MenuWindow." alt="" coords="435,101,570,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="438,39,494,99,490,102,434,42"/>
+<area shape="rect" id="Node000006" href="$test__inventorywindow_8cpp.html" title=" " alt="" coords="594,101,822,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="466,32,673,98,671,103,464,37"/>
+<area shape="rect" id="Node000003" href="$mocs__compilation_8cpp.html" title=" " alt="" coords="5,196,237,251"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="124,162,124,196,119,196,119,162"/>
+</map>

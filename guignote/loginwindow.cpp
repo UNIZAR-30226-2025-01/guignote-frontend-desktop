@@ -2,11 +2,15 @@
  * @file loginwindow.cpp
  * @brief Implementación de la clase LoginWindow.
  *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
  * Esta clase representa la ventana de inicio de sesión en la aplicación. Permite a los usuarios
  * ingresar sus credenciales, alternar la visibilidad de la contraseña, recordar las credenciales,
  * recuperar la contraseña en caso de olvido y gestionar la comunicación con el servidor para la autenticación.
  * Además, muestra un overlay semitransparente en el widget padre para enfocar la atención en el diálogo.
  */
+
 
 #include "loginwindow.h"
 #include "loadingwindow.h"

@@ -2,9 +2,14 @@
  * @file loadingwindow.cpp
  * @brief Implementación de la clase LoadingWindow.
  *
- * Esta clase muestra una pantalla de carga a pantalla completa con el gif "carga.gif".
- * La pantalla se muestra durante 5 segundos y luego se desvanece, pasando a la ventana del menú (MenuWindow).
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la ventana de carga a pantalla completa,
+ * que muestra un GIF animado, gestiona el temporizador de visualización
+ * y la animación de desvanecimiento antes de pasar a MenuWindow.
  */
+
 
 #include "loadingwindow.h"
 #include "menuwindow.h"
@@ -15,6 +20,15 @@
 #include <QShowEvent>
 #include <QMainWindow>
 #include <QDebug>
+
+/**
+ * @brief Constructor de la pantalla de carga.
+ * @param userKey Clave del usuario para pasar a la siguiente ventana.
+ * @param parent Widget padre opcional.
+ *
+ * Configura el diálogo sin bordes, a pantalla completa, inicializa
+ * el GIF de carga, el temporizador de visualización y el efecto de opacidad.
+ */
 
 LoadingWindow::LoadingWindow(const QString &userKey, QWidget *parent)
     : QDialog(parent),
@@ -59,6 +73,12 @@ LoadingWindow::LoadingWindow(const QString &userKey, QWidget *parent)
     this->setGraphicsEffect(opacityEffect);
     opacityEffect->setOpacity(1.0);
 }
+
+/**
+ * @brief Destructor de LoadingWindow.
+ *
+ * Elimina la animación de desvanecimiento si existe.
+ */
 
 LoadingWindow::~LoadingWindow()
 {

@@ -1,12 +1,24 @@
+/**
+ * @file loginwindow.h
+ * @brief Declaración de la clase LoginWindow, ventana de inicio de sesión de usuario.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * La clase LoginWindow gestiona la interfaz de autenticación inicial del usuario,
+ * incluyendo validación de credenciales, navegación hacia el registro, y manejo visual
+ * con un fondo oscurecido.
+ */
+
 #ifndef LOGINWINDOW_H
 #define LOGINWINDOW_H
 
 #include <QDialog>
 
 /**
+ * @class LoginWindow
  * @brief Ventana de inicio de sesión.
  *
- * La clase LoginWindow representa la ventana de inicio de sesión de la aplicación.
  * Permite al usuario ingresar sus credenciales, alternar la visibilidad de la contraseña,
  * y gestionar acciones relacionadas como la recuperación de contraseña o la solicitud
  * para abrir la ventana de registro.
@@ -22,16 +34,12 @@ public:
      */
     explicit LoginWindow(QWidget *parent = nullptr);
 
-    /**
-     * @brief Destructor de la ventana de inicio de sesión.
-     */
+    /** @brief Destructor. */
     ~LoginWindow();
 
 signals:
     /**
      * @brief Señal para solicitar la apertura de la ventana de registro.
-     *
-     * Esta señal se emite cuando el usuario indica que aún no tiene cuenta y desea crear una.
      */
     void openRegisterRequested();
 
@@ -39,16 +47,12 @@ protected:
     /**
      * @brief Evento que se ejecuta al mostrar la ventana.
      * @param event Evento de tipo QShowEvent.
-     *
-     * Se utiliza para crear un overlay semitransparente en el widget padre y centrar el diálogo.
      */
     void showEvent(QShowEvent *event) override;
 
     /**
      * @brief Evento que se ejecuta al cerrar la ventana.
      * @param event Evento de tipo QCloseEvent.
-     *
-     * Se encarga de eliminar el overlay y remover el filtro de eventos instalado en el widget padre.
      */
     void closeEvent(QCloseEvent *event) override;
 
@@ -57,27 +61,21 @@ protected:
      * @param watched Objeto que recibe el evento.
      * @param event Evento que se produce.
      * @return true si el evento se procesa, false en caso contrario.
-     *
-     * Este método se utiliza para actualizar la posición del diálogo y del overlay cuando
-     * el widget padre se mueve o redimensiona.
      */
     bool eventFilter(QObject *watched, QEvent *event) override;
 
     /**
      * @brief Sobrescribe el método reject() para limpiar recursos adicionales.
-     *
-     * Este método se encarga de realizar tareas de limpieza específicas antes de cerrar
-     * el diálogo de inicio de sesión. En particular, elimina el filtro de eventos instalado
-     * en el widget padre y programa la eliminación del overlay semitransparente (fondo oscuro)
-     * que se aplicó al widget padre para enfocar la atención en el diálogo.
-     *
-     * Estas acciones aseguran que, al cerrarse el diálogo (por ejemplo, al presionar Escape),
-     * no queden recursos residuales que bloqueen la interacción con la ventana principal.
      */
     void reject() override;
 
 private:
+    /**
+     * @brief Ejecutado cuando el inicio de sesión es exitoso.
+     * @param userKey Clave del usuario autenticado.
+     */
     void loginSucceeded(const QString &userKey);
+
     QWidget *backgroundOverlay; ///< Overlay para enfocar la atención en el diálogo.
 };
 

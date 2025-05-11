@@ -1,3 +1,14 @@
+/**
+ * @file icon.h
+ * @brief Declaración de la clase Icon, un widget interactivo con imagen.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * La clase Icon proporciona una etiqueta (QLabel) que muestra una imagen escalada
+ * y permite interacción mediante eventos de ratón (hover y clic).
+ */
+
 #ifndef ICON_H
 #define ICON_H
 

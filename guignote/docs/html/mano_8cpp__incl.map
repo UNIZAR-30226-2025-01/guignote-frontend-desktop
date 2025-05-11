@@ -1,0 +1,15 @@
+<map id="mano.cpp" name="mano.cpp">
+<area shape="rect" id="Node000001" title="Implementación de la clase Mano." alt="" coords="46,5,133,31"/>
+<area shape="rect" id="Node000002" href="$mano_8h.html" title="Declaración de la clase Mano, que representa la mano de un jugador." alt="" coords="54,79,125,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="92,31,92,65,87,65,87,31"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="6,152,79,177"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="84,106,60,142,56,139,79,103"/>
+<area shape="rect" id="Node000004" href="$carta_8h.html" title="Declaración de la clase Carta para el proyecto de Qt." alt="" coords="104,152,171,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="99,103,124,139,120,142,95,106"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,225,72,251"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="123,180,67,219,64,215,120,175"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="97,225,178,251"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="140,178,140,212,135,212,135,178"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="202,225,267,251"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="155,175,209,215,206,219,151,180"/>
+</map>
