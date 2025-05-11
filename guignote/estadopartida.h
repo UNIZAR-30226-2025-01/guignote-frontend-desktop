@@ -105,6 +105,8 @@ public:
     void procesarResume(QJsonObject data, std::function<void()> callback = nullptr);
     void procesarAllPause(QJsonObject data, std::function<void()> callback = nullptr);
     void procesarError(QJsonObject data, std::function<void()> callback);
+    void procesarCambioSiete(QJsonObject data, std::function<void()> callback);
+    void procesarCanto(QJsonObject data, std::function<void()> callback);
 
     void manejarEventoPrePartida(const QString& tipo, const QJsonObject& data);
     void mostrarOverlayEspera(int jugadoresCola, int jugadoresMax);

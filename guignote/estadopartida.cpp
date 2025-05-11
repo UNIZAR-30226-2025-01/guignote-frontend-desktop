@@ -275,21 +275,14 @@ void EstadoPartida::dibujarEstado() {
         enemigos[1]->mano->move(width - enemigos[1]->mano->width() - 24, height/2 - enemigos[1]->mano->height()/2);
     }
 
-    // Posicionar carta de triunfo
+    // Posicionar carta de triunfo y mazo central
     if (cartaTriunfo && cartaTriunfo->isVisible()) {
-        if (mazoRestante > 1 || mazo->isVisible())
-            cartaTriunfo->move(width/2 - cartaTriunfo->width() - 10, height/2 - cartaTriunfo->height()/2);
-        else
-            cartaTriunfo->move(width/2 - cartaTriunfo->width()/2, height/2 - cartaTriunfo->height()/2);
+        cartaTriunfo->move(width/2 - cartaTriunfo->width() - 10, height/2 - cartaTriunfo->height()/2);
         cartaTriunfo->raise();
     }
-
-    // Baraja central (si quedan cartas)
-    if (mazoRestante > 1) {
-        if (mazo->isVisible()) {
-            mazo->move(width/2 + 10, height/2 - mazo->height()/2);
-            mazo->raise();
-        }
+    if (mazo && mazo->isVisible()) {
+        mazo->move(width/2 + 10, height/2 - mazo->height()/2);
+        mazo->raise();
     }
 
     // Posicionar puntuaciones
@@ -382,6 +375,10 @@ void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::functi
 
     timer->start();
 }
+
+//////////////////////////////////////////////////////////////////////////////////////
+/// Acciones usuario
+//////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @brief Maneja el doble clic sobre una carta para jugarla.
@@ -507,7 +504,6 @@ void EstadoPartida::procesarSiguienteEvento() {
     qDebug() << "Recibido " + tipo;
 
     if(tipo == "start_game") {
-        this->setPartidaIniciada(true);
         procesarStartGame(data);
     } else if (tipo == "card_played") {
         procesarCardPlayed(data, [this]() {
@@ -544,7 +540,17 @@ void EstadoPartida::procesarSiguienteEvento() {
             enEjecucion = false;
             procesarSiguienteEvento();
         });
-    } else if (tipo == "end_game") {
+    } else if(tipo == "cambio_siete") {
+        procesarCambioSiete(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if(tipo == "canto") {
+        procesarCanto(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    }else if (tipo == "end_game") {
         procesarEndGame(data, nullptr);
     } else if (tipo == "all_pause") {
         procesarAllPause(data, nullptr);
@@ -686,44 +692,12 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
     }
 
     connect(animationGroup, &QParallelAnimationGroup::finished, this, [=]() {
-        if(mazoRestante <= jugadores.size()) {
-            mazo->show(); cartaTriunfo->show();
-
-            QGraphicsOpacityEffect* mazoEffect = new QGraphicsOpacityEffect(mazo);
-            mazo->setGraphicsEffect(mazoEffect);
-            mazoEffect->setOpacity(1.0);
-
-            QPropertyAnimation* fadeOutMazo = new QPropertyAnimation(mazoEffect, "opacity");
-            fadeOutMazo->setDuration(1000);
-            fadeOutMazo->setStartValue(1.0);
-            fadeOutMazo->setEndValue(0.0);
-            fadeOutMazo->setEasingCurve(QEasingCurve::OutCubic);
-
-            QPoint centro(this->width() / 2 - cartaTriunfo->width() / 2,
-                          this->height() / 2 - cartaTriunfo->height() / 2);
-
-            QPropertyAnimation* moverTriunfo = new QPropertyAnimation(cartaTriunfo, "pos");
-            moverTriunfo->setDuration(1000);
-            moverTriunfo->setStartValue(cartaTriunfo->pos());
-            moverTriunfo->setEndValue(centro);
-            moverTriunfo->setEasingCurve(QEasingCurve::OutCubic);
-
-            QParallelAnimationGroup* finalGroup = new QParallelAnimationGroup(this);
-            finalGroup->addAnimation(fadeOutMazo);
-            finalGroup->addAnimation(moverTriunfo);
-
-            connect(finalGroup, &QParallelAnimationGroup::finished, this, [=]() {
-                mazo->hide();
-                mazo->setGraphicsEffect(nullptr);
-                this->dibujarEstado();
-                if (callback) callback();
-            });
-
-            finalGroup->start(QAbstractAnimation::DeleteWhenStopped);
-        } else {
-            this->dibujarEstado();
-            if (callback) callback();
+        if(mazoRestante <= 0) {
+            this->cartaTriunfo->hide();
+            this->mazo->hide();
         }
+        this->dibujarEstado();
+        if (callback) callback();
     });
 
     if(animationGroup->animationCount() > 0) {
@@ -732,6 +706,19 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
         delete animationGroup;
         this->dibujarEstado();
     }
+}
+
+/**
+ * @brief Procesa cambio de fase ('phase_update'), calcula puntos de triunfo.
+ *
+ * @param data Datos de la fase.
+ * @param callback Función tras actualizar puntuaciones.
+ */
+void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> callback) {
+    this->mostrarMensaje("Cambio a fase de arrastre", [=]() {
+        if(callback) callback();
+        return;
+    });
 }
 
 /**
@@ -791,14 +778,14 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
  * @param data Datos iniciales de la partida.
  */
 void EstadoPartida::procesarStartGame(QJsonObject data) {
-    this->setPartidaIniciada(true);
     ocultarOverlayEspera();
-
-    this->iniciarBotonesYEtiquetas();
+    if(!getPartidaIniciada()) {
+        this->iniciarBotonesYEtiquetas();
+        this->setPartidaIniciada(true);
+    }
     this->actualizarEstado(data);
     this->dibujarEstado();
-
-    QTimer::singleShot(250, this, [=]() {
+    QTimer::singleShot(500, this, [=]() {
         this->dibujarEstado();
         enEjecucion = false;
         procesarSiguienteEvento();
@@ -837,63 +824,6 @@ void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*ca
         if(this->onSalir) this->onSalir();
         this->deleteLater();
     }, this);
-}
-
-/**
- * @brief Procesa cambio de fase ('phase_update'), calcula puntos de triunfo.
- *
- * @param data Datos de la fase.
- * @param callback Función tras actualizar puntuaciones.
- */
-void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> callback) {
-    this->mostrarMensaje("Cambio a fase de arrastre", [=]() {
-        if (!cartaTriunfo) {
-            if (callback) callback();
-            return;
-        }
-        Carta* copia = new Carta(cartaTriunfo->getPalo(), cartaTriunfo->getValor(), this);
-        QPoint posGlobal = cartaTriunfo->mapToGlobal(QPoint(0, 0));
-        copia->move(this->mapFromGlobal(posGlobal));
-        copia->show();
-        copia->raise();
-        cartaTriunfo->hide();
-
-        QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(copia);
-        copia->setGraphicsEffect(effect);
-        QPropertyAnimation* anim = new QPropertyAnimation(effect, "opacity");
-        anim->setDuration(1000);
-        anim->setStartValue(1.0);
-        anim->setEndValue(0.0);
-        anim->setEasingCurve(QEasingCurve::OutCubic);
-
-        connect(anim, &QPropertyAnimation::finished, this, [=]() {
-            copia->deleteLater();
-            int valor = cartaTriunfo->getValor().toInt();
-            int puntos = 0;
-            switch (valor) {
-                case 1:  puntos = 11; break;
-                case 3:  puntos = 10; break;
-                case 12: puntos = 4; break;
-                case 10: puntos = 3; break;
-                case 11: puntos = 2; break;
-                default: puntos = 0;
-            }
-
-            int equipo = data.value("equipo_que_gana_triunfo").toInt();
-            int puntosFinales1 = puntosEquipo1;
-            int puntosFinales2 = puntosEquipo2;
-
-            if (equipo == 1) puntosFinales1 += puntos;
-            else if (equipo == 2) puntosFinales2 += puntos;
-
-            if (puntosFinales1 != puntosEquipo1)
-                this->actualizarPuntuacion(1, puntosFinales1, callback);
-            else
-                this->actualizarPuntuacion(2, puntosFinales2, callback);
-        });
-
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
-    });
 }
 
 /**
@@ -1049,6 +979,79 @@ void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callba
     group->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
+
+/**
+ * @brief Procesa la acción de un jugador que ha cantado
+ *
+ * @param data Datos del evento.
+ * @param callback Función opcional tras mostras mensaje.
+ */
+void EstadoPartida::procesarCanto(QJsonObject data, std::function<void()> callback) {
+    QJsonObject jugadorData = data["jugador"].toObject();
+    int jugadorId = jugadorData["id"].toInt();
+    QString jugadorNombre = jugadorData["nombre"].toString();
+
+    QJsonArray cantosJson = data["cantos"].toArray();
+    QStringList cantos;
+    for(const QJsonValue& canto: cantosJson) {
+        cantos.append(canto.toString());
+    }
+
+    int puntos = data["puntos"].toInt();
+    int puntos1 = data["puntos_equipo_1"].toInt();
+    int puntos2 = data["puntos_equipo_2"].toInt();
+
+    QString msg = QString("%1 ha cantado %2 puntos:\n%3")
+                      .arg(jugadorNombre)
+                      .arg(puntos)
+                      .arg(cantos.join("\n"));
+
+    this->mostrarMensaje(msg, [=]() {
+        int completados = 0;
+        auto onDone = [this, callback]() {
+            if (callback) callback();
+        };
+        if (puntos1 != puntosEquipo1) this->actualizarPuntuacion(1, puntos1, onDone);
+        else this->actualizarPuntuacion(2, puntos2, onDone);
+    });
+}
+
+/**
+ * @brief Procesa la acción de un jugador que ha cambiado el siete
+ *
+ * @param data Datos del evento.
+ * @param callback Función opcional tras mostras mensaje.
+ */
+void EstadoPartida::procesarCambioSiete(QJsonObject data, std::function<void()> callback) {
+    QJsonObject jugadorData = data["jugador"].toObject();
+    int jugadorId = jugadorData["id"].toInt();
+    QString jugadorNombre = jugadorData["nombre"].toString();
+
+    QJsonObject cartaRobadaJson = data["carta_robada"].toObject();
+    QString paloTriunfo = cartaRobadaJson["palo"].toString();
+    QString valorTriunfo = cartaRobadaJson["valor"].toString();
+
+    Jugador* jugador = mapJugadores.value(jugadorId, nullptr);
+
+    // El jugador no existe
+    if(!jugador || !jugador->mano) return;
+
+    // Buscar 7 del jugador e intercambiarlo por la carta de triunfo
+    bool cambio = false;
+    for(int i = 0; i < jugador->mano->getNumCartas() && !cambio; ++i) {
+        Carta* aux = jugador->mano->getCarta(i);
+        if(aux->getPalo() == paloTriunfo && aux->getValor() == "7") {
+            cartaTriunfo->setPaloValor(paloTriunfo, "7");
+            aux->setPaloValor(paloTriunfo, valorTriunfo);
+            cambio = true;
+        }
+    }
+
+    // Mostrar mensaje
+    QString msg = QString("%1 ha cambiado su 7 de triunfo por la carta %2 de triunfo")
+                      .arg(jugadorNombre).arg(valorTriunfo);
+    this->mostrarMensaje(msg, callback);
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 /// Overlay
