@@ -1,3 +1,17 @@
+/**
+ * @file friendswindow.cpp
+ * @brief Implementación de la clase friendswindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la clase friendswindow, encargada de
+ * gestionar la interfaz de usuario para el menú de amigos, incluyendo
+ * visualización de amigos, solicitudes y búsqueda de usuarios,
+ * así como gestión de peticiones REST y WebSocket.
+ */
+
+
 #include "friendswindow.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -23,8 +37,14 @@
 #include "friendsmessagewindow.h"
 #include "userprofilewindow.h"
 
-// Función auxiliar para crear un diálogo modal con mensaje personalizado.
-// Si exitApp es verdadero, al cerrar se finaliza la aplicación.
+/**
+ * @brief Crea un diálogo modal personalizado con mensaje.
+ * @param parent Widget padre.
+ * @param message Texto a mostrar en el diálogo.
+ * @param exitApp True para cerrar la aplicación al cerrar el diálogo.
+ * @return Puntero al QDialog creado.
+ */
+
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -68,7 +88,12 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
     return dialog;
 }
 
-// Constructor
+/**
+ * @brief Constructor de la clase friendswindow.
+ * @param userKey Clave identificadora del usuario.
+ * @param parent Widget padre.
+ */
+
 friendswindow::friendswindow(const QString &userKey, QWidget *parent) : QDialog(parent) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
@@ -85,7 +110,10 @@ friendswindow::friendswindow(const QString &userKey, QWidget *parent) : QDialog(
     fetchRequests();
 }
 
-// Configuración de la UI
+/**
+ * @brief Configura la interfaz de usuario principal.
+ */
+
 void friendswindow::setupUI() {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
@@ -139,7 +167,11 @@ void friendswindow::setupUI() {
     setLayout(mainLayout);
 }
 
-// Pestaña Amigos: muestra la lista de amigos.
+/**
+ * @brief Crea la pestaña "Amigos".
+ * @return Puntero al QWidget de la pestaña.
+ */
+
 QWidget* friendswindow::createFriendsTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
@@ -154,7 +186,11 @@ QWidget* friendswindow::createFriendsTab() {
     return page;
 }
 
-// Pestaña Solicitudes: muestra la lista de solicitudes.
+/**
+ * @brief Crea la pestaña "Solicitudes".
+ * @return Puntero al QWidget de la pestaña.
+ */
+
 QWidget* friendswindow::createRequestsTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
@@ -169,7 +205,11 @@ QWidget* friendswindow::createRequestsTab() {
     return page;
 }
 
-// Pestaña Buscar: campo de búsqueda y lista de resultados.
+/**
+ * @brief Crea la pestaña "Buscar" con campo de búsqueda.
+ * @return Puntero al QWidget de la pestaña.
+ */
+
 QWidget* friendswindow::createSearchTab() {
     QWidget *page = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(page);
@@ -202,8 +242,11 @@ QWidget* friendswindow::createSearchTab() {
 }
 
 
+/**
+ * @brief Obtiene el token de autenticación desde el archivo de configuración.
+ * @return Token como QString, o cadena vacía si falla.
+ */
 
-// Función para extraer el token de autenticación desde el archivo .conf
 QString friendswindow::loadAuthToken() {
 
     qDebug() << "VALOR DE userKey EN loadAuthToken: " << userKey;
@@ -231,7 +274,10 @@ QString friendswindow::loadAuthToken() {
     return token;
 }
 
-// Obtiene la lista de amigos desde el servidor.
+/**
+ * @brief Descarga la lista de amigos desde el servidor y la muestra.
+ */
+
 void friendswindow::fetchFriends() {
     QString token = loadAuthToken();
     if (token.isEmpty()) return;
@@ -266,6 +312,12 @@ void friendswindow::fetchFriends() {
         reply->deleteLater();
     });
 }
+
+/**
+ * @brief Crea el widget de tarjeta de un amigo.
+ * @param amigo Objeto JSON con datos del amigo.
+ * @return Puntero al QWidget que representa la tarjeta.
+ */
 
 QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     QWidget *widget = new QWidget();
@@ -468,10 +520,11 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     return widget;
 }
 
+/**
+ * @brief Envía petición para eliminar a un amigo.
+ * @param friendId ID del amigo a eliminar.
+ */
 
-
-
-// Envía una solicitud para eliminar a un amigo.
 void friendswindow::removeFriend(const QString &friendId) {
     QString token = loadAuthToken();
     if (token.isEmpty()) {
@@ -505,7 +558,10 @@ void friendswindow::removeFriend(const QString &friendId) {
     });
 }
 
-// Obtiene las solicitudes de amistad desde el servidor.
+/**
+ * @brief Obtiene la lista de solicitudes de amistad del servidor.
+ */
+
 void friendswindow::fetchRequests() {
     QString token = loadAuthToken();
     if (token.isEmpty()) return;
@@ -543,6 +599,11 @@ void friendswindow::fetchRequests() {
         reply->deleteLater();
     });
 }
+
+/**
+ * @brief Realiza búsqueda de usuarios según el texto ingresado.
+ * Dispara REST y actualiza la lista de resultados.
+ */
 
 void friendswindow::searchUsers() {
     qDebug() << "VALOR DE USERKEY EN searchUsers:" << userKey;
@@ -606,6 +667,11 @@ void friendswindow::searchUsers() {
     });
 }
 
+/**
+ * @brief Crea el widget de resultado de búsqueda de usuario.
+ * @param usuario Objeto JSON con datos del usuario.
+ * @return Puntero al QWidget de resultado.
+ */
 
 QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     QWidget *widget = new QWidget();
@@ -683,6 +749,12 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
     return widget;
 }
 
+/**
+ * @brief Descarga una imagen y la asigna recortada como avatar circular.
+ * @param imageUrl URL de la imagen.
+ * @param avatarIcon Puntero al Icon donde mostrarla.
+ */
+
 void friendswindow::downloadAndSetAvatar(const QString &imageUrl, Icon *avatarIcon) {
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     QNetworkRequest request{QUrl(imageUrl)};
@@ -707,7 +779,13 @@ void friendswindow::downloadAndSetAvatar(const QString &imageUrl, Icon *avatarIc
     });
 }
 
-// Convierte una imagen en un QPixmap circular.
+/**
+ * @brief Convierte un QPixmap en una versión circular de tamaño dado.
+ * @param src QPixmap de origen.
+ * @param size Dimensión del lado del círculo.
+ * @return QPixmap circular resultante.
+ */
+
 QPixmap friendswindow::createCircularImage(const QPixmap &src, int size) {
     // Escalamos a un cuadrado de “size × size” y recortamos el exceso
     QPixmap scaled = src.scaled(size, size,
@@ -726,7 +804,12 @@ QPixmap friendswindow::createCircularImage(const QPixmap &src, int size) {
     return circular;
 }
 
-// Crea un widget para mostrar cada solicitud de amistad.
+/**
+ * @brief Crea el widget de una solicitud de amistad.
+ * @param solicitud Objeto JSON con datos de la solicitud.
+ * @return Puntero al QWidget de la solicitud.
+ */
+
 QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     QWidget *widget = new QWidget();
     widget->setMinimumSize(300, 130);
@@ -798,6 +881,9 @@ QWidget* friendswindow::createRequestWidget(const QJsonObject &solicitud) {
     return widget;
 }
 
+/**
+ * @brief Envía una solicitud de amistad al usuario indicado.
+ */
 
 void friendswindow::sendFriendRequest() {
     QPushButton *button = qobject_cast<QPushButton*>(sender());
@@ -843,7 +929,10 @@ void friendswindow::sendFriendRequest() {
 }
 
 
-// Acepta una solicitud de amistad.
+/**
+ * @brief Acepta la solicitud de amistad seleccionada.
+ */
+
 void friendswindow::acceptRequest() {
     QObject *senderObj = sender();
     if (!senderObj) return;
@@ -879,7 +968,10 @@ void friendswindow::acceptRequest() {
     });
 }
 
-// Rechaza una solicitud de amistad.
+/**
+ * @brief Rechaza la solicitud de amistad seleccionada.
+ */
+
 void friendswindow::rejectRequest() {
     QObject *senderObj = sender();
     if (!senderObj) return;

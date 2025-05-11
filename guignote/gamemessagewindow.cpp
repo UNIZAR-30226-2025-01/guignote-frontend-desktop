@@ -1,4 +1,15 @@
-// GameMessageWindow.cpp
+/**
+ * @file GameMessageWindow.cpp
+ * @brief Implementación de la clase GameMessageWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la ventana de chat de partida, que gestiona
+ * la interfaz de mensajería, la conexión WebSocket/Socket TCP y el
+ * almacenamiento de histórico de mensajes.
+ */
+
 
 #include "gamemessagewindow.h"
 
@@ -18,6 +29,13 @@
 
 QMap<QString, QList<QPair<QString,QString>>> GameMessageWindow::chatHistories;
 
+/**
+ * @brief Constructor de la ventana de chat de partida.
+ * @param userKey Clave del usuario para autenticación.
+ * @param parent Widget padre.
+ * @param gameID Identificador de la partida/chat.
+ * @param userID Identificador del usuario actual.
+ */
 
 GameMessageWindow::GameMessageWindow(const QString &userKey, QWidget *parent, const QString &gameID, const QString &userID)
     : QWidget(parent), chatID(gameID), userID(userID)
@@ -35,6 +53,12 @@ GameMessageWindow::GameMessageWindow(const QString &userKey, QWidget *parent, co
     networkManager = new QNetworkAccessManager(this);
     loadChatHistoryFromServer(userKey);
 }
+
+
+/**
+ * @brief Descarga el historial de chat de la partida mediante socket TCP.
+ * @param userKey Clave del usuario para enviar en la petición.
+ */
 
 void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
     QString token = loadAuthToken(userKey);
@@ -100,12 +124,20 @@ void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
 }
 
 
+/**
+ * @brief Destructor: cierra el WebSocket y libera recursos.
+ */
 
 GameMessageWindow::~GameMessageWindow() {
     qDebug() << "GameMessageWindow: Destructor, cerrando WebSocket.";
     webSocket->close();
     delete webSocket;
 }
+
+/**
+ * @brief Configura la interfaz gráfica de la ventana de chat.
+ * @param userKey Clave del usuario (se pasa para conectar señales).
+ */
 
 void GameMessageWindow::setupUI(const QString userKey) {
     mainLayout = new QVBoxLayout(this);
@@ -170,6 +202,11 @@ void GameMessageWindow::setupUI(const QString userKey) {
     mainLayout->addLayout(inputLayout);
 }
 
+/**
+ * @brief Establece la conexión WebSocket para recibir mensajes en tiempo real.
+ * @param userKey Clave del usuario usada para obtener el token.
+ */
+
 void GameMessageWindow::setupWebSocketConnection(const QString &userKey) {
     webSocket = new QWebSocket();
     QString token = loadAuthToken(userKey);
@@ -190,13 +227,26 @@ void GameMessageWindow::setupWebSocketConnection(const QString &userKey) {
             this, &GameMessageWindow::onTextMessageReceived);
 }
 
+/**
+ * @brief Callback que se ejecuta cuando el WebSocket se conecta.
+ */
+
 void GameMessageWindow::onConnected() {
     qDebug() << "GameMessageWindow: WebSocket conectado.";
 }
 
+/**
+ * @brief Callback que se ejecuta cuando el WebSocket se desconecta.
+ */
+
 void GameMessageWindow::onDisconnected() {
     qDebug() << "GameMessageWindow: WebSocket desconectado.";
 }
+
+/**
+ * @brief Procesa un mensaje recibido por WebSocket.
+ * @param message Cadena JSON con el mensaje.
+ */
 
 void GameMessageWindow::onTextMessageReceived(const QString &message) {
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
@@ -216,6 +266,10 @@ void GameMessageWindow::onTextMessageReceived(const QString &message) {
 }
 
 
+/**
+ * @brief Envía un mensaje: lo muestra en UI y lo manda por WebSocket.
+ * @param userKey Clave del usuario para (re)conexión si hace falta.
+ */
 
 void GameMessageWindow::sendMessage(const QString &userKey) {
     // 1) Recuperar y validar el texto
@@ -243,6 +297,12 @@ void GameMessageWindow::sendMessage(const QString &userKey) {
     messageInput->clear();
 }
 
+
+/**
+ * @brief Añade un mensaje al listado de chat con estilo de burbuja.
+ * @param senderId ID del remitente.
+ * @param content Texto del mensaje.
+ */
 
 void GameMessageWindow::appendMessage(const QString &senderId, const QString &content) {
     QLabel *lbl = new QLabel(content);
@@ -286,6 +346,12 @@ void GameMessageWindow::appendMessage(const QString &senderId, const QString &co
         messagesListWidget->scrollToBottom();
     });
 }
+
+/**
+ * @brief Lee el token de autenticación guardado en configuración.
+ * @param userKey Clave del usuario para localizar el archivo .conf.
+ * @return Token como QString, o cadena vacía si no existe.
+ */
 
 QString GameMessageWindow::loadAuthToken(const QString &userKey) {
     // Construimos la misma ruta que usa LoginWindow para el .conf

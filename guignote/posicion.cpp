@@ -1,9 +1,34 @@
+/**
+ * @file posicion.cpp
+ * @brief Implementación de la clase Posicion.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Este archivo define la clase Posicion, responsable de representar
+ * cada zona de juego donde puede caer una carta. Gestiona su posición,
+ * rotación, drag&drop y notifica al servidor cuando se juega una carta.
+ */
+
+
 #include "posicion.h"
 #include <QPainter>
 #include <QApplication>
 #include <QtWebSockets>
 #include "gamewindow.h"
 
+/**
+ * @brief Constructor de Posicion.
+ * @param gw Puntero a la ventana de juego (GameWindow).
+ * @param parent Widget padre en el que se dibuja la posición.
+ * @param h Altura de cada carta en píxeles.
+ * @param pos Índice de la posición (0=abajo,1=arriba,2=derecha,3=izquierda).
+ * @param token Cadena de autenticación para el servidor.
+ * @param ws WebSocket usado para comunicar jugadas.
+ *
+ * Crea un QLabel con fondo semitransparente, fija su tamaño,
+ * habilita drag&drop y lo sitúa según el índice pos.
+ */
 Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos, QString token, QWebSocket *ws)
     : QLabel(parent), cartaActual(nullptr)
 {
@@ -36,6 +61,12 @@ Posicion::Posicion(GameWindow *gw, QWidget *parent, int h, int pos, QString toke
     this->mostrarPosicion();
 }
 
+/**
+ * @brief Reposiciona y rota el widget según su índice.
+ *
+ * Calcula las coordenadas dentro de su contenedor y, si
+ * corresponde, rota el fondo en 90°, 180° o 270°.
+ */
 void Posicion::mostrarPosicion()
 {
     QWidget *contenedor = parentWidget();
@@ -96,12 +127,25 @@ void Posicion::mostrarPosicion()
     show();
 }
 
+/**
+ * @brief Evento de entrada de arrastre.
+ * @param event Información del evento de drag.
+ *
+ * Acepta cualquier arrastre para poder soltar cartas aquí.
+ */
 void Posicion::dragEnterEvent(QDragEnterEvent *event)
 {
     event->acceptProposedAction();  // ✅ Aceptamos cualquier tipo de arrastre
 
 }
 
+/**
+ * @brief Evento de soltado de una carta.
+ * @param event Información del evento de drop.
+ *
+ * Si no está bloqueada y no hay carta ya, extrae el id del MIME,
+ * obtiene la Carta desde GameWindow, la mueve, y llama a jugarCarta().
+ */
 void Posicion::dropEvent(QDropEvent *event)
 {
     QString id = event->mimeData()->text();
@@ -128,6 +172,12 @@ void Posicion::dropEvent(QDropEvent *event)
     }
 }
 
+/**
+ * @brief Envía al servidor la jugada de la carta actual.
+ *
+ * Construye un JSON con palo y valor, lo serializa y lo emite
+ * por el WebSocket si está conectado.
+ */
 void Posicion::jugarCarta() {
     QJsonObject carta;
     carta["palo"] = cartaActual->suit;
@@ -153,6 +203,12 @@ void Posicion::jugarCarta() {
     ws->sendTextMessage(jsonString);
 }
 
+/**
+ * @brief Coloca una carta en esta posición.
+ * @param carta Puntero a la carta que se va a fijar aquí.
+ *
+ * Ajusta padre, posición y visibilidad, y guarda la cartaActual.
+ */
 void Posicion::setCard(Carta *carta) {
     carta->setParent(this);
     int x = (width() - carta->width()) / 2;
@@ -164,6 +220,11 @@ void Posicion::setCard(Carta *carta) {
     cartaActual = carta;
 }
 
+/**
+ * @brief Elimina la carta actual de la posición.
+ *
+ * Oculta y destruye el objeto Carta y deja cartaActual a nullptr.
+ */
 void Posicion::removeCard(){
     if(cartaActual){
         cartaActual->hide();
@@ -172,6 +233,10 @@ void Posicion::removeCard(){
     }
 }
 
+/**
+ * @brief Bloquea o desbloquea esta posición.
+ * @param l true para bloquear (no aceptar drops), false para desbloquear.
+ */
 void Posicion::setLock(bool l){
     Lock = l;
 }

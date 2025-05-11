@@ -1,5 +1,17 @@
-#include "inventorywindow.h"
+/**
+ * @file inventorywindow.cpp
+ * @brief Implementación de la clase InventoryWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la ventana de inventario, que permite
+ * gestionar barajas y tapetes mediante una interfaz con tarjeta,
+ * sombras y animaciones de transición.
+ */
 
+
+#include "inventorywindow.h"
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -44,9 +56,15 @@ static const char *tileQss = R"(
     }
 )";
 
-/* ------------------------------------------------------------------ */
-/*  TARJETA (BOTÓN) CON ESQUINAS REDONDEADAS Y SOMBRA                 */
-/* ------------------------------------------------------------------ */
+/**
+ * @brief Constructor de CardTile.
+ * @param text Texto que mostrará la tarjeta.
+ * @param pixmap Imagen opcional para mostrar en la tarjeta.
+ * @param parent Widget padre.
+ *
+ * Configura tamaño fijo, estilo QSS, sombra, y permite marcado.
+ */
+
 class CardTile : public QPushButton
 {
     Q_OBJECT
@@ -75,15 +93,38 @@ public:
     }
 
 protected:
-    /* --- animamos solo blur y offset; la geometría no cambia --- */
+
+    /**
+ * @brief Constructor de CardTile.
+ * @param text Texto que mostrará la tarjeta.
+ * @param pixmap Imagen opcional para mostrar en la tarjeta.
+ * @param parent Widget padre.
+ *
+ * Configura tamaño fijo, estilo QSS, sombra, y permite marcado.
+ */
+
     void enterEvent(QEnterEvent *e) override {
         elevate(28, 6);
         QPushButton::enterEvent(e);
     }
+
+    /**
+ * @brief Restaura la sombra al salir el cursor de la tarjeta.
+ * @param e Evento de salida del cursor.
+ */
+
     void leaveEvent(QEvent *e) override {
         elevate(18, 4);
         QPushButton::leaveEvent(e);
     }
+
+    /**
+ * @brief Dibuja la tarjeta personalizada con esquina redondeada.
+ * @param Evento de pintura (no utilizado directamente).
+ *
+ * Si tiene pixmap, lo dibuja centrado y añade borde de selección;
+ * si no, dibuja texto centrado.
+ */
 
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
@@ -133,6 +174,15 @@ protected:
 
 
 private:
+    /**
+ * @brief Ajusta dinámicamente el radio de desenfoque y el desplazamiento de la sombra.
+ * @param blur Nuevo valor para blurRadius del efecto de sombra.
+ * @param y Nuevo valor de offset vertical de la sombra.
+ *
+ * Crea animaciones que interpolan desde los valores actuales hasta los especificados,
+ * para dar un efecto de elevación al pasar/retirar el cursor.
+ */
+
     void elevate(qreal blur, qreal y)
     {
         auto animate = [this](const char *prop, const QVariant &v) {
@@ -151,9 +201,13 @@ private:
     QPixmap m_pixmap;
 };
 
-/* ------------------------------------------------------------------ */
-/*  LISTA LATERAL (NavList)                                           */
-/* ------------------------------------------------------------------ */
+/**
+ * @brief Constructor de NavList.
+ * @param parent Widget padre.
+ *
+ * Configura estilo QSS, sin marco, y prepara indicador animado.
+ */
+
 class NavList : public QListWidget
 {
     Q_OBJECT
@@ -186,6 +240,13 @@ public:
     }
 
 private slots:
+    /**
+ * @brief Mueve el indicador a la fila seleccionada.
+ * @param row Índice de la fila activa.
+ *
+ * Anima la propiedad geometry para deslizar el indicador.
+ */
+
     void animateIndicator(int row)
     {
         if (row < 0) return;
@@ -206,9 +267,12 @@ private:
     QWidget *indicator;
 };
 
-/* ------------------------------------------------------------------ */
-/*  FUNCIÓN AUXILIAR DE OPACIDAD (sin cambios)                         */
-/* ------------------------------------------------------------------ */
+/**
+ * @brief Crea un efecto de opacidad inicializado en 1.0.
+ * @param w Widget al que aplicar el efecto.
+ * @return Puntero al QGraphicsOpacityEffect configurado.
+ */
+
 static QGraphicsOpacityEffect *makeFadeEffect(QWidget *w)
 {
     auto *eff = new QGraphicsOpacityEffect(w);
@@ -218,9 +282,14 @@ static QGraphicsOpacityEffect *makeFadeEffect(QWidget *w)
     return eff;
 }
 
-/* ------------------------------------------------------------------ */
-/*  TRANSICIÓN ENTRE PÁGINAS (sin cambios)                            */
-/* ------------------------------------------------------------------ */
+/**
+ * @brief Anima la transición entre páginas de un QStackedWidget.
+ * @param stack Pila de páginas.
+ * @param nextIdx Índice de la página destino.
+ * @param ms Duración de la animación en milisegundos.
+ * @param dir Dirección del deslizamiento (+1 derecha→izq, -1 izquierdo→der).
+ */
+
 static void slidePages(QStackedWidget *stack, int nextIdx,
                        int ms = 300, int dir = +1)
 {
@@ -261,9 +330,15 @@ static void slidePages(QStackedWidget *stack, int nextIdx,
     aIn ->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-/* ------------------------------------------------------------------ */
-/*  CONSTRUCTOR / DESTRUCTOR DE INVENTORYWINDOW                       */
-/* ------------------------------------------------------------------ */
+/**
+ * @brief Constructor de InventoryWindow.
+ * @param parent Widget padre.
+ * @param usr Clave de usuario para cargar ajustes.
+ *
+ * Configura ventana sin marco, estilos, sombra y crea
+ * la interfaz de selección de barajas y tapetes.
+ */
+
 InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
 {
     /* ---------- Ventana base ---------- */
@@ -432,11 +507,23 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
         b2->setChecked(true);
 }
 
+/**
+ * @brief Slot que responde al cambio de pestaña en la barra lateral.
+ * @param row Índice de la pestaña seleccionada.
+ *
+ * Llama a slidePages para animar la transición.
+ */
 
 void InventoryWindow::onTabChanged(int row)
 {
     slidePages(stackedWidget, row, 350, -1);  // slide de derecha a izquierda
 }
+
+/**
+ * @brief Destructor de InventoryWindow.
+ *
+ * Limpia los recursos de la interfaz (implícito en Qt).
+ */
 
 InventoryWindow::~InventoryWindow() {}
 

@@ -1,3 +1,16 @@
+/**
+ * @file rejoinwindow.cpp
+ * @brief Implementación de la clase RejoinWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Esta clase muestra un diálogo con una lista de salas reconectables (recibidas como JSON),
+ * permitiendo al usuario volver a unirse a una partida via WebSocket. Gestiona la creación de la UI,
+ * el manejo de mensajes entrantes y la reconexión usando el token de autenticación.
+ */
+
+
 #include "rejoinwindow.h"
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -7,6 +20,17 @@
 #include <QWebSocket>
 #include "gamewindow.h"
 
+/**
+ * @brief Constructor de RejoinWindow.
+ * @param jsonArray Array JSON con la información de las salas.
+ * @param fondo Identificador de recurso de fondo.
+ * @param userKey Clave del usuario para extraer el token.
+ * @param usr Nombre del usuario actual.
+ * @param parent Widget padre, puede ser nullptr.
+ *
+ * Configura el diálogo (sin bordes y con estilo), carga el token,
+ * fija tamaño y estilo, y llama a setupUI() para construir la interfaz.
+ */
 RejoinWindow::RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent)
     : QDialog(parent), salas(jsonArray) {
     this->fondo = fondo;
@@ -21,6 +45,12 @@ RejoinWindow::RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QS
     setupUI();
 }
 
+/**
+ * @brief Construye la interfaz de usuario.
+ *
+ * Crea el layout principal vertical, ajusta márgenes y espaciados,
+ * añade el header y llama a populateSalas() para generar la lista.
+ */
 void RejoinWindow::setupUI() {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
@@ -33,6 +63,13 @@ void RejoinWindow::setupUI() {
     setLayout(mainLayout);
 }
 
+/**
+ * @brief Crea y devuelve el layout del encabezado.
+ * @return Puntero al QHBoxLayout que contiene el título y el botón de cerrar.
+ *
+ * Configura el QLabel con el título y el QPushButton de cierre,
+ * con estilo y conexiones adecuadas.
+ */
 QHBoxLayout* RejoinWindow::createHeaderLayout() {
     QHBoxLayout *headerLayout = new QHBoxLayout();
     titleLabel = new QLabel("Perfil", this);
@@ -55,6 +92,12 @@ QHBoxLayout* RejoinWindow::createHeaderLayout() {
     return headerLayout;
 }
 
+/**
+ * @brief Rellena el diálogo con las salas reconectables.
+ *
+ * Para cada objeto en `salas` crea un contenedor con nombre,
+ * ocupación y un botón "Entrar" que llama a rejoin().
+ */
 void RejoinWindow::populateSalas() {
     for (const QJsonValue &val : salas) {
 
@@ -127,6 +170,14 @@ void RejoinWindow::populateSalas() {
     }
 }
 
+/**
+ * @brief Maneja mensajes entrantes por WebSocket.
+ * @param userKey Clave del usuario para contexto.
+ * @param mensaje Cadena JSON recibida.
+ *
+ * Parsear el JSON, detectar eventos ("player_joined", "start_game")
+ * y actuar en consecuencia (debug, abrir GameWindow y cerrar diálogo).
+ */
 void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
     QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
     if (!doc.isObject()) {
@@ -209,7 +260,14 @@ void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje
 }
 
 
-// Función para extraer el token de autenticación desde el archivo .conf
+/**
+ * @brief Extrae el token de autenticación desde el archivo de configuración.
+ * @param userKey Clave del usuario usada para formar la ruta del .conf.
+ * @return Cadena con el token, o vacía si ocurre un error.
+ *
+ * Abre el fichero `.conf` asociado, busca la línea `token=...`
+ * y devuelve su valor.
+ */
 QString RejoinWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
@@ -235,6 +293,13 @@ QString RejoinWindow::loadAuthToken(const QString &userKey) {
     return token;
 }
 
+/**
+ * @brief Inicia la reconexión a la sala seleccionada.
+ * @param idPart Identificador de la sala (string).
+ *
+ * Crea y configura un QWebSocket con el token y el id_partida,
+ * conecta las señales y abre la conexión al servidor.
+ */
 void RejoinWindow::rejoin(QString idPart) {
 
     qDebug() << "creamos socket";

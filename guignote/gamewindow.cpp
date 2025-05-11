@@ -1,3 +1,16 @@
+/**
+ * @file GameWindow.cpp
+ * @brief Implementación de la clase GameWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la ventana principal de juego, que gestiona
+ * la interfaz gráfica, la lógica de partida, conexiones WebSocket/TCP,
+ * animaciones y efectos de sonido.
+ */
+
+
 #include "gamewindow.h"
 #include "gamemessagewindow.h"
 #include "settingswindow.h"
@@ -22,11 +35,23 @@
 
 
 QMap<QString, Carta*> GameWindow::cartasPorId;
+
+/**
+ * @brief Declara la función de crear un diálogo modal personalizado.
+ * @param parent Widget padre.
+ * @param message Texto a mostrar.
+ * @param exitApp Si es true, cierra la aplicación al cerrar el diálogo.
+ * @return Puntero al QDialog.
+ */
+
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false);
 
-/* Devuelve un nombre “corto” para cada skin.
- * Amplíalo cada vez que añadas una baraja nueva.
+/**
+ * @brief Devuelve un nombre “corto” para cada skin de baraja.
+ * @param idx Índice de la skin.
+ * @return Cadena identificadora de la skin.
  */
+
 static QString skinName(int idx)
 {
     switch (idx) {
@@ -35,6 +60,11 @@ static QString skinName(int idx)
     default: return QString("skin%1").arg(idx);
     }
 }
+
+/**
+ * @brief Registra una Carta en el mapa estático por su ID global.
+ * @param c Puntero a la instancia de Carta.
+ */
 
 void GameWindow::addCartaPorId(Carta* c){
     cartasPorId[c->idGlobal] = c;
@@ -45,9 +75,27 @@ void GameWindow::addCartaPorId(Carta* c){
 }
 
 
+/**
+ * @brief Recupera una Carta registrada por su ID global.
+ * @param id Identificador global de la carta.
+ * @return Puntero a la Carta o nullptr si no existe.
+ */
+
 Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
+
+/**
+ * @brief Constructor de la ventana principal de juego.
+ * @param userKey Clave del usuario para autenticación.
+ * @param type Tipo de partida (número de jugadores).
+ * @param fondo Índice de fondo de pantalla.
+ * @param msg Objeto JSON con datos iniciales de la partida.
+ * @param id Identificador del jugador actual.
+ * @param ws Puntero al WebSocket para comunicación.
+ * @param usr Usuario (clave) para configuración.
+ * @param menuRef Puntero a la ventana de menú padre.
+ */
 
 GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef)
     : legendLabel(nullptr), legendPinned(false) {
@@ -103,6 +151,11 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
 
 }
 
+/**
+ * @brief Muestra la leyenda de la baraja si corresponde.
+ * Sólo para skins distintos de la “base”.
+ */
+
 void GameWindow::colocarLeyenda()
 {
     if (legendPinned || !legendLabel)          // ya está, o aún no existe
@@ -126,6 +179,11 @@ void GameWindow::colocarLeyenda()
     legendPinned = true;
 }
 
+
+/**
+ * @brief Configura toda la interfaz gráfica de la ventana de juego.
+ * @param userKey Clave del usuario (usada en callbacks).
+ */
 
 void GameWindow::setupUI(const QString &userKey) {
 
@@ -356,7 +414,12 @@ void GameWindow::setupUI(const QString &userKey) {
 }
 
 
-
+/**
+ * @brief Captura eventos de entrada/salida sobre la barra de opciones.
+ * @param watched Objeto filtrado.
+ * @param event Evento recibido.
+ * @return True si se consume el evento.
+ */
 
 bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
     if ((watched == optionsBar || watched == optionsIndicator)) {
@@ -377,6 +440,11 @@ bool GameWindow::eventFilter(QObject *watched, QEvent *event) {
     return QWidget::eventFilter(watched, event);
 }
 
+/**
+ * @brief Muestra un overlay con el texto de turno.
+ * @param texto Mensaje a mostrar.
+ * @param miTurno True si es turno del usuario actual.
+ */
 
 void GameWindow::mostrarTurno(const QString &texto, bool /*miTurno*/) {
     turnoLabel->setText(texto);
@@ -400,17 +468,18 @@ void GameWindow::mostrarTurno(const QString &texto, bool /*miTurno*/) {
     hideTurnoTimer->start(duracion);
 }
 
-
-
+/**
+ * @brief Oculta el overlay de turno con animación de desvanecimiento.
+ */
 
 void GameWindow::ocultarTurno() {
     fadeIn->stop();
     fadeOut->start();
 }
 
-
-
-
+/**
+ * @brief Establece el fondo y ornamentos de acuerdo al índice seleccionado.
+ */
 
 void GameWindow::setBackground() {
     QString ornament;
@@ -537,6 +606,11 @@ void GameWindow::setBackground() {
     }
 }
 
+/**
+ * @brief Inicializa manos, posiciones y el mazo según el estado de partida.
+ * @param msg Objeto JSON con datos de estado inicial.
+ */
+
 void GameWindow::setupGameElements(QJsonObject msg) {
     manos.append(new Mano(0, 0));
     manos.append(new Mano(1, 1));
@@ -565,9 +639,18 @@ void GameWindow::setupGameElements(QJsonObject msg) {
 
 }
 
+
+/**
+ * @brief Reposiciona y muestra todas las manos de jugadores.
+ */
+
 void GameWindow::repositionHands(){
     for (Mano* mano : manos) mano->mostrarMano();
 }
+
+/**
+ * @brief Ajusta la posición de los ornamentos decorativos en las esquinas.
+ */
 
 void GameWindow::repositionOrnaments() {
     int w = this->width();
@@ -584,6 +667,10 @@ void GameWindow::repositionOrnaments() {
         corner->lower();
     }
 }
+
+/**
+ * @brief Centra y dimensiona la barra de opciones y su indicador.
+ */
 
 void GameWindow::repositionOptions() {
     auto *lay = qobject_cast<QHBoxLayout*>(optionsBar->layout());
@@ -619,8 +706,10 @@ void GameWindow::repositionOptions() {
     optionsIndicator->raise();
 }
 
-
-
+/**
+ * @brief Gestiona el redimensionado de la ventana.
+ * Reposiciona elementos y actualiza la visualización.
+ */
 
 // Función para recolocar y reposicionar todos los elementos
 void GameWindow::resizeEvent(QResizeEvent *event) {
@@ -642,10 +731,14 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
 
 }
 
-// FUNCIONES PARA COMUNICARSE CON BACKEND Y JUGAR PARTIDAS
+/**
+ * @brief Función auxiliar para crear un diálogo modal con estilo.
+ * @param parent Widget padre.
+ * @param message Texto a mostrar.
+ * @param exitApp Indica si la aplicación debe cerrarse al cerrar el diálogo.
+ * @return Puntero al QDialog creado.
+ */
 
-// Función auxiliar para crear un diálogo modal con mensaje personalizado.
-// Si exitApp es verdadero, al cerrar se finaliza la aplicación.
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp) {
     QDialog *dialog = new QDialog(parent);
     dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -689,7 +782,12 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
     return dialog;
 }
 
-// Función para extraer el token de autenticación desde el archivo .conf
+/**
+ * @brief Lee el token de autenticación desde el archivo de configuración INI.
+ * @param userKey Clave del usuario para localizar el fichero.
+ * @return Token como QString o cadena vacía si falla.
+ */
+
 QString GameWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
@@ -713,17 +811,11 @@ QString GameWindow::loadAuthToken(const QString &userKey) {
     return token;
 }
 
-/* Setup:
- * Deck:
- *  numCartas
- *  cartaTriunfo
- * Mano Mia:
- *  Asignar my id
- *  Añadir mis cartas a la mano
- * Mano Resto:
- *  Añadir sus ids
- *  Añadir n backs a la mano
+/**
+ * @brief Aplica el estado inicial de la partida (mazo, triunfo, manos).
+ * @param s0 Objeto JSON con datos de estado de partida.
  */
+
 void GameWindow::setupGameState(QJsonObject s0){
     qDebug() << "🧪 deckSkin en setupGameState =" << deckSkin;
     // Comprobamos que tenemos el id
@@ -793,6 +885,11 @@ void GameWindow::setupGameState(QJsonObject s0){
         }
     }
 }
+
+/**
+ * @brief Procesa mensajes entrantes del WebSocket.
+ * @param mensaje Cadena JSON recibida.
+ */
 
 void GameWindow::recibirMensajes(const QString &mensaje) {
     qDebug() << "[recibirMensajes] ⟶ WS raw message:" << mensaje;
@@ -1075,6 +1172,11 @@ void GameWindow::recibirMensajes(const QString &mensaje) {
     }
 }
 
+/**
+ * @brief Anima el robo de carta para un jugador.
+ * @param drawData Objeto JSON con datos de la carta.
+ * @param userId ID del jugador que robó.
+ */
 
 void GameWindow::animateDraw(const QJsonObject &drawData, int userId) {
     // ▶ Retrasar animación de robo hasta que termine el movimiento de la pila
@@ -1142,6 +1244,11 @@ void GameWindow::animateDraw(const QJsonObject &drawData, int userId) {
     deck->actualizarVisual();
 }
 
+/**
+ * @brief Maneja una actualización de turno (habilita/bloquea mano).
+ * @param data Objeto JSON con información de turno.
+ */
+
 void GameWindow::processTurnUpdate(const QJsonObject &data) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QString nombre = data["jugador"].toObject()["nombre"].toString();
@@ -1154,6 +1261,11 @@ void GameWindow::processTurnUpdate(const QJsonObject &data) {
         mostrarTurno("Es el turno de " + nombre, false);
     }
 }
+
+/**
+ * @brief Destructor de GameWindow: detiene timers, desconecta sockets
+ * y libera recursos.
+ */
 
 GameWindow::~GameWindow() {
 
@@ -1176,6 +1288,11 @@ GameWindow::~GameWindow() {
     if (backgroundPlayer) backgroundPlayer->stop();
 
 }
+
+/**
+ * @brief Procesa de forma segura el resultado de una ronda con animaciones.
+ * @param data Objeto JSON con datos de ganador y jugadas.
+ */
 
 void GameWindow::procesarRoundResultSeguro(const QJsonObject& data) {
     qDebug() << "[procesarRoundResultSeguro] — entrada";
@@ -1466,6 +1583,10 @@ void GameWindow::procesarRoundResultSeguro(const QJsonObject& data) {
 
     repositionHands();
 };
+
+/**
+ * @brief Carga y aplica configuración de usuario (volumen, etc.).
+ */
 
 void GameWindow::getSettings() {
     QString config = "Sota, Caballo y Rey_" + usr;

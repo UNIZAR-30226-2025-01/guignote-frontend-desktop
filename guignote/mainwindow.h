@@ -1,3 +1,15 @@
+/**
+ * @file mainwindow.h
+ * @brief Declaración de la clase MainWindow, la ventana principal de la aplicación.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * La clase MainWindow gestiona la interfaz principal de la aplicación,
+ * incluyendo la navegación hacia las ventanas de inicio de sesión y registro,
+ * así como la gestión de decoraciones visuales en la ventana principal.
+ */
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -25,47 +37,23 @@ public:
     /**
      * @brief Constructor de la clase MainWindow.
      * @param parent Widget padre de la ventana (opcional, por defecto `nullptr`).
-     *
-     * Inicializa la interfaz gráfica y configura los elementos visuales principales.
      */
     explicit MainWindow(QWidget *parent = nullptr);
 
-    /**
-     * @brief Destructor de la clase MainWindow.
-     *
-     * Se encarga de liberar los recursos utilizados por la interfaz de usuario (`ui`).
-     */
+    /** @brief Destructor de la clase MainWindow. */
     ~MainWindow();
 
 private slots:
-    /**
-     * @brief Abre la ventana de inicio de sesión.
-     *
-     * Se activa cuando el usuario pulsa el botón "Iniciar sesión".
-     */
+    /** @brief Abre la ventana de inicio de sesión. */
     void openLoginWindow();
 
-    /**
-     * @brief Abre la ventana de registro de usuario.
-     *
-     * Se activa cuando el usuario pulsa el botón "Crear cuenta".
-     */
+    /** @brief Abre la ventana de registro de usuario. */
     void openRegisterWindow();
 
-    /**
-     * @brief Maneja la solicitud de abrir la ventana de inicio de sesión desde la de registro.
-     *
-     * Se conecta con la señal emitida por `RegisterWindow` cuando el usuario pulsa
-     * "¿Ya tienes cuenta?".
-     */
+    /** @brief Maneja la solicitud de abrir la ventana de inicio desde la de registro. */
     void handleOpenLoginRequested();
 
-    /**
-     * @brief Maneja la solicitud de abrir la ventana de registro desde la de inicio de sesión.
-     *
-     * Se conecta con la señal emitida por `LoginWindow` cuando el usuario pulsa
-     * "¿No tienes cuenta?".
-     */
+    /** @brief Maneja la solicitud de abrir la ventana de registro desde la de inicio. */
     void handleOpenRegisterRequested();
 
 private:
@@ -81,18 +69,11 @@ private:
 
     /**
      * @brief Evento de redimensionamiento de la ventana.
-     * @param event Evento de tipo `QResizeEvent` que contiene los nuevos valores de tamaño.
-     *
-     * Se ejecuta automáticamente cuando la ventana cambia de tamaño y ajusta la posición de los adornos.
+     * @param event Evento de tipo `QResizeEvent`.
      */
     void resizeEvent(QResizeEvent *event) override;
 
-    /**
-     * @brief Reposiciona los adornos en las esquinas de la ventana.
-     *
-     * Se llama desde `resizeEvent()` para mantener la alineación correcta
-     * de los elementos decorativos cuando la ventana cambia de tamaño.
-     */
+    /** @brief Reposiciona los adornos en las esquinas tras redimensionar. */
     void repositionOrnaments();
 };
 

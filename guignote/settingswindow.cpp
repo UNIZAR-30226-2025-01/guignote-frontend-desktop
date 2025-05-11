@@ -2,6 +2,9 @@
  * @file settingswindow.cpp
  * @brief Implementación de la clase SettingsWindow.
  *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
  * Esta clase define la ventana de configuración de la aplicación, permitiendo al usuario
  * modificar opciones de visualización, como cambiar entre el modo ventana y el modo pantalla completa.
  * La interfaz se compone de un sidebar para la navegación y un área (QStackedWidget) para mostrar la
@@ -158,6 +161,13 @@ SettingsWindow::~SettingsWindow()
 {
 }
 
+/**
+ * @brief Gestiona el evento de cierre de la ventana.
+ * @param event Evento de tipo QCloseEvent.
+ *
+ * Se encarga de guardar los ajustes antes de cerrar y emitir la señal finished.
+ */
+
 void SettingsWindow::closeEvent(QCloseEvent *event)
 {
     saveSettings();  // Guardar los ajustes antes de cerrar la ventana
@@ -165,6 +175,12 @@ void SettingsWindow::closeEvent(QCloseEvent *event)
     emit finished(0);
 }
 
+/**
+ * @brief Guarda la configuración actual en QSettings.
+ *
+ * Persiste los valores de los sliders de música y efectos bajo la clave
+ * "sound/volume" y "sound/effectsVolume" en el archivo de configuración del usuario.
+ */
 
 void SettingsWindow::saveSettings()
 {
@@ -173,6 +189,13 @@ void SettingsWindow::saveSettings()
     settings.setValue("sound/volume", audioSlider->value());
     settings.setValue("sound/effectsVolume", soundSlider->value());
 }
+
+/**
+ * @brief Carga la configuración almacenada en QSettings.
+ *
+ * Lee los valores de "sound/volume" y "sound/effectsVolume" y los aplica
+ * a los sliders correspondientes (valor por defecto: 50).
+ */
 
 void SettingsWindow::loadSettings()
 {

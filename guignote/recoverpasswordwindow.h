@@ -1,10 +1,28 @@
+/**
+ * @file recoverpasswordwindow.h
+ * @brief Declaración de la clase RecoverPasswordWindow, diálogo de recuperación de contraseña.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * La clase RecoverPasswordWindow proporciona una interfaz modal para que el usuario
+ * inicie el proceso de recuperación de contraseña. Añade un overlay semitransparente
+ * sobre el widget padre para mejorar la experiencia visual.
+ */
+
 #ifndef RECOVERPASSWORDWINDOW_H
 #define RECOVERPASSWORDWINDOW_H
 
 #include <QDialog>
 
-// Clase RecoverPasswordWindow: Diálogo para la recuperación de contraseña que se centra
-// automáticamente en el widget padre y actualiza su posición al mover o redimensionar dicho widget.
+/**
+ * @class RecoverPasswordWindow
+ * @brief Diálogo para recuperación de contraseña.
+ *
+ * Centra el diálogo sobre el widget padre y añade un fondo oscuro para mejorar la
+ * visibilidad. También gestiona el reposicionamiento automático si el padre se mueve
+ * o cambia de tamaño.
+ */
 class RecoverPasswordWindow : public QDialog
 {
     Q_OBJECT
@@ -16,45 +34,32 @@ public:
      */
     explicit RecoverPasswordWindow(QWidget *parent = nullptr);
 
-    /**
-     * @brief Destructor de RecoverPasswordWindow.
-     */
+    /** @brief Destructor. */
     ~RecoverPasswordWindow();
 
 protected:
     /**
      * @brief Evento que se dispara al mostrar el diálogo.
-     * Se utiliza para crear un overlay semitransparente en el widget padre y centrar el diálogo.
-     * @param event Puntero al evento de muestra.
+     * @param event Evento de tipo QShowEvent.
      */
     void showEvent(QShowEvent *event) override;
 
     /**
      * @brief Evento que se dispara al cerrar el diálogo.
-     * Se utiliza para eliminar el overlay y remover el filtro de eventos instalado en el widget padre.
-     * @param event Puntero al evento de cierre.
+     * @param event Evento de tipo QCloseEvent.
      */
     void closeEvent(QCloseEvent *event) override;
 
     /**
-     * @brief Filtro de eventos para detectar cambios en el widget padre.
-     * Reposiciona el diálogo y actualiza el overlay cuando el widget padre se mueve o se redimensiona.
+     * @brief Filtra eventos en el widget padre para manejar movimientos/redimensiones.
      * @param watched Objeto observado.
      * @param event Evento detectado.
-     * @return true si el evento es procesado, de lo contrario false.
+     * @return true si el evento se procesa.
      */
     bool eventFilter(QObject *watched, QEvent *event) override;
 
     /**
-     * @brief Sobrescribe el método reject() para limpiar recursos adicionales.
-     *
-     * Este método se encarga de realizar tareas de limpieza específicas antes de cerrar
-     * el diálogo de inicio de sesión. En particular, elimina el filtro de eventos instalado
-     * en el widget padre y programa la eliminación del overlay semitransparente (fondo oscuro)
-     * que se aplicó al widget padre para enfocar la atención en el diálogo.
-     *
-     * Estas acciones aseguran que, al cerrarse el diálogo (por ejemplo, al presionar Escape),
-     * no queden recursos residuales que bloqueen la interacción con la ventana principal.
+     * @brief Limpia recursos (overlay y filtros) antes de cerrar el diálogo.
      */
     void reject() override;
 

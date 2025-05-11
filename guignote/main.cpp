@@ -1,3 +1,16 @@
+/**
+ * @file main.cpp
+ * @brief Función principal y flujo de arranque de la aplicación.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Gestiona el inicio de sesión automático mediante credenciales guardadas,
+ * muestra la ventana principal o de login según corresponda, y conecta el
+ * guardado/limpieza de credenciales al cierre de la aplicación.
+ */
+
+
 #include "loadingwindow.h"
 #include "mainwindow.h"
 #include <QApplication>
@@ -10,7 +23,19 @@
 #include <QJsonObject>
 #include <QEventLoop>
 #include <QUrl>
-// Función para hacer login de forma sincrónica
+
+
+/**
+ * @brief Realiza un intento síncrono de login contra el servidor.
+ * @param user Nombre de usuario o correo.
+ * @param pass Contraseña en texto claro.
+ * @param outToken Referencia donde devolver el token si tiene éxito.
+ * @return true si la autenticación fue correcta y se obtuvo token, false en caso contrario.
+ *
+ * Envía una petición POST JSON a la API de login y espera de forma bloqueante
+ * la respuesta antes de devolver el control.
+ */
+
 bool tryLogin(const QString &user, const QString &pass, QString &outToken) {
     QUrl url("http://188.165.76.134:8000/usuarios/iniciar_sesion/");
     QNetworkRequest request(url);
@@ -46,6 +71,19 @@ bool tryLogin(const QString &user, const QString &pass, QString &outToken) {
     reply->deleteLater();
     return false;
 }
+
+
+/**
+ * @brief Punto de entrada de la aplicación.
+ * @param argc Número de argumentos de línea de comandos.
+ * @param argv Array de cadenas con los argumentos.
+ * @return Entero de estado de salida del proceso.
+ *
+ * Verifica si existen credenciales guardadas; si no, muestra la ventana principal
+ * de login. Si hay credenciales, intenta login automático y muestra la pantalla de carga
+ * o vuelve al login manual según el resultado. Además, limpia las credenciales al cerrar
+ * si no está marcada la opción de “Recordar contraseña”.
+ */
 
 int main(int argc, char *argv[])
 {

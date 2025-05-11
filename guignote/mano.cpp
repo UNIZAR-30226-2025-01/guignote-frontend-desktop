@@ -1,4 +1,26 @@
+/**
+ * @file mano.cpp
+ * @brief Implementación de la clase Mano.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Define la clase Mano, que gestiona un conjunto de cartas para cada jugador,
+ * posicionándolas automáticamente según la orientación (inferior, superior,
+ * izquierda o derecha) y permite añadir o eliminar cartas.
+ */
+
+
 #include "mano.h"
+
+/**
+ * @brief Constructor de Mano.
+ * @param player_id Identificador del jugador dueño de esta mano.
+ * @param pos Posición de la mano (0=abajo, 1=arriba, 2=derecha, 3=izquierda).
+ *
+ * Inicializa el contador de cartas y marca si la mano es interactiva
+ * (solo la posición 0 permite interacción directa).
+ */
 
 Mano::Mano(int player_id, int pos)
 {
@@ -8,8 +30,14 @@ Mano::Mano(int player_id, int pos)
     is_interactive = (pos == 0);
 }
 
-// Función mostrarMiMano (posición 0 - mano inferior)
-// Función mostrarMiMano (posición 0 - mano inferior)
+/**
+ * @brief Posiciona horizontalmente la mano inferior (posición 0).
+ * @param cartas Vector de punteros a las cartas a mostrar.
+ *
+ * Calcula el espaciado y centra las cartas en el ancho del contenedor,
+ * desplazándolas desde la parte baja con un margen fijo.
+ */
+
 void mostrarMiMano(QVector<Carta*> cartas) {
     if (cartas.isEmpty()) return;
 
@@ -39,7 +67,13 @@ void mostrarMiMano(QVector<Carta*> cartas) {
     }
 }
 
-// Función mostrarMano2 (posición 1 - arriba horizontal)
+/**
+ * @brief Posiciona horizontalmente la mano superior (posición 1).
+ * @param cartas Vector de punteros a las cartas a mostrar.
+ *
+ * Centra las cartas en la parte superior del contenedor con un margen fijo.
+ */
+
 void mostrarMano2(QVector<Carta*> cartas) {
     if (cartas.isEmpty()) return;
 
@@ -67,7 +101,13 @@ void mostrarMano2(QVector<Carta*> cartas) {
     }
 }
 
-// Función mostrarMano1 (posición 2 - derecha vertical)
+/**
+ * @brief Posiciona verticalmente la mano derecha (posición 2).
+ * @param cartas Vector de punteros a las cartas a mostrar.
+ *
+ * Centra las cartas a la derecha del contenedor y ajusta el espaciado vertical.
+ */
+
 void mostrarMano1(QVector<Carta*> cartas) {
     if (cartas.isEmpty()) return;
 
@@ -96,7 +136,13 @@ void mostrarMano1(QVector<Carta*> cartas) {
     }
 }
 
-// Función mostrarMano3 (posición 3 - izquierda vertical)
+/**
+ * @brief Posiciona verticalmente la mano izquierda (posición 3).
+ * @param cartas Vector de punteros a las cartas a mostrar.
+ *
+ * Centra las cartas a la izquierda del contenedor y ajusta el espaciado vertical.
+ */
+
 void mostrarMano3(QVector<Carta*> cartas) {
     if (cartas.isEmpty()) return;
 
@@ -125,7 +171,13 @@ void mostrarMano3(QVector<Carta*> cartas) {
     }
 }
 
-// Crear funciones Auxiliares
+/**
+ * @brief Actualiza la posición de todas las cartas de la mano.
+ *
+ * Elige la función de posicionamiento adecuada
+ * según el valor de `pos` (0–3).
+ */
+
 void Mano::mostrarMano()
 {
     switch (pos) {
@@ -144,6 +196,14 @@ void Mano::mostrarMano()
     }
 }
 
+/**
+ * @brief Añade una carta a la mano y la posiciona.
+ * @param carta Puntero a la carta a añadir.
+ *
+ * Si es la mano interactiva (posición 0), desbloquea la carta para el usuario,
+ * la añade al vector, aumenta el contador y reposiciona todas las cartas.
+ */
+
 void Mano::añadirCarta(Carta *carta)
 {
     if(pos == 0) {
@@ -155,6 +215,13 @@ void Mano::añadirCarta(Carta *carta)
     mostrarMano();
 
 }
+
+/**
+ * @brief Elimina la carta en la posición dada y reposiciona el resto.
+ * @param index Índice de la carta a eliminar en el vector.
+ *
+ * Disminuye el contador y actualiza la disposición de las cartas.
+ */
 
 void Mano::eliminarCarta(int index)
 {

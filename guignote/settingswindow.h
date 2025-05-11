@@ -1,3 +1,15 @@
+/**
+ * @file settingswindow.h
+ * @brief Declaración de la clase SettingsWindow, ventana de configuración de la aplicación.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * La clase SettingsWindow permite al usuario modificar opciones de configuración,
+ * como el modo de pantalla y los volúmenes de audio. Utiliza QSettings para guardar
+ * y recuperar preferencias persistentes.
+ */
+
 #ifndef SETTINGSWINDOW_H
 #define SETTINGSWINDOW_H
 
@@ -5,18 +17,18 @@
 #include <QSettings>
 #include <QSlider>
 
-// Declaraciones adelantadas de clases para evitar incluir sus cabeceras
+// Declaraciones adelantadas para evitar inclusiones innecesarias
 class QListWidget;
 class QStackedWidget;
 class QRadioButton;
 class QPushButton;
 
 /**
+ * @class SettingsWindow
  * @brief Ventana de configuración de la aplicación.
  *
- * SettingsWindow permite al usuario modificar opciones de visualización,
- * como el modo gráfico (ventana o pantalla completa). La interfaz se compone de
- * un sidebar para la navegación y un área de contenido para las opciones.
+ * Permite al usuario modificar parámetros visuales y de audio,
+ * almacenándolos de forma persistente mediante QSettings.
  */
 class SettingsWindow : public QDialog
 {
@@ -25,28 +37,36 @@ class SettingsWindow : public QDialog
 public:
     /**
      * @brief Constructor de SettingsWindow.
-     * @param parent Puntero al widget padre, por defecto nullptr.
+     * @param mainWindow Puntero a la ventana principal para aplicar cambios.
+     * @param parent Widget padre, por defecto nullptr.
+     * @param usr Nombre del usuario actual.
      */
-    explicit SettingsWindow(QWidget *mainWindow, QWidget *parent = nullptr, QString usr="");
+    explicit SettingsWindow(QWidget *mainWindow, QWidget *parent = nullptr, QString usr = "");
 
-    /**
-     * @brief Destructor de SettingsWindow.
-     */
+    /** @brief Destructor. */
     ~SettingsWindow();
 
-private:
-    QWidget *mainWindowRef; // Guardar referencia al mainWindow
-    QPushButton *closeButton;       ///< Botón para cerrar la ventana de configuración.
-    QSlider *audioSlider;
-    QSlider *soundSlider;
-    QString usr;
-
-    void saveSettings();  // Guarda los ajustes en QSettings
-    void loadSettings();  // Carga los ajustes desde QSettings
-
 protected:
-    void closeEvent(QCloseEvent *event) override;  // Captura el evento de cierre para guardar los ajustes
+    /**
+     * @brief Evento de cierre de la ventana.
+     * @param event Evento de tipo QCloseEvent.
+     *
+     * Guarda los ajustes al cerrarse la ventana.
+     */
+    void closeEvent(QCloseEvent *event) override;
 
+private:
+    QWidget *mainWindowRef;         ///< Referencia a la ventana principal.
+    QPushButton *closeButton;       ///< Botón para cerrar la ventana.
+    QSlider *audioSlider;           ///< Control deslizante para volumen de música.
+    QSlider *soundSlider;           ///< Control deslizante para volumen de efectos.
+    QString usr;                    ///< Nombre de usuario asociado a la configuración.
+
+    /** @brief Guarda los ajustes actuales en QSettings. */
+    void saveSettings();
+
+    /** @brief Carga los ajustes previamente guardados desde QSettings. */
+    void loadSettings();
 };
 
 #endif // SETTINGSWINDOW_H

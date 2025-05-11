@@ -2,10 +2,14 @@
  * @file menuwindow.cpp
  * @brief Implementación de la clase MenuWindow.
  *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
  * La clase MenuWindow define la ventana principal del menú de la aplicación.
  * Se configuran el fondo, los botones de selección de modos de juego, los adornos decorativos
  * y se gestionan los redimensionamientos para mantener una disposición coherente de los elementos.
  */
+
 
 #include "menuwindow.h"
 #include "gamewindow.h"
@@ -36,7 +40,15 @@
 #include <QUrl>
 #include <QWebSocketProtocol>
 
-// Función auxiliar para crear un diálogo modal de sesión expirada.
+/**
+ * @brief Crea un diálogo modal informando de sesión expirada.
+ * @param parent Widget padre para centrar el diálogo.
+ * @return Puntero al QDialog recién creado (sin mostrar).
+ *
+ * Configura un diálogo sin bordes con sombra y un botón OK que al cerrarse
+ * termina la aplicación.
+ */
+
 static QDialog* createExpiredDialog(QWidget *parent) {
     QDialog *expiredDialog = new QDialog(parent);
     expiredDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -88,6 +100,14 @@ static QDialog* createExpiredDialog(QWidget *parent) {
 }
 
 
+/**
+ * @brief Procesa los mensajes recibidos por WebSocket.
+ * @param userKey Clave de usuario para identificar la sesión.
+ * @param mensaje Cadena JSON recibida del servidor.
+ *
+ * Interpreta los tipos "player_joined" y "start_game", actualizando la
+ * interfaz (colocando en cola, cerrando diálogos o lanzando GameWindow).
+ */
 
 void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
     QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
@@ -196,6 +216,16 @@ void MenuWindow::manejarMensaje(const QString &userKey, const QString &mensaje) 
         top->close();
     }
 }
+
+/**
+ * @brief Inicia la búsqueda de partida y muestra diálogo de espera.
+ * @param userKey Clave de usuario para la autenticación.
+ * @param token Token JWT para conexión WebSocket.
+ * @param capacidad Número de jugadores de la partida (2 o 4).
+ *
+ * Se conecta al WebSocket del backend, crea el diálogo modal con candados
+ * giratorios y permite cancelar la búsqueda.
+ */
 
 void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int capacidad) {
     if (webSocket != nullptr) {
@@ -339,6 +369,13 @@ void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int 
        // ——————————————————————————————————————————————————————————
 }
 
+/**
+ * @brief Comprueba si hay salas reconectables disponibles.
+ *
+ * Realiza una petición REST a /salas/reconectables/ y muestra u oculta
+ * el botón de reconexión según la respuesta.
+ */
+
 void MenuWindow::checkRejoin(){
     QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
@@ -385,7 +422,16 @@ void MenuWindow::checkRejoin(){
     });
 }
 
-// Constructor de la clase MenuWindow
+/**
+ * @brief Constructor de MenuWindow.
+ * @param userKey Clave de usuario para las peticiones asociadas.
+ * @param parent Widget padre opcional.
+ *
+ * Inicializa la interfaz del menú, carga la UI, configura WebSocket
+ * para reconexión, crea botones de juego, iconos, temporizadores y
+ * adornos decorativos en las esquinas.
+ */
+
 MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MenuWindow),
@@ -733,7 +779,15 @@ MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
     repositionOrnaments();
 }
 
-// Función para extraer el token de autenticación desde el archivo .conf
+/**
+ * @brief Carga el token de autenticación desde el fichero .conf.
+ * @param userKey Clave de usuario usada en el nombre del fichero.
+ * @return Token en texto plano, o cadena vacía si falla la lectura.
+ *
+ * Lee línea a línea el archivo de configuración en QStandardPaths::ConfigLocation
+ * hasta encontrar “token=…”.
+ */
+
 QString MenuWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
@@ -778,7 +832,13 @@ void MenuWindow::repositionOrnaments() {
     }
 }
 
-// Función para reposicionar los ImageButtons
+/**
+ * @brief Ajusta la posición de los ImageButtons en el centro.
+ *
+ * Calcula el tamaño de los botones según la altura de la ventana
+ * y los distribuye horizontalmente con separación proporcional.
+ */
+
 void MenuWindow::repositionImageButtons() {
     int w = this->width();
     int h = this->height();
@@ -797,7 +857,13 @@ void MenuWindow::repositionImageButtons() {
     boton2v2->move(startX + buttonWidth + buttonSpacing, startY);
 }
 
-// Función para reposicionar las barras (topBar y bottomBar)
+/**
+ * @brief Ajusta la posición y tamaño de topBar y bottomBar.
+ *
+ * Calcula anchos proporcionales y centra ambas barras, así como
+ * la posición del botón invisible y la etiqueta de usuario.
+ */
+
 void MenuWindow::repositionBars() {
     int w = this->width();
     int barWidthTop = w / 3;
@@ -824,7 +890,13 @@ void MenuWindow::repositionBars() {
     invisibleButton->raise();
 }
 
-// Función para reposicionar los iconos
+/**
+ * @brief Posiciona los iconos de la barra inferior.
+ *
+ * Distribuye settings, friends, inventory, rankings y exit
+ * dentro de bottomBar con espacios iguales.
+ */
+
 void MenuWindow::repositionIcons() {
     int barWidth = bottomBar->width();
     int barHeight = bottomBar->height();
@@ -862,7 +934,14 @@ void MenuWindow::repositionIcons() {
     exit->move(x, yExit);
 }
 
-// Función para recolocar y reposicionar todos los elementos
+/**
+ * @brief Maneja el redimensionamiento de la ventana.
+ * @param event Evento de redimensionamiento.
+ *
+ * Recoloca adornos, barras, botones e iconos para adaptarse
+ * al nuevo tamaño y evita valores inválidos.
+ */
+
 void MenuWindow::resizeEvent(QResizeEvent *event) {
     if (this->width() <= 0 || this->height() <= 0) {
         qWarning() << "Evitar redimensionamiento con tamaño inválido:" << this->width() << "x" << this->height();
@@ -875,17 +954,37 @@ void MenuWindow::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
 }
 
+/**
+ * @brief Ajusta el volumen de audio del menú.
+ * @param volumePercentage Volumen en porcentaje (0–100).
+ *
+ * Convierte el porcentaje a la escala 0.0–1.0 y lo aplica
+ * al audioOutput asociado.
+ */
+
 void MenuWindow::setVolume(int volumePercentage) {
     if (audioOutput) {
         audioOutput->setVolume(volumePercentage / 100.0);
     }
 }
 
+/**
+ * @brief Destructor de MenuWindow.
+ *
+ * Libera la interfaz UI y detiene cualquier playback activo.
+ */
+
 MenuWindow::~MenuWindow() {
     delete ui;
 }
 
-// Sobrescribimos closeEvent para parar la música:
+/**
+ * @brief Maneja el cierre de la ventana.
+ * @param event Evento de cierre.
+ *
+ * Detiene la música antes de aceptar el cierre normal.
+ */
+
 void MenuWindow::closeEvent(QCloseEvent *event)
 {
     // Detenemos la música antes de cerrar
@@ -896,6 +995,13 @@ void MenuWindow::closeEvent(QCloseEvent *event)
     // Luego dejamos que continúe el proceso normal de cierre
     event->accept();
 }
+
+/**
+ * @brief Carga y aplica la configuración de usuario.
+ *
+ * Lee el volumen desde QSettings y ajusta audioOutput,
+ * mostrando en modo pantalla completa.
+ */
 
 void MenuWindow::getSettings() {
     QString config = "Sota, Caballo y Rey_" + usr;

@@ -1,3 +1,16 @@
+/**
+ * @file rankingwindow.cpp
+ * @brief Implementación de la clase RankingWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Este archivo define la ventana de rankings, que muestra listas
+ * de puntuaciones individuales o por parejas, con opción de filtrar
+ * solo amigos. Se encarga de la UI, de obtener datos del servidor
+ * y de actualizar la lista.
+ */
+
 #include "rankingwindow.h"
 
 #include <QListWidget>
@@ -16,6 +29,14 @@
 #include <QDebug>
 #include <QString>
 
+/**
+ * @brief Constructor de RankingWindow.
+ * @param userKey Clave de usuario para cargar el token.
+ * @param parent Widget padre (por defecto nullptr).
+ *
+ * Configura la ventana como dialog sin bordes, carga el token,
+ * construye la interfaz y lanza la petición inicial para el ranking individual.
+ */
 RankingWindow::RankingWindow(const QString &userKey, QWidget *parent)
     : QDialog(parent),
       currentUserName(userKey)
@@ -31,6 +52,11 @@ RankingWindow::RankingWindow(const QString &userKey, QWidget *parent)
     fetchIndividualRanking();
 }
 
+/**
+ * @brief Carga el token de autenticación desde el archivo .conf del usuario.
+ * @param userKey Clave de usuario usada en el nombre del archivo.
+ * @return QString Token extraído o cadena vacía si falla.
+ */
 QString RankingWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
@@ -54,6 +80,12 @@ QString RankingWindow::loadAuthToken(const QString &userKey) {
     return token;
 }
 
+/**
+ * @brief Construye y organiza todos los widgets de la UI.
+ *
+ * Crea layouts, cabecera, botones de selección, checkbox de “Sólo amigos”,
+ * la lista de rankings y conecta señales de los botones.
+ */
 void RankingWindow::setupUI() {
     mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 20);
@@ -178,6 +210,12 @@ void RankingWindow::setupUI() {
     connect(parejasButton, &QPushButton::clicked, this, &RankingWindow::fetchTeamRanking);
 }
 
+/**
+ * @brief Solicita al servidor el ranking individual.
+ *
+ * Monta la URL según si está marcado “Solo amigos” y envía un GET.
+ * Conecta la respuesta a @ref handleIndividualRankingResponse.
+ */
 void RankingWindow::fetchIndividualRanking() {
     QString cat = "top_elo" + amigos;
     QUrl url(QString("http://188.165.76.134:8000/usuarios/" + cat +"/"));
@@ -188,6 +226,12 @@ void RankingWindow::fetchIndividualRanking() {
     lastPressed = 1;
 }
 
+/**
+ * @brief Solicita al servidor el ranking por parejas.
+ *
+ * Monta la URL correspondiente (parejas + filtro amigos) y envía un GET.
+ * Conecta la respuesta a @ref handleTeamRankingResponse.
+ */
 void RankingWindow::fetchTeamRanking() {
     QString cat = "top_elo_parejas" + amigos;
     QUrl url(QString("http://188.165.76.134:8000/usuarios/" + cat +"/"));
@@ -198,6 +242,13 @@ void RankingWindow::fetchTeamRanking() {
     lastPressed = 2;
 }
 
+/**
+ * @brief Procesa la respuesta del servidor para el ranking individual.
+ *
+ * Si no hay error, parsea el JSON y extrae el array "top_elo_players",
+ * luego llama a @ref updateRankingList con dicho array.
+ * En caso de error, imprime en debug.
+ */
 void RankingWindow::handleIndividualRankingResponse() {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (reply->error() == QNetworkReply::NoError) {
@@ -211,6 +262,13 @@ void RankingWindow::handleIndividualRankingResponse() {
     reply->deleteLater();
 }
 
+/**
+ * @brief Procesa la respuesta del servidor para el ranking por parejas.
+ *
+ * Si no hay error, parsea el JSON y extrae el array "top_elo_parejas_players",
+ * luego llama a @ref updateRankingList con dicho array.
+ * En caso de error, imprime en debug.
+ */
 void RankingWindow::handleTeamRankingResponse() {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
     if (reply->error() == QNetworkReply::NoError) {
@@ -224,6 +282,14 @@ void RankingWindow::handleTeamRankingResponse() {
     reply->deleteLater();
 }
 
+/**
+ * @brief Actualiza el QListWidget con los datos del ranking.
+ * @param playersArray Array de objetos JSON con campos "nombre" y "elo"/"elo_parejas".
+ * @param type       1=individual, 2=parejas.
+ *
+ * Limpia la lista, recorre el array, crea items con formato,
+ * aplica “zebra” y resalta al usuario actual.
+ */
 void RankingWindow::updateRankingList(const QJsonArray &playersArray, int type)
 {
     rankingListWidget->clear();

@@ -1,3 +1,16 @@
+/**
+ * @file userprofilewindow.cpp
+ * @brief Implementación de la clase UserProfileWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Esta clase muestra un diálogo con la información de perfil de un amigo,
+ * incluyendo avatar, estadísticas y opciones para iniciar partidas amistosas
+ * o en equipo. El diálogo tiene un estilo sin bordes, fondo oscuro y sombra.
+ */
+
+
 #include "userprofilewindow.h"
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -9,6 +22,14 @@
 #include <QLabel>
 #include <QDebug>
 #include "icon.h"
+
+/**
+ * @brief Constructor de UserProfileWindow.
+ * @param parent Widget padre, por defecto nullptr.
+ *
+ * Configura el diálogo sin bordes, con fondo oscuro y esquinas redondeadas,
+ * aplica un efecto de sombra y construye la interfaz de usuario llamando a setupUI().
+ */
 
 UserProfileWindow::UserProfileWindow(QWidget *parent) : QDialog(parent) {
     // Configura la ventana sin bordes y con estilo personalizado.
@@ -27,6 +48,14 @@ UserProfileWindow::UserProfileWindow(QWidget *parent) : QDialog(parent) {
     // Construye la interfaz de usuario.
     setupUI();
 }
+
+/**
+ * @brief Construye y dispone todos los widgets de la ventana.
+ *
+ * Crea el layout principal, el encabezado con título y botón de cierre,
+ * la sección de avatar y estadísticas, y los botones inferiores para
+ * partida amistosa o en equipo.
+ */
 
 void UserProfileWindow::setupUI() {
     mainLayout = new QVBoxLayout(this);

@@ -1,3 +1,15 @@
+/**
+ * @file friendsmessagewindow.cpp
+ * @brief Implementación de la clase FriendsMessageWindow.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene la definición de la clase FriendsMessageWindow, encargada de
+ * gestionar la interfaz de chat entre usuarios, la conexión WebSocket y
+ * el envío/recepción de mensajes.
+ */
+
 #include "friendsmessagewindow.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -19,6 +31,14 @@
 #include <QJsonObject>
 #include <QByteArray>
 
+
+/**
+ * @brief Constructor de la clase FriendsMessageWindow.
+ * @param userKey Clave identificadora del usuario.
+ * @param friendId Identificador del amigo con quien se conversa.
+ * @param friendName Nombre del amigo.
+ * @param parent Widget padre.
+ */
 FriendsMessageWindow::FriendsMessageWindow(const QString &userKey,
                                            const QString &friendId,
                                            const QString &friendName,
@@ -44,7 +64,10 @@ FriendsMessageWindow::FriendsMessageWindow(const QString &userKey,
     setupWebSocketConnection(userKey);
 }
 
-
+/**
+ * @brief Crea y configura la interfaz de usuario.
+ * @param userKey Clave del usuario para gestionar eventos de envío.
+ */
 void FriendsMessageWindow::setupUI(const QString &userKey)
 {
     mainLayout = new QVBoxLayout(this);
@@ -109,6 +132,10 @@ void FriendsMessageWindow::setupUI(const QString &userKey)
     mainLayout->addLayout(inputLayout);
 }
 
+/**
+ * @brief Establece la conexión WebSocket y sus callbacks.
+ * @param userKey Clave del usuario para obtener token de autenticación.
+ */
 void FriendsMessageWindow::setupWebSocketConnection(const QString &userKey)
 {
     webSocket = new QWebSocket();
@@ -133,16 +160,26 @@ void FriendsMessageWindow::setupWebSocketConnection(const QString &userKey)
             this, &FriendsMessageWindow::onTextMessageReceived);
 }
 
+/**
+ * @brief Callback cuando el WebSocket se conecta correctamente.
+ */
 void FriendsMessageWindow::onConnected()
 {
     qDebug() << "WebSocket conectado.";
 }
 
+/**
+ * @brief Callback cuando el WebSocket se desconecta.
+ */
 void FriendsMessageWindow::onDisconnected()
 {
     qDebug() << "WebSocket desconectado.";
 }
 
+/**
+ * @brief Maneja la recepción de un nuevo mensaje vía WebSocket.
+ * @param rawMessage Cadena JSON del mensaje recibido.
+ */
 void FriendsMessageWindow::onTextMessageReceived(const QString &rawMessage)
 {
     // 1) Parsear el JSON recibido
@@ -177,6 +214,10 @@ void FriendsMessageWindow::onTextMessageReceived(const QString &rawMessage)
     emit newMessageReceived(senderId);
 }
 
+/**
+ * @brief Envía un mensaje tanto por WebSocket como por REST.
+ * @param userKey Clave de usuario para token y conexión.
+ */
 void FriendsMessageWindow::sendMessage(const QString &userKey)
 {
     const QString textoAEnviar = messageInput->text().trimmed();
@@ -216,7 +257,10 @@ void FriendsMessageWindow::sendMessage(const QString &userKey)
 }
 
 
-
+/**
+ * @brief Descarga y muestra el historial de mensajes.
+ * @param userKey Clave del usuario para autenticación REST.
+ */
 void FriendsMessageWindow::loadMessages(const QString &userKey)
 {
     QString token = loadAuthToken(userKey);
@@ -278,6 +322,11 @@ void FriendsMessageWindow::loadMessages(const QString &userKey)
     messagesListWidget->scrollToBottom();
 }
 
+/**
+ * @brief Añade un mensaje a la interfaz.
+ * @param senderId ID del remitente del mensaje.
+ * @param content Contenido textual del mensaje.
+ */
 void FriendsMessageWindow::appendMessage(const QString &senderId,
                                          const QString &content)
 {
@@ -340,7 +389,11 @@ void FriendsMessageWindow::appendMessage(const QString &senderId,
 }
 
 
-
+/**
+ * @brief Obtiene el token de autenticación almacenado localmente.
+ * @param userKey Clave del usuario.
+ * @return Token JWT como cadena.
+ */
 QString FriendsMessageWindow::loadAuthToken(const QString &userKey)
 {
     QString appName = QString("Sota, Caballo y Rey_%1").arg(userKey);
@@ -348,6 +401,11 @@ QString FriendsMessageWindow::loadAuthToken(const QString &userKey)
     return settings.value("auth/token").toString();
 }
 
+/**
+ * @brief Extrae el ID propio del usuario desde el token JWT.
+ * @param userKey Clave del usuario.
+ * @return ID del usuario como cadena.
+ */
 QString FriendsMessageWindow::loadOwnId(const QString &userKey)
 {
     // 1) Obtener el token
@@ -387,7 +445,9 @@ QString FriendsMessageWindow::loadOwnId(const QString &userKey)
     return QString();
 }
 
-
+/**
+ * @brief Destructor de FriendsMessageWindow. Libera recursos.
+ */
 FriendsMessageWindow::~FriendsMessageWindow()
 {
     webSocket->close();

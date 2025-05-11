@@ -2,6 +2,9 @@
  * @file registerwindow.cpp
  * @brief Implementación de la clase RegisterWindow.
  *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
  * Esta clase representa la ventana de registro de la aplicación. Permite a los usuarios
  * crear una nueva cuenta proporcionando sus credenciales, y contiene la lógica para enviar
  * los datos al servidor mediante una petición HTTP POST. Además, ofrece la opción de cambiar
@@ -31,6 +34,14 @@
 #include <QJsonObject>
 #include <QUrl>
 
+/**
+ * @brief Constructor de RegisterWindow.
+ * @param parent Puntero al widget padre, puede ser nullptr.
+ *
+ * Configura el diálogo (modal, sin bordes), carga la fuente personalizada,
+ * crea y organiza los widgets: campos de usuario, correo, contraseña,
+ * confirmación, enlaces y botones, y prepara el overlay para el fondo.
+ */
 RegisterWindow::RegisterWindow(QWidget *parent)
     : QDialog(parent),
     backgroundOverlay(nullptr)
@@ -261,6 +272,12 @@ RegisterWindow::RegisterWindow(QWidget *parent)
     connect(backButton, &QPushButton::clicked, this, &QDialog::close);
 }
 
+/**
+ * @brief Destructor de RegisterWindow.
+ *
+ * Libera los recursos utilizados por el diálogo. Los widgets hijos son
+ * eliminados automáticamente por Qt.
+ */
 RegisterWindow::~RegisterWindow()
 {
     // Liberación de recursos (se gestiona de forma automática en Qt para los widgets hijos).

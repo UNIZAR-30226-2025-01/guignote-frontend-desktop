@@ -1,3 +1,15 @@
+/**
+ * @file imagebutton.h
+ * @brief Declaración de la clase ImageButton, un botón gráfico interactivo.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * La clase ImageButton permite representar un botón con imagen y texto superpuesto,
+ * que responde a eventos del ratón mediante efectos visuales y señales.
+ */
+
+
 #ifndef IMAGEBUTTON_H
 #define IMAGEBUTTON_H
 
