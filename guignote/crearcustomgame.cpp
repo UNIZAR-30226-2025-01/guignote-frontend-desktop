@@ -239,9 +239,19 @@ void CrearCustomGame::crearPartida(){
                       .arg("true");
     qDebug() << "Conectando a:" << url;
 
+    // 1) Obtener widget padre y abuelo
+    QWidget *padre   = parentWidget();
+    QWidget *abuelo  = padre ? padre->parentWidget() : nullptr;
+
+    // 2) Intentar hacer cast a MenuWindow
+    MenuWindow *menu = qobject_cast<MenuWindow*>(abuelo);
+    if (!menu) {
+        qWarning() << "CrearCustomGame no tiene un abuelo de tipo MenuWindow!";
+        return;
+    }
 
     // Creamos la nueva ventana (EstadoPartida o GameWindow)
-    EstadoPartida *gameWindow = new EstadoPartida(usr, url, 1, 1, [this]() {
+    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, menu, url, 1, 1, [this]() {
         auto* menu = new MenuWindow(userKey);
         menu->showFullScreen();
     });

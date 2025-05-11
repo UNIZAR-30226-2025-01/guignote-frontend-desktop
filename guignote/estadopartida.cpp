@@ -1,4 +1,7 @@
 #include "estadopartida.h"
+#include "settingswindow.h"
+#include "gamemessagewindow.h"
+#include "menuwindow.h"
 #include <QPauseAnimation>
 #include <QSequentialAnimationGroup>
 #include <QGraphicsOpacityEffect>
@@ -14,9 +17,11 @@
 #include <QJsonDocument>
 #include "ventanasalirpartida.h"
 
-EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int style,
+EstadoPartida::EstadoPartida(QString miNombre, QString userKey,  MenuWindow* menu, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl) {
+    this->userKey = userKey;
+    menuWindowRef = menu;
     if(bg == 0) {
         this->setStyleSheet(R"(
             /* Fondo de la ventana con gradiente verde */
@@ -103,6 +108,11 @@ void EstadoPartida::limpiar() {
         overlay = nullptr;
         overlayMsg = nullptr;
     }
+    if (optionsBar) {
+        optionsBar->hide();
+        optionsBar->deleteLater();
+        optionsBar = nullptr;
+    }
 }
 
 void EstadoPartida::actualizarEstado(const QJsonObject& data) {
@@ -171,6 +181,7 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
             j->mano->ocultarCartaJugada();
         }
     }
+    crearBarraSuperior();
 }
 
 void EstadoPartida::dibujarEstado() {
@@ -272,6 +283,10 @@ void EstadoPartida::dibujarEstado() {
     if (pausadosLabel) {
         pausadosLabel->show();
         pausadosLabel->raise();
+    }
+    if(optionsBar) {
+        optionsBar->show();
+        optionsBar->raise();
     }
 }
 
@@ -670,8 +685,10 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
     this->actualizarEstado(data);
     this->dibujarEstado();
 
+
     QTimer::singleShot(250, this, [=]() {
         this->dibujarEstado();
+        this->crearBarraSuperior();
         enEjecucion = false;
         procesarSiguienteEvento();
     });
@@ -1013,4 +1030,180 @@ void EstadoPartida::procesarMensajeWebSocket(const QString& mensaje) {
     } else {
         this->recibirEvento(root);
     }
+}
+
+// En tu clase EstadoPartida
+
+void EstadoPartida::crearBarraSuperior() {
+    // Barra superior
+    optionsBar = new QFrame(this);
+    optionsBar->setObjectName("optionsBar");
+    optionsBar->setFixedHeight(60);  // Hacer la barra más corta
+    optionsBar->setGeometry((this->width() - 300) / 2, 0, 300, 60); // Centramos la barra en la parte superior
+
+    optionsBar->installEventFilter(this);
+
+    // Estilo de la barra
+    optionsBar->setStyleSheet(R"(
+        QFrame#optionsBar {
+            background: qlineargradient(
+                spread: pad,
+                x1: 0, y1: 0,
+                x2: 0, y2: 1,
+                stop: 0 #3a3a3a,
+                stop: 1 #000000
+            );
+            border-radius: 8px;
+            border: 2px solid #000000;
+        }
+    )");
+
+    // Layout para centrar los iconos
+    QHBoxLayout *layout = new QHBoxLayout(optionsBar);
+    layout->setAlignment(Qt::AlignCenter);
+    layout->setContentsMargins(10, 0, 10, 0); // Márgenes
+    layout->setSpacing(20);
+
+    // Crear los iconos y añadirlos al layout
+    settings = new Icon(optionsBar);
+    settings->setImage(":/icons/audio.png", 50, 50);
+
+    chat = new Icon(optionsBar);
+    chat->setImage(":/icons/message.png", 50, 50);
+
+    quit = new Icon(optionsBar);
+    quit->setImage(":/icons/door.png", 60, 60);
+
+    // Añadir los iconos al layout
+    layout->addWidget(settings);
+    layout->addWidget(chat);
+    layout->addWidget(quit);
+
+    // Conexiones de los iconos
+    connect(settings, &Icon::clicked, this, [=]() {
+        settings->setImage(":/icons/darkenedaudio.png", 50, 50);
+        SettingsWindow *w = new SettingsWindow(menuWindowRef, this, miNombre);
+        w->setModal(true);
+        connect(w, &QDialog::finished, [=](int){ settings->setImage(":/icons/audio.png", 50, 50); });
+        w->exec();
+    });
+
+    connect(chat, &Icon::clicked, this, [this]() {
+        GameMessageWindow *w = new GameMessageWindow(userKey, this, QString::number(chatId), QString::number(miId));
+        w->setWindowModality(Qt::ApplicationModal);
+        w->move(this->geometry().center() - w->rect().center());
+        w->show(); w->raise(); w->activateWindow();
+    });
+
+    connect(quit, &Icon::clicked, this, [this]() {
+        quit->setImage(":/icons/darkeneddoor.png", 60, 60);
+        QDialog *confirmDialog = new QDialog(this);
+        confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+        confirmDialog->setModal(true);
+        confirmDialog->setFixedSize(300,150);
+        confirmDialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+
+        QGraphicsDropShadowEffect *dialogShadow = new QGraphicsDropShadowEffect(confirmDialog);
+        dialogShadow->setBlurRadius(10);
+        dialogShadow->setColor(QColor(0, 0, 0, 80));
+        dialogShadow->setOffset(4, 4);
+        confirmDialog->setGraphicsEffect(dialogShadow);
+
+        QVBoxLayout *dialogLayout = new QVBoxLayout(confirmDialog);
+        QLabel *confirmLabel = new QLabel("¿Está seguro que desea salir?", confirmDialog);
+        confirmLabel->setStyleSheet("QFrame { background-color: #171718; color: white; border-radius: 5px; }");
+        confirmLabel->setAlignment(Qt::AlignCenter);
+        dialogLayout->addWidget(confirmLabel);
+
+        QHBoxLayout *dialogButtonLayout = new QHBoxLayout();
+        QString buttonStyle =
+            "QPushButton {"
+            "  background-color: #c2c2c3;"
+            "  color: #171718;"
+            "  border-radius: 15px;"
+            "  font-size: 20px;"
+            "  font-weight: bold;"
+            "  padding: 12px 25px;"
+            "}"
+            "QPushButton:hover {"
+            "  background-color: #9b9b9b;"
+            "}";
+        QPushButton *yesButton = new QPushButton("Sí", confirmDialog);
+        QPushButton *noButton = new QPushButton("No", confirmDialog);
+        yesButton->setStyleSheet(buttonStyle);
+        noButton->setStyleSheet(buttonStyle);
+        yesButton->setFixedSize(100,40);
+        noButton->setFixedSize(100,40);
+        dialogButtonLayout->addWidget(yesButton);
+        dialogButtonLayout->addWidget(noButton);
+        dialogLayout->addLayout(dialogButtonLayout);
+        connect(yesButton, &QPushButton::clicked, [this, confirmDialog]() {
+            confirmDialog->close();
+            QSize windowSize = this->size();
+            MenuWindow *menuWindow = new MenuWindow(userKey);
+            menuWindow->resize(windowSize);
+            menuWindow->show();
+            menuWindow->raise();
+            menuWindow->activateWindow();
+            this->close();
+        });
+        connect(noButton, &QPushButton::clicked, [=]() {
+            confirmDialog->close();
+        });
+        connect(confirmDialog, &QDialog::finished, [=](int) {
+            quit->setImage(":/icons/door.png", 60, 60);
+        });
+        confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        confirmDialog->show();
+
+        QTimer *centerTimer = new QTimer(confirmDialog);
+        centerTimer->setInterval(50);
+        connect(centerTimer, &QTimer::timeout, [this, confirmDialog]() {
+            confirmDialog->move(this->geometry().center() - confirmDialog->rect().center());
+        });
+    });
+}
+
+
+static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp) {
+    QDialog *dialog = new QDialog(parent);
+    dialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    dialog->setStyleSheet("QDialog { background-color: #171718; border-radius: 5px; padding: 20px; }");
+
+    QGraphicsDropShadowEffect *shadow = new QGraphicsDropShadowEffect(dialog);
+    shadow->setBlurRadius(10);
+    shadow->setColor(QColor(0, 0, 0, 80));
+    shadow->setOffset(4, 4);
+    dialog->setGraphicsEffect(shadow);
+
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QLabel *label = new QLabel(message, dialog);
+    label->setWordWrap(true);
+    label->setStyleSheet("color: white; font-size: 16px;");
+    label->setAlignment(Qt::AlignCenter);
+    layout->addWidget(label);
+
+    QPushButton *okButton = new QPushButton("OK", dialog);
+    okButton->setStyleSheet(
+        "QPushButton { background-color: #c2c2c3; color: #171718; border-radius: 15px;"
+        "font-size: 20px; font-weight: bold; padding: 12px 25px; }"
+        "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+    okButton->setFixedSize(100, 40);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(okButton);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+
+    QObject::connect(okButton, &QPushButton::clicked, [dialog, exitApp]() {
+        dialog->close();
+        if (exitApp)
+            qApp->quit();
+    });
+
+    dialog->adjustSize();
+    dialog->move(parent->geometry().center() - dialog->rect().center());
+    return dialog;
 }

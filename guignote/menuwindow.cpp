@@ -94,7 +94,7 @@
          .arg(capacidad);
  
      // Creamos la nueva ventana (EstadoPartida o GameWindow)
-     EstadoPartida *gameWindow = new EstadoPartida(usr, url, 1, 1, [userKey]() {
+     EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, this, url, 1, 1, [userKey]() {
          auto* menu = new MenuWindow(userKey);
          menu->showFullScreen();
      });

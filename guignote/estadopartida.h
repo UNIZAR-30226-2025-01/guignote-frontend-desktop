@@ -3,12 +3,15 @@
 
 #include "carta.h"
 #include "mano.h"
+#include "icon.h"
 #include <QWidget>
 #include <QJsonObject>
 #include <QTimer>
 #include <QtWebSockets/QWebSocket>
 #include <QQueue>
 #include "botonaccion.h"
+
+class MenuWindow;
 
 struct Jugador {
     QString nombre;
@@ -21,7 +24,7 @@ struct Jugador {
 class EstadoPartida : public QWidget {
     Q_OBJECT
 public:
-    EstadoPartida(QString miNombre, const QString& wsUrl, int bg = 0, int style = 0,
+    EstadoPartida(QString miNombre, QString userKey, MenuWindow* menu, const QString& wsUrl, int bg = 0, int style = 0,
                   std::function<void()> onSalir = nullptr, QWidget* parent = nullptr);
 
     ~EstadoPartida();
@@ -67,6 +70,7 @@ public:
     void procesarSiguienteEvento();
 
     QString miNombre = "";
+
 public slots:
     void onCartaDobleClick(Carta* carta);
     void onCantar();
@@ -118,7 +122,19 @@ private:
     int jugadoresCola = 0, jugadoresMax = 0;
     bool partidaIniciada = false;
 
+    // Icons
+    Icon *settings;
+    Icon *chat;
+    Icon *quit;
+
+    //Barra
+    QFrame *optionsBar;
+
     QString wsUrl;
+
+    QString userKey;
+    void crearBarraSuperior();
+    MenuWindow *menuWindowRef;
 };
 
 #endif // ESTADOPARTIDA_H
