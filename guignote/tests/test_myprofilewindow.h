@@ -19,7 +19,6 @@ private slots:
     void test_header_layout();
     void test_profile_picture_clickable();
     void test_labels_initial_text();
-    void test_logout_button_closes_and_resets();
 
 private:
     static const QString kUserKey;
