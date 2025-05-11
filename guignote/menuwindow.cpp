@@ -18,6 +18,7 @@
  #include "myprofilewindow.h"
  #include "rankingwindow.h"
  #include "rejoinwindow.h"
+ #include "customgameswindow.h"
  #include <QGraphicsDropShadowEffect>
  #include <QTimer>
  #include <QNetworkAccessManager>
@@ -34,6 +35,7 @@
  #include <QWebSocket>
  #include <QUrl>
  #include <QWebSocketProtocol>
+ #include <QApplication>
  
  // Función auxiliar para crear un diálogo modal de sesión expirada.
  static QDialog* createExpiredDialog(QWidget *parent) {
@@ -113,8 +115,12 @@
          backgroundPlayer->deleteLater();
          backgroundPlayer = nullptr;
      }
- 
-     this->close();
+
+     for (QWidget *w : QApplication::topLevelWidgets()) {
+         if (w != gameWindow) {
+             w->close();
+         }
+     }
  }
  
  void MenuWindow::checkRejoin(){
@@ -333,12 +339,14 @@
      exit = new Icon(this);
      inventory = new Icon(this);
      rankings = new Icon(this);
+     customGames = new Icon(this);
  
      settings->setImage(":/icons/audio.png", 50, 50);
      friends->setImage(":/icons/friends.png", 60, 60);
      exit->setImage(":/icons/door.png", 60, 60);
      inventory->setImage(":/icons/chest.png", 50, 50);
      rankings->setImage(":/icons/trophy.png", 50, 50);
+     customGames->setImage(":/icons/gameslist.png", 50, 50);
  
      // ------------- EVENTOS DE CLICK EN ICONOS -------------
      connect(settings, &Icon::clicked, [=]() {
@@ -441,8 +449,19 @@
  
          rankingWin->exec();
      });
- 
- 
+     connect(customGames, &Icon::clicked, this, [userKey, this](){
+         customGames->setImage(":/icons/darkenedgameslist.png", 50, 50);
+
+         // Crear pantalla nueva aquí.
+         CustomGamesWindow *cstgmWin = new CustomGamesWindow(userKey, usr, fondo, this);
+         cstgmWin->setModal(true);
+
+         connect(cstgmWin, &QDialog::finished, [this, cstgmWin](int){
+             customGames->setImage(":/icons/gameslist.png", 50, 50);
+         });
+
+         cstgmWin->exec();
+     });
  
      // ------------- ORNAMENTOS ESQUINAS -------------
      ornamentSize = QSize(300, 299);
@@ -604,40 +623,43 @@
  
  // Función para reposicionar los iconos
  void MenuWindow::repositionIcons() {
-     int barWidth = bottomBar->width();
+     // 1) Recolectamos los widgets en un array
+     QList<QWidget*> icons = {
+         friends,
+         customGames,
+         rankings,
+         inventory,
+         settings,
+         exit
+     };
+
+     // 2) Datos de la barra
+     int barX      = bottomBar->pos().x();
+     int barY      = bottomBar->pos().y();
+     int barWidth  = bottomBar->width();
      int barHeight = bottomBar->height();
-     QPoint barPos = bottomBar->pos();
-     int barX = barPos.x();
-     int barY = barPos.y();
- 
-     int margen = 20;
- 
-     int iconWidth = settings->width();
-     int iconHeight = settings->height();
-     int exitWidth = exit->width();
-     int exitHeight = exit->height();
- 
-     int totalIconsWidth = 4 * iconWidth + exitWidth;
-     int spacing = (barWidth - totalIconsWidth) / 6;
- 
-     int yCommon = barY + (barHeight - iconHeight) / 2;
-     int yExit = barY + (barHeight - exitHeight) / 2;
- 
+
+     // 3) Sumar anchos de todos los iconos
+     int totalIconsWidth = 0;
+     for (QWidget* w : icons) {
+         totalIconsWidth += w->width();
+     }
+
+     // 4) Calcular huecos: (número de widgets + 1)
+     int gaps = icons.size() + 1;
+     int spacing = (barWidth - totalIconsWidth) / gaps;
+
+     // 5) Calcular Y centrados (exit puede tener altura distinta)
+     int yCommon = barY + (barHeight - settings->height()) / 2;
+     int yExit   = barY + (barHeight - exit->height())     / 2;
+
+     // 6) Colocar iterativamente
      int x = barX + spacing;
- 
-     friends->move(x, yCommon);
-     x += iconWidth + spacing;
- 
-     rankings->move(x, yCommon);
-     x += iconWidth + spacing;
- 
-     inventory->move(x, yCommon);
-     x += iconWidth + spacing;
- 
-     settings->move(x, yCommon);
-     x += iconWidth + spacing;
- 
-     exit->move(x, yExit);
+     for (QWidget* w : icons) {
+         int y = (w == exit ? yExit : yCommon);
+         w->move(x, y);
+         x += w->width() + spacing;
+     }
  }
  
  // Función para recolocar y reposicionar todos los elementos

@@ -96,6 +96,7 @@ private:
     void saveToken(const QString &tok);
     Icon *friendsIcon = nullptr;
     Icon *messagesIcon = nullptr;
+    Icon *customGames = nullptr;
     int   unreadMessages = 0;
 
     // Skins seleccionadas

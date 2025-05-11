@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include <QPushButton>
 #include <QDialog>
+#include <QJsonDocument>
 #include "ventanasalirpartida.h"
 
 EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int style,

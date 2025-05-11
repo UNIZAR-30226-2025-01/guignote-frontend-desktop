@@ -127,5 +127,7 @@
         <file>tiles/poker.png</file>
         <file>tiles/tapetebase.png</file>
         <file>legends/legendpoker.png</file>
+        <file>icons/gameslist.png</file>
+        <file>icons/darkenedgameslist.png</file>
     </qresource>
 </RCC>
