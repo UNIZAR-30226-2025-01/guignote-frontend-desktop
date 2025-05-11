@@ -96,6 +96,176 @@ void EstadoPartida::limpiar()
     }
 }
 
+void EstadoPartida::actualizarEstado(const QJsonObject& data) {
+    limpiar();
+
+    QJsonArray jugadoresJson = data.value("jugadores").toArray();
+    for(const QJsonValue& val : jugadoresJson) {
+        QJsonObject obj = val.toObject();
+        Jugador* j = new Jugador;
+        j->id = obj["id"].toInt();
+        j->nombre = obj["nombre"].toString();
+        j->equipo = obj["equipo"].toInt();
+        j->numCartas = obj["num_cartas"].toInt();
+        jugadores.append(j);
+        mapJugadores[j->id] = j;
+    }
+
+    chatId = data.value("chat_id").toInt();
+    mazoRestante = data.value("mazo_restante").toInt();
+
+    QJsonObject triunfo = data.value("carta_triunfo").toObject();
+    QString palo = triunfo["palo"].toString();
+    QString valor = QString::number(triunfo["valor"].toInt());
+    cartaTriunfo = new Carta(palo, valor, this);
+    cartaTriunfo->show();
+
+    if(mazoRestante > 1) {
+        mazo = new Carta(this);
+        mazo->show();
+    }
+
+    Jugador* yo = mapJugadores.value(miId, nullptr);
+    if(!yo) return;
+
+    yo->mano = new Mano(Orientacion::DOWN, this, this);
+    QJsonArray misCartas = data.value("mis_cartas").toArray();
+    for(const QJsonValue& cartaVal : misCartas) {
+        QJsonObject cartaObj = cartaVal.toObject();
+        QString palo = cartaObj["palo"].toString();
+        QString valor = QString::number(cartaObj["valor"].toInt());
+        yo->mano->agnadirCarta(new Carta(palo, valor));
+    }
+
+    if(jugadores.size() == 2) {
+        for(Jugador* j : jugadores) {
+            if(j->id != miId) {
+                j->mano = new Mano(Orientacion::TOP, this, this);
+                for(int i = 0; i < j->numCartas; ++i)
+                    j->mano->agnadirCarta(new Carta());
+            }
+        }
+    } else {
+        Orientacion orient;
+        int k = 0;
+        for(Jugador* j : jugadores) {
+            if(j->id != miId) {
+                if(j->equipo == yo->equipo) {
+                    orient = Orientacion::TOP;
+                } else {
+                    orient = (k++ == 0) ? Orientacion::LEFT : Orientacion::RIGHT;
+                }
+                j->mano = new Mano(orient, this, this);
+                for(int i = 0; i < j->numCartas; ++i)
+                    j->mano->agnadirCarta(new Carta());
+            }
+            j->mano->ocultarCartaJugada();
+        }
+    }
+}
+
+void EstadoPartida::dibujarEstado() {
+
+    QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
+    int width = screenSize.width(), height = screenSize.height();
+
+    Jugador* yo = mapJugadores.value(miId, nullptr);
+    if(!yo || !yo->mano) return;
+
+    for(Jugador* j : jugadores) {
+        if(j->mano) j->mano->dibujar();
+    }
+
+    // 2 jugadores (1vs1)
+    if(jugadores.size() == 2) {
+        Jugador* oponente = (jugadores[0]->id == miId) ? jugadores[1] : jugadores[0];
+
+        yo->mano->move(width/2 - yo->mano->width()/2, height - yo->mano->height());
+        oponente->mano->move(width/2 - oponente->mano->width() / 2, 0);
+    }
+    // 4 jugadores (2vs2)
+    else if(jugadores.size() == 4) {
+        Jugador* companero = nullptr;
+        QVector<Jugador*> enemigos;
+        for (Jugador* j : jugadores) {
+            if (j->id != miId) {
+                if (j->equipo == yo->equipo) companero = j;
+                else enemigos.append(j);
+            }
+        }
+
+        yo->mano->move(width/2 - yo->mano->width()/2, height - yo->mano->height() - 24);
+        companero->mano->move(width/2 - companero->mano->width()/2, 24);
+        enemigos[0]->mano->move(24, height/2 - enemigos[0]->mano->height()/2);
+        enemigos[1]->mano->move(width - enemigos[1]->mano->width() - 24, height/2 - enemigos[1]->mano->height()/2);
+    }
+
+    // Posicionar carta de triunfo
+    if (cartaTriunfo && cartaTriunfo->isVisible()) {
+        if (mazoRestante > 1 || mazo->isVisible())
+            cartaTriunfo->move(width/2 - cartaTriunfo->width() - 10, height/2 - cartaTriunfo->height()/2);
+        else
+            cartaTriunfo->move(width/2 - cartaTriunfo->width()/2, height/2 - cartaTriunfo->height()/2);
+        cartaTriunfo->raise();
+    }
+
+    // Baraja central (si quedan cartas)
+    if (mazoRestante > 1) {
+        if (mazo->isVisible()) {
+            mazo->move(width/2 + 10, height/2 - mazo->height()/2);
+            mazo->raise();
+        }
+    }
+
+    // Posicionar puntuaciones
+    puntosEquipo1Title->move(2 * width/6 - puntosEquipo1Title->width()/2, height/2 - puntosEquipo1Title->height()/2 - puntosEquipo1Label->height());
+    puntosEquipo1Title->show();
+
+    puntosEquipo1Label->move(2 * width/6 - puntosEquipo1Label->width()/2, height/2 - puntosEquipo1Label->height()/2);
+    puntosEquipo1Label->setText(QString::number(puntosEquipo1));
+    puntosEquipo1Label->show();
+
+    puntosEquipo2Title->move(4 * width/6 - puntosEquipo2Title->width()/2, height/2 - puntosEquipo2Title->height()/2 - puntosEquipo2Label->height());
+    puntosEquipo2Title->show();
+
+    puntosEquipo2Label->move(4 * width/6 - puntosEquipo2Label->width()/2, height/2 - puntosEquipo2Label->height()/2);
+    puntosEquipo2Label->setText(QString::number(puntosEquipo2));
+    puntosEquipo2Label->show();
+
+    // Botones cantar y cambiar siete
+    if(botonCantar && botonCambiarSiete) {
+        int x = puntosEquipo1Label->pos().x() + puntosEquipo1Label->width()/2 - botonCantar->width()/2;
+        int y = yo->mano->pos().y() - botonCantar->height()/2;
+        botonCantar->move(x, y);
+        botonCambiarSiete->move(x, y + botonCantar->height() + 24);
+    }
+
+    // Solicitar pausa o reanudar boton
+    if(botonPausa) {
+        int x = puntosEquipo2Label->pos().x() + puntosEquipo2Label->width()/2;
+        int y = yo->mano->pos().y() - botonPausa->height()/2;
+        botonPausa->move(x - botonPausa->width()/2, y);
+        pausadosLabel->move(x - pausadosLabel->width()/2, y + botonPausa->height() + 24);
+    }
+
+    if (botonCantar) {
+        botonCantar->show();
+        botonCantar->raise();
+    }
+    if (botonCambiarSiete) {
+        botonCambiarSiete->show();
+        botonCambiarSiete->raise();
+    }
+    if (botonPausa) {
+        botonPausa->show();
+        botonPausa->raise();
+    }
+    if (pausadosLabel) {
+        pausadosLabel->show();
+        pausadosLabel->raise();
+    }
+}
+
 void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::function<void()> callback)
 {
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();

@@ -1,164 +1,129 @@
 #include "mano.h"
+#include "carta.h"
+#include "estadopartida.h"
 
-Mano::Mano(int player_id, int pos)
-{
-    this->player_id = player_id;
-    num_cards = 0;
-    this->pos = pos;
-    is_interactive = (pos == 0);
+Mano::Mano(Orientacion orientacion, EstadoPartida* estadoPartida, QWidget* parent)
+    : QWidget(parent), orientacion(orientacion), estadoPartida(estadoPartida) {
+    zonaJuego = new Carta(this);
+    zonaJuego->setOrientacion(orientacion);
 }
 
-// Función mostrarMiMano (posición 0 - mano inferior)
-// Función mostrarMiMano (posición 0 - mano inferior)
-void mostrarMiMano(QVector<Carta*> cartas) {
-    if (cartas.isEmpty()) return;
-
-    QWidget *contenedor = cartas[0]->parentWidget();
-    if (!contenedor) return;
-
-    int anchoVentana = contenedor->width();
-    int anchoCarta = cartas[0]->width();
-    int numCartas = cartas.size();
-
-    int availableWidth = anchoVentana - 2 * MARGIN;
-    int totalCardWidth = numCartas * anchoCarta;
-    int spacing = 0;
-
-    if (numCartas > 1) {
-        spacing = (availableWidth - totalCardWidth) / (numCartas - 1);
-        spacing = qMax(spacing, MIN_SPACING);  // Asegurar espaciado mínimo
-    }
-
-    int xInicial = (anchoVentana - (totalCardWidth + (numCartas - 1) * spacing)) / 2;
-    int y = contenedor->height() - cartas[0]->height() - MARGIN;
-
+Mano::~Mano() {
     for(int i = 0; i < numCartas; ++i) {
-        int x = xInicial + i * (anchoCarta + spacing);
-        cartas[i]->move(x, y);
-        cartas[i]->raise();
+        if(cartas[i]) {
+            delete cartas[i];
+            cartas[i] = nullptr;
+        }
+    }
+    if(zonaJuego) {
+        delete zonaJuego;
+        zonaJuego = nullptr;
     }
 }
 
-// Función mostrarMano2 (posición 1 - arriba horizontal)
-void mostrarMano2(QVector<Carta*> cartas) {
-    if (cartas.isEmpty()) return;
-
-    QWidget *contenedor = cartas[0]->parentWidget();
-    if (!contenedor) return;
-
-    int anchoVentana = contenedor->width();
-    int anchoCarta = cartas[0]->width();
-    int numCartas = cartas.size();
-
-    int availableWidth = anchoVentana - 2 * MARGIN;
-    int totalCardWidth = numCartas * anchoCarta;
-    int spacing = 0;
-
-    if (numCartas > 1) {
-        spacing = (availableWidth - totalCardWidth) / (numCartas - 1);
-        spacing = qMax(spacing, MIN_SPACING);
+void Mano::agnadirCarta(Carta* c, bool visible) {
+    if(numCartas < 6) {
+        cartas[numCartas++] = c;
+        c->setParent(this);
+        c->setOrientacion(orientacion);
+        c->interactuable = visible && (this->orientacion == Orientacion::DOWN);
+        if(visible) c->show();
+        connect(c, &Carta::cartaDobleClick, estadoPartida, &EstadoPartida::onCartaDobleClick);
     }
+}
 
-    int xInicial = (anchoVentana - (totalCardWidth + (numCartas - 1) * spacing)) / 2;
-    int y = MARGIN;
+Carta* Mano::getCarta(int i) const {
+    if(i >= 0 && i < numCartas){
+        return cartas[i];
+    }
+    return nullptr;
+}
 
+Carta* Mano::pop() {
+    if(numCartas > 0) {
+        return extraerCartaEnIndice(numCartas - 1);
+    }
+    return nullptr;
+}
+
+int Mano::getNumCartas() const {
+    return numCartas;
+}
+
+Carta* Mano::extraerCarta(const QString& palo, const QString& valor) {
     for(int i = 0; i < numCartas; ++i) {
-        cartas[i]->move(xInicial + i * (anchoCarta + spacing), y);
+        if(cartas[i] && cartas[i]->getPalo() == palo && cartas[i]->getValor() == valor) {
+            return extraerCartaEnIndice(i);
+        }
     }
+    return nullptr;
 }
 
-// Función mostrarMano1 (posición 2 - derecha vertical)
-void mostrarMano1(QVector<Carta*> cartas) {
-    if (cartas.isEmpty()) return;
-
-    QWidget *contenedor = cartas[0]->parentWidget();
-    if (!contenedor) return;
-
-    int altoVentana = contenedor->height();
-    int altoCarta = cartas[0]->height();
-    int numCartas = cartas.size();
-
-    int availableHeight = altoVentana - 2 * MARGIN;
-    int totalCardHeight = numCartas * altoCarta;
-    int spacing = 0;
-
-    if (numCartas > 1) {
-        spacing = (availableHeight - totalCardHeight) / (numCartas - 1);
-        spacing = qMax(spacing, MIN_SPACING);
+Carta* Mano::extraerCartaEnIndice(int indice) {
+    if(indice < 0 || indice >= numCartas)
+        return nullptr;
+    Carta* extraida = cartas[indice];
+    for(int i = indice; i < numCartas - 1; ++i) {
+        cartas[i] = cartas[i + 1];
     }
-
-    int yInicial = (altoVentana - (totalCardHeight + (numCartas - 1) * spacing)) / 2;
-    int x = contenedor->width() - cartas[0]->width() - MARGIN;
-
-    for(int i = 0; i < numCartas; ++i) {
-        int y = yInicial + i * (altoCarta + spacing);
-        cartas[i]->move(x, y);
-    }
+    cartas[numCartas - 1] = nullptr;
+    --numCartas;
+    return extraida;
 }
 
-// Función mostrarMano3 (posición 3 - izquierda vertical)
-void mostrarMano3(QVector<Carta*> cartas) {
-    if (cartas.isEmpty()) return;
-
-    QWidget *contenedor = cartas[0]->parentWidget();
-    if (!contenedor) return;
-
-    int altoVentana = contenedor->height();
-    int altoCarta = cartas[0]->height();
-    int numCartas = cartas.size();
-
-    int availableHeight = altoVentana - 2 * MARGIN;
-    int totalCardHeight = numCartas * altoCarta;
-    int spacing = 0;
-
-    if (numCartas > 1) {
-        spacing = (availableHeight - totalCardHeight) / (numCartas - 1);
-        spacing = qMax(spacing, MIN_SPACING);
-    }
-
-    int yInicial = (altoVentana - (totalCardHeight + (numCartas - 1) * spacing)) / 2;
-    int x = MARGIN;
-
-    for(int i = 0; i < numCartas; ++i) {
-        int y = yInicial + i * (altoCarta + spacing);
-        cartas[i]->move(x, y);
-    }
+Orientacion Mano::getOrientacion() const {
+    return orientacion;
 }
 
-// Crear funciones Auxiliares
-void Mano::mostrarMano()
-{
-    switch (pos) {
-    case 0:
-        mostrarMiMano(cartas);
-        break;
-    case 2:
-        mostrarMano1(cartas);
-        break;
-    case 1:
-        mostrarMano2(cartas);
-        break;
-    case 3:
-        mostrarMano3(cartas);
-        break;
-    }
+Carta* Mano::jugada() {
+    return zonaJuego;
 }
 
-void Mano::añadirCarta(Carta *carta)
-{
-    if(pos == 0) {
-        carta->setLock(false);
-    }
-    cartas.append(carta);
-    carta->añadirAMano(this, num_cards);
-    num_cards++;
-    mostrarMano();
-
+QPoint Mano::getZonaDeJuego() const {
+    return zonaJuego->pos();
 }
 
-void Mano::eliminarCarta(int index)
-{
-    cartas.removeAt(index);
-    num_cards--;
-    mostrarMano();
+void Mano::actualizarCartaJugada(const QString& palo, const QString& valor) {
+    zonaJuego->setPaloValor(palo, valor);
+    zonaJuego->setOrientacion(this->orientacion);
+}
+
+void Mano::ocultarCartaJugada() {
+    zonaJuego->setPaloValor("Back", "");
+}
+
+void Mano::dibujar() {
+    if(numCartas <= 0) return;
+    int width  = cartas[0]->width();
+    int height = cartas[0]->height();
+
+    switch(orientacion) {
+        case(Orientacion::TOP):
+            for(int i = 0; i < numCartas; ++i)
+                cartas[i]->setPosicion(i * (width + 24), 0);
+            zonaJuego->setPosicion((width + 24) * numCartas / 2 - (width / 2), height + 24);
+            if(numCartas > 0)
+                this->resize((width + 24) * numCartas, height * 2 + 48);
+            break;
+        case(Orientacion::LEFT):
+            for(int i = 0; i < numCartas; ++i)
+                cartas[i]->setPosicion(0, i * (height + 24));
+            zonaJuego->setPosicion(width + 24, (height + 24) * numCartas / 2 - (height / 2));
+            if(numCartas > 0)
+                this->resize(width * 2 + 48, (height + 24) * numCartas);
+            break;
+        case(Orientacion::DOWN):
+            for (int i = 0; i < numCartas; ++i)
+                cartas[i]->setPosicion(i * (width + 24), height + 24);
+            zonaJuego->setPosicion((width + 24) * numCartas / 2 - (width / 2), 0);
+            this->resize((width + 24) * numCartas, height * 2 + 48);
+            break;
+        case(Orientacion::RIGHT):
+            for (int i = 0; i < numCartas; ++i)
+                cartas[i]->setPosicion(width + 24, i * (height + 24));
+            zonaJuego->setPosicion(0, (height + 24) * numCartas / 2 - (height / 2));
+            this->resize(width * 2 + 48, (height + 24) * numCartas);
+            break;
+    }
+    this->show();
 }

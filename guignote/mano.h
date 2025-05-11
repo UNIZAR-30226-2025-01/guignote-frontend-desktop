@@ -1,29 +1,43 @@
 #ifndef MANO_H
 #define MANO_H
 
-#include <QVector>
-#include "carta.h"  // ✅ Incluido aquí porque usamos objetos reales (no solo punteros)
+#include "orientacion.h"
+#include "carta.h"
+#include <QWidget>
 
-#define MARGIN 20         // Margen desde los bordes de la ventana
-#define MIN_SPACING 10    // Espaciado mínimo entre cartas
+class EstadoPartida;
 
-class Mano
-{
+class Mano : public QWidget {
+    Q_OBJECT
 public:
-    Mano(int player_id, int pos);
 
-    void añadirCarta(Carta* carta);
-    void eliminarCarta(int index);
-    void mostrarMano();
-    int player_id;
-    bool is_interactive;
-    QVector<Carta*> cartas;
+    Mano(Orientacion orientacion, EstadoPartida* estadoPartida, QWidget* parent);
+    ~Mano();
 
+    // Cartas en la mano
+    void agnadirCarta(Carta* c, bool visible = true);
+    Carta* getCarta(int i) const;
+    Carta* pop();
+    int getNumCartas() const;
+    Carta* extraerCarta(const QString& palo, const QString& valor);
+    Carta* extraerCartaEnIndice(int indice);
+
+    // Carta jugada
+    Carta* jugada();
+    QPoint getZonaDeJuego() const;
+    void actualizarCartaJugada(const QString& palo, const QString& valor);
+    void ocultarCartaJugada();
+
+    // GUI
+    Orientacion getOrientacion() const;
+    void dibujar();
 
 private:
-    int num_cards;
-    int pos;
-
+    Carta* zonaJuego;
+    Carta* cartas[6];
+    int numCartas = 0;
+    const Orientacion orientacion;
+    EstadoPartida* estadoPartida;
 };
 
 #endif // MANO_H

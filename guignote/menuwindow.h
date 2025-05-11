@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 #include <QJsonArray>
 #include <QTimer>
+#include "estadopartida.h"
 
 class ImageButton;
 class Icon;
@@ -79,13 +80,7 @@ private:
     QString loadAuthToken(const QString &userKey);
     QString token;
 
-    QWebSocket *webSocket;
     void jugarPartida(const QString &userKey, const QString &token, int capacidad = 2);
-    QLabel *mensajeCola = nullptr;
-    QDialog *searchingDialog = nullptr;
-    int jugadoresCola = 0;
-    int jugadoresMax = 0;
-    void manejarMensaje(const QString &userKey, const QString &mensaje);
     QString usr;
     QString userKey;
     int id;
