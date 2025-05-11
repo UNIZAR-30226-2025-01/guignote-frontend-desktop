@@ -1,0 +1,21 @@
+<map id="deck.h" name="deck.h">
+<area shape="rect" id="Node000001" title="Declaración de la clase Deck, que representa el mazo en la interfaz del juego." alt="" coords="273,5,339,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,84,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="274,31,98,78,97,73,272,26"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="89,152,155,177"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="274,26,244,32,210,42,177,58,149,80,133,109,126,139,121,138,128,107,145,77,175,53,208,37,243,26,273,20"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="431,152,512,177"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="339,18,406,23,488,33,563,50,592,62,611,77,618,91,617,104,610,115,598,125,564,142,526,154,525,149,562,137,595,121,606,112,612,102,613,92,607,80,589,67,561,55,487,38,406,28,339,23"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="250,79,362,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="309,31,309,65,303,65,303,31"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="387,79,497,104"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="329,28,409,70,407,75,327,33"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="522,79,597,104"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="340,26,510,73,508,78,338,31"/>
+<area shape="rect" id="Node000008" href="$carta_8h.html" title="Declaración de la clase Carta para el proyecto de Qt." alt="" coords="159,79,226,104"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="289,33,224,74,221,69,286,28"/>
+<area shape="poly" id="edge8_Node000008_Node000003" title=" " alt="" coords="183,106,145,144,141,140,179,102"/>
+<area shape="poly" id="edge9_Node000008_Node000004" title=" " alt="" coords="227,99,418,147,417,152,226,104"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="180,152,245,177"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="199,104,208,138,203,140,193,105"/>
+</map>

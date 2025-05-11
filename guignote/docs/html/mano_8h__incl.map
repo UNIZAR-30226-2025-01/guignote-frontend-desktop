@@ -1,0 +1,13 @@
+<map id="mano.h" name="mano.h">
+<area shape="rect" id="Node000001" title="Declaración de la clase Mano, que representa la mano de un jugador." alt="" coords="54,5,125,31"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="6,79,79,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="84,32,60,69,56,66,79,30"/>
+<area shape="rect" id="Node000003" href="$carta_8h.html" title="Declaración de la clase Carta para el proyecto de Qt." alt="" coords="104,79,171,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="99,30,124,66,120,69,95,33"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,152,72,177"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="123,106,67,146,64,142,120,102"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="97,152,178,177"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="140,104,140,138,135,138,135,104"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="202,152,267,177"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="155,102,209,141,206,146,151,106"/>
+</map>
