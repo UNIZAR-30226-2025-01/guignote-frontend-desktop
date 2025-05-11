@@ -83,6 +83,7 @@ private:
     void getID();
     void getUsr();
     void recibirMensajes(const QString &mensaje);
+    void colocarLeyenda();        //< carga/-muestra la leyenda si procede
 
     // Labels to display the corner ornaments
     QLabel *cornerTopLeft;
@@ -139,6 +140,9 @@ private:
     bool hasPendingDraw = false;
     int pendingDrawUserId     = -1;
     QVector<int>  pendingDrawUserIds;
+
+    QLabel *legendLabel = nullptr;   ///< etiqueta que muestra la leyenda
+    bool    legendPinned = false;    ///< true ⇒ la leyenda ya se fijó
 
 };
 

@@ -126,5 +126,6 @@
         <file>tiles/base.png</file>
         <file>tiles/poker.png</file>
         <file>tiles/tapetebase.png</file>
+        <file>legends/legendpoker.png</file>
     </qresource>
 </RCC>

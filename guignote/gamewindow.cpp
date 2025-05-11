@@ -24,6 +24,18 @@
 QMap<QString, Carta*> GameWindow::cartasPorId;
 static QDialog* createDialog(QWidget *parent, const QString &message, bool exitApp = false);
 
+/* Devuelve un nombre “corto” para cada skin.
+ * Amplíalo cada vez que añadas una baraja nueva.
+ */
+static QString skinName(int idx)
+{
+    switch (idx) {
+    case 0:  return "base";   // reverso / baraja clásica
+    case 1:  return "poker";
+    default: return QString("skin%1").arg(idx);
+    }
+}
+
 void GameWindow::addCartaPorId(Carta* c){
     cartasPorId[c->idGlobal] = c;
     // Cuando Qt destruya la Carta, la quitamos del mapa automáticamente
@@ -37,10 +49,13 @@ Carta* GameWindow::getCartaPorId(QString id){
     return cartasPorId.value(id, nullptr);
 }
 
-GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef) {
+GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject msg, int id, QWebSocket *ws, QString usr, MenuWindow *menuRef)
+    : legendLabel(nullptr), legendPinned(false) {
     QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
     QSettings appSettings("Grace Hopper", config);
     this->deckSkin = appSettings.value("selectedDeck", 0).toInt();
+
+
     this->usr = usr;
     menuWindowRef = menuRef;
     bg = fondo;
@@ -88,6 +103,30 @@ GameWindow::GameWindow(const QString &userKey, int type, int fondo, QJsonObject 
 
 }
 
+void GameWindow::colocarLeyenda()
+{
+    if (legendPinned || !legendLabel)          // ya está, o aún no existe
+        return;
+
+    if (deckSkin == 0)
+        return;                               // baraja “base” → sin leyenda
+
+    QString ruta = QString(":/legends/legend%1.png")
+                       .arg(skinName(deckSkin));
+
+    QPixmap pm(ruta);
+    if (pm.isNull()) {
+        qWarning() << "[GameWindow] Leyenda no encontrada:" << ruta;
+        return;
+    }
+    legendLabel->setPixmap(pm.scaled(200,200,
+                                     Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation));
+    legendLabel->show();
+    legendPinned = true;
+}
+
+
 void GameWindow::setupUI(const QString &userKey) {
 
     // Registrar fuente personalizada
@@ -100,6 +139,22 @@ void GameWindow::setupUI(const QString &userKey) {
         qWarning() << "❌ No se pudo cargar la fuente Glossy Personaluse.";
         fontFamily = "Arial";  // Fuente alternativa
     }
+
+    // ------------------------------------------------------------------
+    // Leyenda (se crea una sola vez)
+    // ------------------------------------------------------------------
+    if (!legendLabel) {                       // evita recrearla
+        legendLabel = new QLabel(this);
+        legendLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+        legendLabel->setAttribute(Qt::WA_TranslucentBackground);
+        legendLabel->setStyleSheet("background: transparent;");
+
+        legendLabel->move(15, 360);            // esquina superior-izq.
+    }
+    legendLabel->hide();                      // por defecto oculta
+    // NUEVO:
+    colocarLeyenda();              // ya existe la label: decide y muestra
 
     // 1) Barra de opciones y layout
     optionsBar = new QFrame(this);
@@ -581,6 +636,9 @@ void GameWindow::resizeEvent(QResizeEvent *event) {
     for (int i = 0; i < posiciones.size(); ++i) {
         posiciones[i]->mostrarPosicion();
     }
+
+    if (legendLabel)
+        legendLabel->raise();
 
 }
 
