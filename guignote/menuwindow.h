@@ -7,6 +7,7 @@
 #include <QFrame>
 #include <QMediaPlayer>
 #include <QtMultimedia>
+#include <QStackedLayout>
 #include <QAudioOutput>
 #include <QResizeEvent>
 #include <QEvent>
@@ -48,6 +49,8 @@ private:
     // Botones de modos de juego
     ImageButton *boton1v1;
     ImageButton *boton2v2;
+
+    QStackedLayout *stackedLayout;
 
     // Barras de la interfaz
     QFrame *bottomBar;

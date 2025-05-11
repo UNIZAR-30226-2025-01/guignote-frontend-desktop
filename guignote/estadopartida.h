@@ -19,6 +19,8 @@
 #include <QWidget>
 #include <QJsonObject>
 #include <QTimer>
+#include <QMediaPlayer>
+#include <QAudioOutput>
 #include <QtWebSockets/QWebSocket>
 #include <QQueue>
 
@@ -121,6 +123,8 @@ public:
     void recibirEvento(const QJsonObject& evento);
     void procesarSiguienteEvento();
 
+    void setVolume(int volumePercentage);
+
     QString miNombre = ""; ///< Nombre del jugador local.
 
 public slots:
@@ -190,6 +194,13 @@ private:
     QWidget* overlayEspera = nullptr;
     QLabel* labelEspera = nullptr;
     int jugadoresCola = 0, jugadoresMax = 0;
+
+    QMediaPlayer*    backgroundPlayer = nullptr;
+    QAudioOutput*    audioOutput      = nullptr;
+
+    // SFX de efectos (roba carta, etc.)
+    QMediaPlayer* effectPlayer     = nullptr;
+    QAudioOutput* effectOutput     = nullptr;
 
     QString wsUrl; ///< URL del servidor WebSocket.
 };
