@@ -10,6 +10,7 @@
 #include <QParallelAnimationGroup>
 #include <QPropertyAnimation>
 #include <QGuiApplication>
+#include <QSettings>
 #include <QJsonArray>
 #include <QScreen>
 #include <QVBoxLayout>
@@ -60,6 +61,58 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int
         )");
     }
     Carta::skin = style;
+
+    // Sólo para skin "poker" (style == 1), creamos el legendLabel oculto y escalado:
+    if (style == 1) {
+        legendLabel = new QLabel(this);
+
+        // Cargamos y escalamos el pixmap a 100px de ancho (manteniendo proporción):
+        QPixmap raw(":/legends/legendpoker.png");
+        int targetW = 150;
+        int targetH = raw.height() * targetW / raw.width();
+        QPixmap scaled = raw.scaled(targetW, targetH,
+                                    Qt::KeepAspectRatio,
+                                    Qt::SmoothTransformation);
+
+        legendLabel->setPixmap(scaled);
+        legendLabel->setAttribute(Qt::WA_TranslucentBackground);
+
+        // 50% de opacidad:
+        auto *opacity = new QGraphicsOpacityEffect(legendLabel);
+        opacity->setOpacity(0.5);
+        legendLabel->setGraphicsEffect(opacity);
+
+        // Oculto hasta que empiece la partida
+        legendLabel->hide();
+    }
+
+    //
+    // ——— BGM DE PARTIDA ———
+    //
+    audioOutput      = new QAudioOutput(this);
+    backgroundPlayer = new QMediaPlayer(this);
+    backgroundPlayer->setAudioOutput(audioOutput);
+
+    // Leemos ambos volúmenes de la misma QSettings
+    QSettings cfg("Grace Hopper",
+                  QString("Sota, Caballo y Rey_%1").arg(miNombre));
+    int bgmVol    = cfg.value("sound/volume",          50).toInt();
+    int sfxVol    = cfg.value("sound/effectsVolume",   50).toInt();
+
+    audioOutput->setVolume(bgmVol / 100.0);
+    backgroundPlayer->setSource(QUrl("qrc:/bgm/partida.mp3"));
+    backgroundPlayer->setLoops(QMediaPlayer::Infinite);
+    backgroundPlayer->play();
+
+    //
+    // ——— SFX DE ROBA CARTA ———
+    //
+    effectOutput = new QAudioOutput(this);
+    effectPlayer = new QMediaPlayer(this);
+    effectPlayer->setAudioOutput(effectOutput);
+
+    effectOutput->setVolume(sfxVol / 100.0);
+    effectPlayer->setSource(QUrl("qrc:/bgm/card_draw.mp3"));
 }
 
 /**
@@ -91,8 +144,29 @@ void EstadoPartida::init() {
  */
 EstadoPartida::~EstadoPartida() {
     qDebug() << "[DEBUG] EstadoPartida destruido.";
+
+    // Parar y liberar BGM
+    if (backgroundPlayer) {
+        backgroundPlayer->stop();
+        backgroundPlayer->deleteLater();
+        backgroundPlayer = nullptr;
+    }
+    // Parar y liberar SFX
+    if (effectPlayer) {
+        effectPlayer->stop();
+        effectPlayer->deleteLater();
+        effectPlayer = nullptr;
+    }
+    // Los QAudioOutput se borran automáticamente como hijos de this
+
+    if (legendLabel) {
+        legendLabel->deleteLater();
+        legendLabel = nullptr;
+    }
+
     this->limpiar();
 }
+
 
 /**
  * @brief Limpia todos los widgets y datos asociados a la partida.
@@ -243,6 +317,14 @@ void EstadoPartida::dibujarEstado() {
 
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
     int width = screenSize.width(), height = screenSize.height();
+
+    if (legendLabel) {
+        // Lo colocamos a la izquierda, centrado verticalmente
+        int x = 0;
+        int y = height/2 - legendLabel->height()/2;
+        legendLabel->move(x, y);
+        legendLabel->raise();
+    }
 
     Jugador* yo = mapJugadores.value(miId, nullptr);
     if(!yo || !yo->mano) return;
@@ -706,6 +788,10 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
         delete animationGroup;
         this->dibujarEstado();
     }
+    if (effectPlayer) {
+        effectPlayer->stop();
+        effectPlayer->play();
+    }
 }
 
 /**
@@ -779,6 +865,9 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
  */
 void EstadoPartida::procesarStartGame(QJsonObject data) {
     ocultarOverlayEspera();
+
+    // — Mostrar la leyenda sólo al empezar la partida —
+    if (legendLabel) legendLabel->show();
     if(!getPartidaIniciada()) {
         this->iniciarBotonesYEtiquetas();
         this->setPartidaIniciada(true);
@@ -791,6 +880,7 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
         procesarSiguienteEvento();
     });
 }
+
 
 /**
  * @brief Procesa actualización de turno ('turn_update'), muestra mensaje.
@@ -1228,5 +1318,11 @@ void EstadoPartida::procesarMensajeWebSocket(const QString& mensaje) {
         this->manejarEventoPrePartida(tipo, data);
     } else {
         this->recibirEvento(root);
+    }
+}
+
+void EstadoPartida::setVolume(int volumePercentage) {
+    if (audioOutput) {
+        audioOutput->setVolume(volumePercentage / 100.0);
     }
 }
