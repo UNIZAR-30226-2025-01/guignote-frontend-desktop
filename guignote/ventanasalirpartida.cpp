@@ -1,5 +1,18 @@
+/**
+ * @file ventanasalirpartida.cpp
+ * @brief Implementación de la clase VentanaInfo que muestra una ventana emergente para salir de la partida.
+ */
+
 #include "ventanasalirpartida.h"
 
+/**
+ * @brief Constructor de VentanaInfo.
+ *
+ * Crea una ventana emergente semitransparente con un mensaje centrado y un botón para salir.
+ * @param msg Mensaje a mostrar en el centro del popup.
+ * @param onSalir Callback a ejecutar al pulsar el botón "Salir".
+ * @param parent Widget padre que determina el tamaño de la ventana.
+ */
 VentanaInfo::VentanaInfo(const QString& msg, std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), onSalirCallback(onSalir) {
 

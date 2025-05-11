@@ -1,3 +1,11 @@
+/**
+ * @file customgameswindow.cpp
+ * @brief Implementación de la ventana para explorar y unirse a partidas personalizadas.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ */
+
 #include "customgameswindow.h"
 #include "crearcustomgame.h"
 #include "estadopartida.h"
@@ -21,6 +29,13 @@
 #include <QNetworkAccessManager>
 #include <QApplication>
 
+/**
+ * @brief Constructor de CustomGamesWindow.
+ * @param userKey Clave del usuario para autenticación.
+ * @param usr Nombre del usuario.
+ * @param fondo Identificador visual del fondo.
+ * @param parent Widget padre.
+ */
 CustomGamesWindow::CustomGamesWindow(const QString &userKey, QString usr, int fondo, QWidget *parent)
     : QDialog(parent)
 {
@@ -39,6 +54,11 @@ CustomGamesWindow::CustomGamesWindow(const QString &userKey, QString usr, int fo
     fetchAllGames();
 }
 
+/**
+ * @brief Carga el token de autenticación desde archivo de configuración local.
+ * @param userKey Clave de usuario usada para localizar el archivo.
+ * @return Token JWT como QString, o cadena vacía si no se encuentra.
+ */
 QString CustomGamesWindow::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
@@ -62,6 +82,9 @@ QString CustomGamesWindow::loadAuthToken(const QString &userKey) {
     return token;
 }
 
+/**
+ * @brief Configura todos los elementos gráficos de la ventana.
+ */
 void CustomGamesWindow::setupUI() {
     // Layout principal
     mainLayout = new QVBoxLayout(this);
@@ -141,6 +164,12 @@ void CustomGamesWindow::setupUI() {
     // ...añade aquí el resto de widgets si hace falta...
 }
 
+/**
+ * @brief Obtiene la lista de partidas personalizadas disponibles desde el servidor.
+ *
+ * Esta función realiza una petición HTTP al backend para obtener las salas disponibles.
+ * Las salas se muestran en la interfaz con su información básica y opción de unirse.
+ */
 void CustomGamesWindow::fetchAllGames() {
     qDebug() << "Fetching all available games";
 
@@ -274,7 +303,12 @@ void CustomGamesWindow::fetchAllGames() {
 }
 
 
-
+/**
+ * @brief Obtiene la lista de partidas disponibles solo entre amigos.
+ *
+ * Realiza una solicitud HTTP al backend para obtener únicamente las salas
+ * creadas por amigos del usuario. Los resultados se renderizan en la interfaz.
+ */
 void CustomGamesWindow::fetchFriendGames() {
     qDebug() << "Fetching friend-only games";
 
@@ -404,6 +438,15 @@ void CustomGamesWindow::fetchFriendGames() {
     });
 }
 
+/**
+ * @brief Une al usuario a una partida personalizada existente.
+ *
+ * Conecta mediante WebSocket a una sala concreta utilizando su ID y capacidad.
+ * Muestra la ventana de juego y cierra otras ventanas de nivel superior.
+ *
+ * @param idPart ID de la partida a la que se desea unir.
+ * @param cap Capacidad total de la partida.
+ */
 void CustomGamesWindow::joinGame(QString idPart, int cap){
 
     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2&capacidad=%3")

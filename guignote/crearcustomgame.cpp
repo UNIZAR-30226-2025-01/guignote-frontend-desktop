@@ -1,3 +1,14 @@
+/**
+ * @file crearcustomgame.cpp
+ * @brief Implementación de la interfaz de configuración para partidas personalizadas.
+ *
+ * Este archivo forma parte del Proyecto de Software 2024/2025
+ * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
+ *
+ * Contiene el código que define la construcción visual y funcional
+ * de la ventana para crear una partida personalizada multijugador.
+ */
+
 #include "crearcustomgame.h"
 #include "estadopartida.h"
 #include "menuwindow.h"
@@ -20,6 +31,13 @@
 #include <QGraphicsDropShadowEffect>
 #include <QApplication>
 
+/**
+ * @brief Constructor de CrearCustomGame.
+ * @param userKey Clave del usuario para autenticación.
+ * @param usr Nombre del usuario.
+ * @param fondo Identificador del fondo visual.
+ * @param parent Diálogo padre.
+ */
 CrearCustomGame::CrearCustomGame(QString &userKey, QString usr, int fondo, QDialog *parent)
     : QDialog(parent)
 {
@@ -37,6 +55,9 @@ CrearCustomGame::CrearCustomGame(QString &userKey, QString usr, int fondo, QDial
     setupUI();
 }
 
+/**
+ * @brief Configura todos los elementos gráficos de la interfaz.
+ */
 void CrearCustomGame::setupUI(){
     // Layout principal
     mainLayout = new QVBoxLayout(this);
@@ -59,7 +80,7 @@ void CrearCustomGame::setupUI(){
         }
     )";
 
-    // ——— Header (título + botón de cerrar) ———
+    // Header (título + botón de cerrar)
     QHBoxLayout *headerLayout = new QHBoxLayout();
     titleLabel = new QLabel("Partidas Personalizadas", this);
     titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -80,7 +101,7 @@ void CrearCustomGame::setupUI(){
     headerLayout->addWidget(closeButton);
     mainLayout->addLayout(headerLayout);
 
-    // ——— “Solo amigos” ———
+    // "Solo amigos"
     QHBoxLayout *amigosLayout = new QHBoxLayout();
     amigosLayout->addWidget(new QLabel("Solo amigos", this));
     soloAmigos = new QCheckBox(this);
@@ -91,7 +112,7 @@ void CrearCustomGame::setupUI(){
     amigosLayout->addWidget(soloAmigos);
     mainLayout->addLayout(amigosLayout);
 
-    // ——— “Capacidad” ———
+    // "Capacidad"
     QHBoxLayout *capacidadLayout = new QHBoxLayout();
     capacidadLayout->addWidget(new QLabel("Capacidad", this));
     ind = new QCheckBox("Individual", this);
@@ -114,17 +135,15 @@ void CrearCustomGame::setupUI(){
     capacidadLayout->addWidget(par);
     mainLayout->addLayout(capacidadLayout);
 
-    // ——— “Tiempo por turno” ———
+    // "Tiempo por turno"
     QHBoxLayout *tiempoLayout = new QHBoxLayout();
     tiempoLayout->addWidget(new QLabel("Tiempo por turno", this));
     t15s = new QCheckBox("15s", this);
     t30s = new QCheckBox("30s", this);
     t60s = new QCheckBox("60s", this);
-    // estados iniciales
     t15s->setChecked(tiempo == 15);
     t30s->setChecked(tiempo == 30);
     t60s->setChecked(tiempo == 60);
-    // comportarse como “radio”:
     connect(t15s, &QCheckBox::stateChanged, this, [this](int s){
         if (s == Qt::Checked) {
             tiempo = 15;
@@ -151,7 +170,7 @@ void CrearCustomGame::setupUI(){
     tiempoLayout->addWidget(t60s);
     mainLayout->addLayout(tiempoLayout);
 
-    // ——— “Revueltas” ———
+    // "Revueltas"
     QHBoxLayout *revLayout = new QHBoxLayout();
     revLayout->addWidget(new QLabel("Revueltas", this));
     revueltas = new QCheckBox(this);
@@ -162,7 +181,7 @@ void CrearCustomGame::setupUI(){
     revLayout->addWidget(revueltas);
     mainLayout->addLayout(revLayout);
 
-    // ——— “Fase de arrastre” ———
+    // "Fase de arrastre"
     QHBoxLayout *arrastreLayout = new QHBoxLayout();
     arrastreLayout->addWidget(new QLabel("Fase de arrastre", this));
     arrastre = new QCheckBox(this);
@@ -173,7 +192,7 @@ void CrearCustomGame::setupUI(){
     arrastreLayout->addWidget(arrastre);
     mainLayout->addLayout(arrastreLayout);
 
-    // ——— Botón “Crear” ———
+    // Botón "Crear"
     QPushButton *crearBtn = new QPushButton("Crear", this);
     crearBtn->setStyleSheet(
         "QPushButton { background-color: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 5px; }"
@@ -188,6 +207,7 @@ void CrearCustomGame::setupUI(){
     });
     mainLayout->addWidget(crearBtn, 0, Qt::AlignCenter);
 
+    // Aplicar estilos
     soloAmigos->setStyleSheet(checkboxStyle);
     t15s->setStyleSheet(checkboxStyle);
     t30s->setStyleSheet(checkboxStyle);
@@ -198,6 +218,15 @@ void CrearCustomGame::setupUI(){
     par->setStyleSheet(checkboxStyle);
 }
 
+/**
+ * @brief Carga el token de autenticación desde el archivo de configuración.
+ *
+ * Busca el archivo de configuración asociado al usuario y extrae la línea que contiene el token.
+ * Este token se utiliza luego para autenticar la conexión WebSocket al servidor.
+ *
+ * @param userKey Clave única del usuario utilizada para localizar el archivo de configuración.
+ * @return Cadena con el token JWT si se encuentra; cadena vacía en caso contrario.
+ */
 QString CrearCustomGame::loadAuthToken(const QString &userKey) {
     QString configPath = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
     + QString("/Grace Hopper/Sota, Caballo y Rey_%1.conf").arg(userKey);
@@ -221,6 +250,12 @@ QString CrearCustomGame::loadAuthToken(const QString &userKey) {
     return token;
 }
 
+/**
+ * @brief Crea y lanza la partida personalizada con los parámetros seleccionados por el usuario.
+ *
+ * Genera la URL de conexión WebSocket utilizando los ajustes seleccionados en la interfaz
+ * (modo de juego, tiempo, reglas), instancia la ventana del juego, y cierra el resto de la interfaz.
+ */
 void CrearCustomGame::crearPartida(){
 
     // Inicializamos contadores

@@ -1,3 +1,8 @@
+/**
+ * @file EstadoPartida.cpp
+ * @brief Implementación de la clase EstadoPartida, gestiona la lógica y presentación de la partida de cartas.
+ */
+
 #include "estadopartida.h"
 #include <QPauseAnimation>
 #include <QSequentialAnimationGroup>
@@ -14,6 +19,18 @@
 #include <QJsonDocument>
 #include "ventanasalirpartida.h"
 
+/**
+ * @brief Constructor de EstadoPartida.
+ *
+ * Inicializa el estilo de la ventana y el skin de las cartas.
+ *
+ * @param miNombre Nombre del jugador local.
+ * @param wsUrl URL del servidor WebSocket.
+ * @param bg Selección de fondo (0: verde claro, distinto: rojo oscuro).
+ * @param style Skin a usar en las cartas.
+ * @param onSalir Callback que se llamará al salir de la partida.
+ * @param parent Widget padre (opcional).
+ */
 EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl) {
@@ -45,6 +62,9 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int
     Carta::skin = style;
 }
 
+/**
+ * @brief Inicializa la conexión WebSocket y los handlers de eventos.
+ */
 void EstadoPartida::init() {
     // WebSockets
     websocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
@@ -64,11 +84,21 @@ void EstadoPartida::init() {
     websocket->open(QUrl(wsUrl));
 }
 
+/**
+ * @brief Destructor de EstadoPartida.
+ *
+ * Se encarga de limpiar recursos y desconectar la partida.
+ */
 EstadoPartida::~EstadoPartida() {
     qDebug() << "[DEBUG] EstadoPartida destruido.";
     this->limpiar();
 }
 
+/**
+ * @brief Limpia todos los widgets y datos asociados a la partida.
+ *
+ * Elimina manos, mazo, carta de triunfo y overlays.
+ */
 void EstadoPartida::limpiar() {
     // Borrar widgets de mano y sus datos
     for (Jugador* jugador : jugadores) {
@@ -105,6 +135,13 @@ void EstadoPartida::limpiar() {
     }
 }
 
+/**
+ * @brief Actualiza el estado de la partida según el JSON recibido.
+ *
+ * Crea jugadores, distribuye cartas y prepara subcomponentes.
+ *
+ * @param data Objeto JSON con los datos de la partida.
+ */
 void EstadoPartida::actualizarEstado(const QJsonObject& data) {
     limpiar();
 
@@ -173,6 +210,35 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
     }
 }
 
+/**
+ * @brief Establece el identificador del jugador local.
+ * @param id Identificador único del jugador.
+ */
+void EstadoPartida::setMiId(int id) {
+    miId = id;
+}
+
+/**
+ * @brief Marca si la partida ha comenzado.
+ * @param iniciada True si la partida está en curso.
+ */
+void EstadoPartida::setPartidaIniciada(bool iniciada) {
+    partidaIniciada = iniciada;
+}
+
+/**
+ * @brief Consulta si la partida se encuentra iniciada.
+ * @return True si la partida está activa.
+ */
+bool EstadoPartida::getPartidaIniciada() const {
+    return partidaIniciada;
+}
+
+/**
+ * @brief Dibuja y posiciona todos los elementos visuales de la partida.
+ *
+ * Coloca manos, mazo, carta triunfo, puntuaciones y botones.
+ */
 void EstadoPartida::dibujarEstado() {
 
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
@@ -275,6 +341,15 @@ void EstadoPartida::dibujarEstado() {
     }
 }
 
+/**
+ * @brief Anima y actualiza la puntuación de un equipo.
+ *
+ * Muestra una transición numérica hasta el nuevo valor.
+ *
+ * @param equipo Número de equipo (1 o 2).
+ * @param nuevoValor Valor destino de la puntuación.
+ * @param callback Llamada al finalizar la animación.
+ */
 void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::function<void()> callback) {
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
     int width = screenSize.width(), height = screenSize.height();
@@ -308,6 +383,13 @@ void EstadoPartida::actualizarPuntuacion(int equipo, int nuevoValor, std::functi
     timer->start();
 }
 
+/**
+ * @brief Maneja el doble clic sobre una carta para jugarla.
+ *
+ * Envía la acción 'jugar_carta' al servidor.
+ *
+ * @param carta Puntero a la carta seleccionada.
+ */
 void EstadoPartida::onCartaDobleClick(Carta* carta) {
     if(websocket) {
         QJsonObject msg;
@@ -326,6 +408,9 @@ void EstadoPartida::onCartaDobleClick(Carta* carta) {
     qDebug() << "Jugar carta";
 }
 
+/**
+ * @brief Envía la acción 'cantar' al servidor.
+ */
 void EstadoPartida::onCantar() {
     if(websocket) {
         QJsonObject msg;
@@ -337,6 +422,9 @@ void EstadoPartida::onCantar() {
     qDebug() << "Cantar";
 }
 
+/**
+ * @brief Envía la acción 'cambiar_siete' al servidor.
+ */
 void EstadoPartida::onCambiarSiete() {
     if(websocket) {
         QJsonObject msg;
@@ -348,6 +436,10 @@ void EstadoPartida::onCambiarSiete() {
     qDebug() << "Cambiar siete";
 }
 
+
+/**
+ * @brief Envía la acción 'pausa' al servidor para solicitar pausa.
+ */
 void EstadoPartida::onPausa() {
     if(websocket) {
         QJsonObject msg;
@@ -359,6 +451,9 @@ void EstadoPartida::onPausa() {
     qDebug() << "Pausa";
 }
 
+/**
+ * @brief Envía la acción 'anular_pausa' al servidor.
+ */
 void EstadoPartida::onAnularPausa() {
     if(websocket) {
         QJsonObject msg;
@@ -370,6 +465,11 @@ void EstadoPartida::onAnularPausa() {
     qDebug() << "Reanudar";
 }
 
+/**
+ * @brief Envía un mensaje JSON al servidor vía WebSocket.
+ *
+ * @param msg Objeto JSON a transmitir.
+ */
 void EstadoPartida::enviarMsg(QJsonObject& msg) {
     if(websocket) {
         QJsonDocument doc(msg);
@@ -382,11 +482,19 @@ void EstadoPartida::enviarMsg(QJsonObject& msg) {
 /// Cola de eventos
 //////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Encola un evento recibido para su procesamiento.
+ *
+ * @param evento Objeto JSON con el evento.
+ */
 void EstadoPartida::recibirEvento(const QJsonObject& evento) {
     colaEventos.enqueue(evento);
     procesarSiguienteEvento();
 }
 
+/**
+ * @brief Procesa el siguiente evento en cola si no hay otro en ejecución.
+ */
 void EstadoPartida::procesarSiguienteEvento() {
     if (enEjecucion || colaEventos.isEmpty())
         return;
@@ -455,6 +563,12 @@ void EstadoPartida::procesarSiguienteEvento() {
 /// Procesar mensajes
 //////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Procesa un evento de tipo 'card_played' con animación.
+ *
+ * @param data Datos del evento en formato JSON.
+ * @param callback Función a ejecutar una vez completada la animación.
+ */
 void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> callback) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QJsonObject cartaJson = data["carta"].toObject();
@@ -530,6 +644,12 @@ void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> c
     anim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
+/**
+ * @brief Procesa un evento de tipo 'card_drawn', reparte cartas con animaciones.
+ *
+ * @param data Datos del evento en formato JSON.
+ * @param callback Función a ejecutar tras finalizar todas las animaciones.
+ */
 void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> callback) {
 
     QJsonObject cartaJson = data.value("carta").toObject();
@@ -614,6 +734,9 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
     }
 }
 
+/**
+ * @brief Inicializa los botones de acción y etiquetas de puntuación.
+ */
 void EstadoPartida::iniciarBotonesYEtiquetas() {
     // Puntuaciones
     puntosEquipo1Title = new QLabel("Pt. Equipo 1", this);
@@ -662,6 +785,11 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
     pausadosLabel->setAlignment(Qt::AlignCenter);
 }
 
+/**
+ * @brief Procesa el inicio de partida ('start_game').
+ *
+ * @param data Datos iniciales de la partida.
+ */
 void EstadoPartida::procesarStartGame(QJsonObject data) {
     this->setPartidaIniciada(true);
     ocultarOverlayEspera();
@@ -677,11 +805,23 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
     });
 }
 
+/**
+ * @brief Procesa actualización de turno ('turn_update'), muestra mensaje.
+ *
+ * @param data Datos del turno en JSON.
+ * @param callback Función tras cerrar el mensaje.
+ */
 void EstadoPartida::procesarTurnUpdate(QJsonObject data, std::function<void()> callback) {
     QString mensaje = data.value("message").toString("Turno desconocido");
     this->mostrarMensaje(mensaje, callback);
 }
 
+/**
+ * @brief Procesa fin de partida ('end_game'), muestra ganador.
+ *
+ * @param data Datos finales de la partida.
+ * @param callback Función opcional para después del mensaje.
+ */
 void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*callback*/) {
     int ganador = data.value("ganador_equipo").toInt();
     int puntos1 = data.value("puntos_equipo_1").toInt();
@@ -699,6 +839,12 @@ void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*ca
     }, this);
 }
 
+/**
+ * @brief Procesa cambio de fase ('phase_update'), calcula puntos de triunfo.
+ *
+ * @param data Datos de la fase.
+ * @param callback Función tras actualizar puntuaciones.
+ */
 void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> callback) {
     this->mostrarMensaje("Cambio a fase de arrastre", [=]() {
         if (!cartaTriunfo) {
@@ -750,6 +896,12 @@ void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> 
     });
 }
 
+/**
+ * @brief Procesa resultado de baza ('round_result'), muestra overlay y puntúa.
+ *
+ * @param data Datos de resultado de la ronda.
+ * @param callback Función tras finalizar todos los procesos.
+ */
 void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> callback) {
     QJsonObject ganador = data.value("ganador").toObject();
     QString nombre = ganador.value("nombre").toString("Desconocido");
@@ -801,6 +953,12 @@ void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> 
     }
 }
 
+/**
+ * @brief Procesa solicitud de pausa ('pause').
+ *
+ * @param data Datos de la solicitud.
+ * @param callback Función tras mostrar mensaje.
+ */
 void EstadoPartida::procesarPause(QJsonObject data, std::function<void()> callback) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QString nombre = data["jugador"].toObject()["nombre"].toString();
@@ -814,6 +972,12 @@ void EstadoPartida::procesarPause(QJsonObject data, std::function<void()> callba
     mostrarMensaje(msg, callback);
 }
 
+/**
+ * @brief Procesa anulación de pausa ('resume').
+ *
+ * @param data Datos de la anulación.
+ * @param callback Función tras mostrar mensaje.
+ */
 void EstadoPartida::procesarResume(QJsonObject data, std::function<void()> callback) {
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QString nombre = data["jugador"].toObject()["nombre"].toString();
@@ -827,6 +991,12 @@ void EstadoPartida::procesarResume(QJsonObject data, std::function<void()> callb
     mostrarMensaje(msg, callback);
 }
 
+/**
+ * @brief Procesa pausa global ('all_pause'), finaliza la partida.
+ *
+ * @param data Datos del evento.
+ * @param callback Función opcional tras mostrar mensaje.
+ */
 void EstadoPartida::procesarAllPause(QJsonObject data, std::function<void()> callback) {
     QString mensaje = "La partida ha sido pausada";
     VentanaInfo* info = new VentanaInfo(mensaje, [this](){
@@ -835,6 +1005,12 @@ void EstadoPartida::procesarAllPause(QJsonObject data, std::function<void()> cal
     }, this);
 }
 
+/**
+ * @brief Procesa un error recibido del servidor ('error').
+ *
+ * @param data Datos del error.
+ * @param callback Función tras cerrar el popup.
+ */
 void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callback) {
     auto *popup = new QLabel(data.value("message").toString("Error desconocido"), this);
     popup->setStyleSheet("QLabel {"
@@ -878,6 +1054,13 @@ void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callba
 /// Overlay
 //////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Muestra un mensaje superpuesto con opacidad animada.
+ *
+ * @param msg Texto a mostrar.
+ * @param callback Función tras desaparecer el mensaje.
+ * @param duracion Tiempo de visualización en milisegundos (por defecto).
+ */
 void EstadoPartida::mostrarMensaje(const QString& msg, std::function<void()> callback, int duracion) {
     if(overlay) {
         delete overlay;
@@ -941,6 +1124,12 @@ void EstadoPartida::mostrarMensaje(const QString& msg, std::function<void()> cal
 /// Overlay espera
 //////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Muestra un overlay mientras llegan jugadores ('player_joined'/'player_left').
+ *
+ * @param jugadoresCola Jugadores actualmente en cola.
+ * @param jugadoresMax Jugadores requeridos.
+ */
 void EstadoPartida::mostrarOverlayEspera(int jugadoresCola, int jugadoresMax) {
     if (overlayEspera) {
         overlayEspera->deleteLater();
@@ -966,12 +1155,21 @@ void EstadoPartida::mostrarOverlayEspera(int jugadoresCola, int jugadoresMax) {
     overlayEspera->show();
 }
 
+/**
+ * @brief Actualiza el texto del overlay de espera.
+ *
+ * @param jugadoresCola Jugadores actualmente en cola.
+ * @param jugadoresMax Jugadores requeridos.
+ */
 void EstadoPartida::actualizarOverlayEspera(int jugadoresCola, int jugadoresMax) {
     if (labelEspera) {
         labelEspera->setText(QString("Esperando jugadores... (%1/%2)").arg(jugadoresCola).arg(jugadoresMax));
     }
 }
 
+/**
+ * @brief Oculta y destruye el overlay de espera.
+ */
 void EstadoPartida::ocultarOverlayEspera() {
     if (overlayEspera) {
         overlayEspera->deleteLater();
@@ -980,6 +1178,14 @@ void EstadoPartida::ocultarOverlayEspera() {
     }
 }
 
+/**
+ * @brief Maneja eventos antes del inicio de partida.
+ *
+ * Procesa 'player_joined' y 'player_left'.
+ *
+ * @param tipo Tipo de evento.
+ * @param data Datos del evento en JSON.
+ */
 void EstadoPartida::manejarEventoPrePartida(const QString& tipo, const QJsonObject& data) {
     if (tipo == "player_joined" || tipo == "player_left") {
         int jugadoresCola = data.value("jugadores").toInt();
@@ -1001,6 +1207,13 @@ void EstadoPartida::manejarEventoPrePartida(const QString& tipo, const QJsonObje
     }
 }
 
+/**
+ * @brief Procesa mensajes entrantes de WebSocket.
+ *
+ * Enruta a pre-partida o al sistema de eventos.
+ *
+ * @param mensaje Cadena JSON recibida.
+ */
 void EstadoPartida::procesarMensajeWebSocket(const QString& mensaje) {
     QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
     if (!doc.isObject()) return;

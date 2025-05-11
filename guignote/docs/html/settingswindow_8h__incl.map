@@ -1,9 +1,0 @@
-<map id="settingswindow.h" name="settingswindow.h">
-<area shape="rect" id="Node000001" title="Declaración de la clase SettingsWindow, ventana de configuración de la aplicación." alt="" coords="79,5,214,31"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,79,80,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="131,33,73,73,70,68,128,28"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="104,79,189,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,31,149,65,144,65,144,31"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="213,79,283,104"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="164,28,222,68,219,73,161,33"/>
-</map>

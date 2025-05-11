@@ -1,5 +1,0 @@
-<map id="Posicion" name="Posicion">
-<area shape="rect" id="Node000001" title="Zona visual en la que un jugador puede colocar una carta durante su turno." alt="" coords="5,79,81,104"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="10,5,77,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="46,44,46,79,41,79,41,44"/>
-</map>

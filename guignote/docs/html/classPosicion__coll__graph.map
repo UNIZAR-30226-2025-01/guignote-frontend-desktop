@@ -1,8 +1,0 @@
-<map id="Posicion" name="Posicion">
-<area shape="rect" id="Node000001" title="Zona visual en la que un jugador puede colocar una carta durante su turno." alt="" coords="6,168,82,193"/>
-<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="42,44,46,168,41,168,37,45"/>
-<area shape="rect" id="Node000003" href="$classCarta.html" title="Clase que representa una carta interactiva en la interfaz gráfica." alt="" coords="61,80,118,105"/>
-<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="57,41,83,78,79,81,53,44"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="79,119,53,169,48,166,74,117"/>
-</map>
