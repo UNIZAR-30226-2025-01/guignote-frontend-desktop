@@ -17,6 +17,7 @@
 #include "mano.h"
 #include "botonaccion.h"
 #include <QWidget>
+#include <QMap>
 #include <QJsonObject>
 #include <QTimer>
 #include <QMediaPlayer>
@@ -168,7 +169,13 @@ public slots:
      */
     void onAnularPausa();
 
+    void onGotUserId         (QNetworkReply* reply);
+    void onGotEquippedItems  (QNetworkReply* reply);
+
+
 private:
+    QMap<int, int> mapaSkinsPorJugador;
+
     int bg;
     bool esquinasCreadas = false;
     void crearEsquinas();
@@ -194,6 +201,10 @@ private:
     bool enPausa = false;
     int jugadoresPausa = 0;
     bool partidaIniciada = false;
+
+    QNetworkAccessManager* m_netMgr;        // ya lo usas para WS, reutilízalo aquí
+    int                  m_equippedSkinId;  // guardará el ID que venga del backend
+
 
     QLabel* legendLabel = nullptr;
 

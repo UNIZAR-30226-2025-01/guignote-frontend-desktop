@@ -73,6 +73,9 @@ private:
     QString m_userId;
     QNetworkAccessManager *m_netMgr;
 
+    /// ID de la skin que viene equipada desde el servidor
+    int m_equippedSkinId{-1};
+
     void populateDeckPage(const QJsonArray &skins);
 
     /**
@@ -89,6 +92,8 @@ private slots:
 
     void onGetUserIdReply(QNetworkReply *reply);
     void onUnlockedSkinsReply(QNetworkReply *reply);
+
+    void onDeckSelected(int skinId);
 };
 
 #endif // INVENTORYWINDOW_H
