@@ -225,19 +225,63 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                     // Si se recibe un token, se asume que el registro fue exitoso y se abre MainWindow.
                     if (respObj.contains("token")) {
                         QString token = respObj["token"].toString();
+                        int userId = respObj.value("user_id").toInt();
                         qDebug() << "Token recibido:" << token;
                         // Almacenamos el token de forma persistente
                         QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
+                        // Almacenamos el token de forma persistente
                         settings.setValue("auth/token", token);
-                        MainWindow *mainWin = new MainWindow();
-                        mainWin->move(this->geometry().center() - mainWin->rect().center());
-                        mainWin->show();
-                        if(this->parentWidget()){
-                            this->parentWidget()->close();
-                            this->close();
-                        } else {
-                            this->close();
-                        }
+
+                        // —————————————— Inserta aquí ——————————————
+                        // 1) Obtener el user_id a partir del nombre de usuario
+                        QNetworkAccessManager *mgrId = new QNetworkAccessManager(this);
+                        QUrl urlId(QStringLiteral(
+                                       "http://188.165.76.134:8000/usuarios/usuarios/id/%1/")
+                                       .arg(nombre));
+                        QNetworkRequest reqId(urlId);
+                        auto *replyId = mgrId->get(reqId);
+                        connect(replyId, &QNetworkReply::finished, this, [this, replyId, mgrId]() {
+                            replyId->deleteLater();
+                            if (replyId->error() != QNetworkReply::NoError) {
+                                qWarning() << "Error al obtener user_id:" << replyId->errorString();
+                                mgrId->deleteLater();
+                                return;
+                            }
+                            QJsonDocument doc = QJsonDocument::fromJson(replyId->readAll());
+                            int userId = doc.object().value("user_id").toInt(-1);
+                            mgrId->deleteLater();
+                            if (userId < 0) {
+                                qWarning() << "user_id no válido";
+                                return;
+                            }
+
+                            // 2) Desbloquear siempre la skin 1 tras el registro
+                            QNetworkAccessManager *mgrUnlock = new QNetworkAccessManager(this);
+                            QUrl urlUnlock(QStringLiteral(
+                                               "http://188.165.76.134:8000/usuarios/unlock_skin/%1/")
+                                               .arg(userId));
+                            QNetworkRequest reqUnlock(urlUnlock);
+                            reqUnlock.setHeader(QNetworkRequest::ContentTypeHeader,
+                                                "application/json");
+                            QJsonObject body;
+                            body["skin_id"] = 1;
+                            auto *replyUnlock = mgrUnlock->post(reqUnlock, QJsonDocument(body).toJson());
+                            connect(replyUnlock, &QNetworkReply::finished, this, [replyUnlock, mgrUnlock]() {
+                                if (replyUnlock->error() != QNetworkReply::NoError)
+                                    qWarning() << "unlock_skin(1) failed:" << replyUnlock->errorString();
+                                else
+                                    qDebug() << "unlock_skin(1) success";
+                                replyUnlock->deleteLater();
+                                mgrUnlock->deleteLater();
+                            });
+                        });
+                        // ————————————————————————————————————————————————
+
+                        // Haz esto:
+                        // 1) Cierra sólo la ventana de registro
+                        this->close();
+                        // 2) Emite la señal que ya tienes conectada en MainWindow para abrir el login
+                        emit openLoginRequested();
                     } else {
                         qWarning() << "Respuesta sin token:" << responseData;
                     }

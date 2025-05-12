@@ -20,6 +20,9 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPropertyAnimation>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QJsonArray>
 #include <QPushButton>
 #include <QGraphicsOpacityEffect>
 #include <QButtonGroup>
@@ -51,9 +54,13 @@ private:
     QStackedWidget *stackedWidget;   ///< Contenedor apilado para los contenidos de cada pestaña.
     QPushButton *closeButton;        ///< Botón para cerrar la ventana.
 
+    int m_numericUserId = -1;
+
     // Animaciones de transición
     QPropertyAnimation *fadeOutAnim; ///< Animación de desvanecimiento al salir de una pestaña.
     QPropertyAnimation *fadeInAnim;  ///< Animación de aparición al entrar a una pestaña.
+
+    QWidget        *deckPage;
 
     // Efectos visuales aplicados a los contenidos
     QGraphicsOpacityEffect *deckEffect; ///< Efecto de opacidad para la vista de barajas.
@@ -62,6 +69,11 @@ private:
     // Grupos de botones para selección exclusiva
     QButtonGroup *deckGroup; ///< Grupo de botones para seleccionar baraja.
     QButtonGroup *matGroup;  ///< Grupo de botones para seleccionar tapete.
+
+    QString m_userId;
+    QNetworkAccessManager *m_netMgr;
+
+    void populateDeckPage(const QJsonArray &skins);
 
     /**
      * @brief Configura los elementos de la interfaz de usuario.
@@ -74,6 +86,9 @@ private slots:
      * @param index Índice de la pestaña seleccionada.
      */
     void onTabChanged(int index);
+
+    void onGetUserIdReply(QNetworkReply *reply);
+    void onUnlockedSkinsReply(QNetworkReply *reply);
 };
 
 #endif // INVENTORYWINDOW_H

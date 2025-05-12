@@ -33,6 +33,13 @@
 #include <QEnterEvent>
 #include <QListWidget>
 #include <QFrame>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
 
 /* ------------------------------------------------------------------ */
 /*  ESTILO QSS COMÚN PARA LAS TARJETAS                                */
@@ -398,46 +405,36 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
     root->addLayout(main);
 
     /* ====================  Página 1 : Barajas ==================== */
-    QWidget *deckPage = new QWidget;
+    m_userId = usr;
+    deckPage = new QWidget;
     deckPage->setStyleSheet("background:#1e1e1e;");
     makeFadeEffect(deckPage);
     deckGroup = new QButtonGroup(this);
     deckGroup->setExclusive(true);
-    QVBoxLayout *vDeck = new QVBoxLayout(deckPage);
+
+    auto *vDeck = new QVBoxLayout(deckPage);
     vDeck->setAlignment(Qt::AlignTop);
     QLabel *lblDeck = new QLabel("Gestión de Barajas");
     lblDeck->setStyleSheet("color:#fff;font-size:24px;font-weight:bold;");
     vDeck->addWidget(lblDeck, 0, Qt::AlignHCenter);
 
-    QStringList deckImages = {
-        ":/tiles/base.png",
-        ":/tiles/poker.png",
-        "", "", "", ""
-    };
-    QGridLayout *gridDeck = new QGridLayout;
-    gridDeck->setSpacing(15);
-    for (int i = 0; i < 6; ++i) {
-        QPixmap pix(deckImages[i]);             // carga directa desde recurso
-        CardTile *tile = new CardTile(
-            QString("Baraja %1").arg(i+1), pix
-            );
-        bool has = !pix.isNull();
-        tile->setCheckable(has);
-        tile->setEnabled(has);
-        if (has)
-            deckGroup->addButton(tile, i);
-        gridDeck->addWidget(tile, i/3, i%3);
-    }
-    vDeck->addLayout(gridDeck);
-
-    // ¡AHORA! Conecta deckGroup para guardar la selección
-    connect(deckGroup, &QButtonGroup::idClicked,
-            this, [=](int id){
-        QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
-        QSettings settings("Grace Hopper", config);
-        settings.setValue("selectedDeck", id);
-            });
+    // 2) Añadir la página vacía al stack (sin tiles aún)
     stackedWidget->addWidget(deckPage);
+
+
+    // 3) Primero: pedir el ID numérico para el username m_userId
+    m_netMgr = new QNetworkAccessManager(this);
+
+    // Slot específico para la primera respuesta
+    QUrl urlId(QStringLiteral(
+                   "http://188.165.76.134:8000/usuarios/usuarios/id/%1/")
+                   .arg(m_userId));
+    QNetworkRequest reqId(urlId);
+    QNetworkReply *replyId = m_netMgr->get(reqId);
+    connect(replyId, &QNetworkReply::finished, this, [this, replyId]() {
+        onGetUserIdReply(replyId);
+    });
+
 
     /* ====================  Página 2 : Tapetes ==================== */
     QWidget *matPage = new QWidget;
@@ -498,9 +495,6 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
     QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
     QSettings s("Grace Hopper", config);        // ① mismo scope que al salvar
 
-    int selDeck = s.value("selectedDeck", 0).toInt();
-    if (auto *b = deckGroup->button(selDeck))   // ② restaura check
-        b->setChecked(true);
 
     int selMat = s.value("selectedMat", 0).toInt();
     if (auto *b2 = matGroup->button(selMat))   // ② restaura check
@@ -518,6 +512,131 @@ void InventoryWindow::onTabChanged(int row)
 {
     slidePages(stackedWidget, row, 350, -1);  // slide de derecha a izquierda
 }
+
+void InventoryWindow::onGetUserIdReply(QNetworkReply *reply)
+{
+    // 1) Comprobar error y borrar reply
+    if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Error obteniendo numeric ID:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+    QJsonDocument docId = QJsonDocument::fromJson(reply->readAll());
+    reply->deleteLater();
+    if (!docId.isObject()) return;
+
+    // 2) Extraer user_id
+    m_numericUserId = docId.object().value("user_id").toInt(-1);
+    if (m_numericUserId < 0) {
+        qWarning() << "Respuesta inválida, no hay user_id";
+        return;
+    }
+
+
+    // 4) Con ID numérico listo, lanzar petición de skins
+    QUrl urlSkins(QStringLiteral(
+                      "http://188.165.76.134:8000/usuarios/get_unlocked_items/%1/")
+                      .arg(m_numericUserId));
+    QNetworkRequest reqSkins(urlSkins);
+    QNetworkReply *replySk = m_netMgr->get(reqSkins);
+    connect(replySk, &QNetworkReply::finished, this, [this, replySk]() {
+        onUnlockedSkinsReply(replySk);
+    });
+}
+
+
+
+void InventoryWindow::onUnlockedSkinsReply(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Error al obtener skins:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+    QByteArray data = reply->readAll();
+    reply->deleteLater();
+
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isObject()) return;
+    QJsonArray skins = doc.object().value("unlocked_skins").toArray();
+    populateDeckPage(skins);
+}
+
+void InventoryWindow::populateDeckPage(const QJsonArray &skins)
+{
+    auto vlay = static_cast<QVBoxLayout*>(deckPage->layout());
+
+    // --- 1) Eliminar el antiguo grid si existía ---
+    if (vlay->count() > 1) {
+        // Extraemos el item en la posición 1
+        QLayoutItem *li = vlay->takeAt(1);
+        if (li) {
+            // Si era un layout, lo borramos
+            if (auto oldLayout = li->layout()) {
+                delete oldLayout;
+            }
+            // Y borramos el QLayoutItem
+            delete li;
+        }
+    }
+
+    // --- 2) Recoger IDs desbloqueados ---
+    QSet<int> unlockedIds;
+    for (auto v : skins)
+        unlockedIds.insert(v.toObject().value("id").toInt());
+
+    // --- 3) Mapa interno id→recurso ---
+    static const QMap<int, QString> resourceMap = {
+        {1, ":/tiles/base.png"},
+        {2, ":/tiles/poker.png"}
+    };
+
+    // --- 4) Construir el nuevo grid ---
+    auto *grid = new QGridLayout;
+    grid->setSpacing(15);
+    const int cols = 3;
+    for (int idx = 1; idx <= 6; ++idx) {
+        QString label = QString("Baraja %1").arg(idx);
+        QPixmap pix;
+        bool ok = unlockedIds.contains(idx) && resourceMap.contains(idx);
+        if (ok) pix.load(resourceMap[idx]);
+
+        CardTile *tile = new CardTile(label, pix);
+        tile->setEnabled(ok);
+        tile->setCheckable(ok);
+        if (ok) deckGroup->addButton(tile, idx);
+
+        int row = (idx-1)/cols, col = (idx-1)%cols;
+        grid->addWidget(tile, row, col);
+    }
+
+    // --- 5) Insertar el nuevo grid en la posición 1 ---
+    vlay->insertLayout(1, grid);
+
+    // --- 6) Restaurar o asignar selección ---
+    QString cfg = QString("Sota, Caballo y Rey_%1").arg(m_userId);
+    QSettings settings("Grace Hopper", cfg);
+    int stored = settings.value("selectedDeck", -1).toInt();
+    if (unlockedIds.contains(stored) && deckGroup->button(stored)) {
+        deckGroup->button(stored)->setChecked(true);
+    } else if (!unlockedIds.isEmpty()) {
+        int firstId = *unlockedIds.begin();
+        if (auto *btn = deckGroup->button(firstId)) {
+            btn->setChecked(true);
+            settings.setValue("selectedDeck", firstId);
+        }
+    }
+
+    // --- 7) Guardar futura selección al pulsar ---
+    connect(deckGroup, QOverload<int>::of(&QButtonGroup::idClicked),
+            this, [cfg](int id){
+                QSettings s("Grace Hopper", cfg);
+                s.setValue("selectedDeck", id);
+            });
+
+}
+
+
 
 /**
  * @brief Destructor de InventoryWindow.
