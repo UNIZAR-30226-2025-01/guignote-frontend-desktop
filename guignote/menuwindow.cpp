@@ -238,9 +238,11 @@
  
      // ------------- EVENTOS DE CLICK EN CARTAS -------------
      connect(boton1v1, &ImageButton::clicked, this, [this, userKey]() {
+         if (!nameHasLoaded) return;
          jugarPartida(userKey, token, 2);
      });
      connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
+         if (!nameHasLoaded) return;
          jugarPartida( userKey, token, 4);
      });
  
@@ -273,6 +275,7 @@
  
      // Conectar la señal del botón con el slot
      connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
+         if (!nameHasLoaded) return;
          RejoinWindow *rjWin = new RejoinWindow(
              this->salas,
              this->salasPausadas,
@@ -308,6 +311,7 @@
      invisibleButton->setStyleSheet("background: transparent; border: none;");
      invisibleButton->setCursor(Qt::PointingHandCursor);
      connect(invisibleButton, &QPushButton::clicked, [=]() {
+         if (!nameHasLoaded) return;
          MyProfileWindow *profileWin = new MyProfileWindow(userKey, this);
          profileWin->setModal(true);
          profileWin->show();
@@ -349,6 +353,8 @@
                                               ).arg(nombre).arg(ELO).arg(rank);
  
                      usrLabel->setText(UsrELORank);
+
+                     nameHasLoaded = true;
  
                      // ------------- MÚSICA -------------
                      backgroundPlayer = new QMediaPlayer(this);
@@ -387,6 +393,7 @@
  
      // ------------- EVENTOS DE CLICK EN ICONOS -------------
      connect(settings, &Icon::clicked, [=]() {
+         if (!nameHasLoaded) return;
          settings->setImage(":/icons/darkenedaudio.png", 60, 60);
          SettingsWindow *settingsWin = new SettingsWindow(this, this, usr);
          settingsWin->setModal(true);
@@ -396,6 +403,7 @@
          settingsWin->exec();
      });
      connect(friends, &Icon::clicked, this, [=]() {
+         if (!nameHasLoaded) return;
          friends->setImage(":/icons/darkenedfriends.png", 60, 60);
          auto *fw = new friendswindow(userKey, this);
          fw->setModal(true);
@@ -404,6 +412,7 @@
      });
  
      connect(exit, &Icon::clicked, this, [this]() {
+         if (!nameHasLoaded) return;
          exit->setImage(":/icons/darkeneddoor.png", 60, 60);
          QDialog *confirmDialog = new QDialog(this);
          confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -466,6 +475,7 @@
          centerTimer->start();
      });
      connect(inventory, &Icon::clicked, this, [this]() {
+         if (!nameHasLoaded) return;
          inventory->setImage(":/icons/darkenedchest.png", 60, 60);
          InventoryWindow *inventoryWin = new InventoryWindow(this,usr);
          inventoryWin->setModal(true);
@@ -475,6 +485,7 @@
          inventoryWin->exec();
      });
      connect(rankings, &Icon::clicked, this, [this, userKey]() {
+         if (!nameHasLoaded) return;
          rankings->setImage(":/icons/darkenedtrophy.png", 60, 60);
  
          RankingWindow *rankingWin = new RankingWindow(userKey, this);
@@ -487,6 +498,7 @@
          rankingWin->exec();
      });
      connect(customGames, &Icon::clicked, this, [userKey, this](){
+         if (!nameHasLoaded) return;
          customGames->setImage(":/icons/darkenedgameslist.png", 50, 50);
 
          // Crear pantalla nueva aquí.

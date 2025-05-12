@@ -85,6 +85,8 @@ void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
                           "\r\n"
                           ).arg(chatID, token.trimmed());
 
+    qDebug() << "[DDD] " << httpReq;
+
     socket->write(httpReq.toUtf8());
     if (!socket->waitForBytesWritten(3000)) {
         qDebug() << "GameMessageWindow: Error al enviar petición:" << socket->errorString();
@@ -116,6 +118,7 @@ void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
         return;
     }
     QJsonArray mensajes = doc.object()["mensajes"].toArray();
+    qDebug() << "[AAA] Numero de mensajes recibidos: " << mensajes.size();
     for (int i = mensajes.size() - 1; i >= 0; --i) {
         QJsonObject msg = mensajes[i].toObject();
         QString senderId = QString::number(msg["emisor"].toInt());

@@ -106,6 +106,8 @@ private:
     // Skins seleccionadas
     int fondo = 1;
     QTimer *rejoinTimer;
+
+    bool nameHasLoaded = false;
 };
 
 #endif // MENUWINDOW_H
