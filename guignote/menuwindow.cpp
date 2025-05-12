@@ -219,19 +219,19 @@
      // Creamos ya el botón (pero oculto)
      ReconnectButton = new QPushButton("Reconectarse", this);
      ReconnectButton->setVisible(false);
- 
-     ReconnectButton->setStyleSheet(
-         "QPushButton {"
-         "   background-color: #c2c2c3;"
-         "   color: #171718;"
-         "   font-size: 20px;"
-         "   font-weight: bold;"
-         "   padding: 12px 25px;"
-         "}"
-         "QPushButton:hover {"
-         "   background-color: #9b9b9b;"
-         "}"
-         );
+
+     ReconnectButton->setStyleSheet(R"(
+    QPushButton {
+        background-color: #171718;  /* Fondo oscuro */
+        color: white;               /* Color del texto */
+        border: 2px solid #333333;  /* Borde oscuro */
+        border-radius: 5px;         /* Esquinas redondeadas */
+    }
+
+    QPushButton:hover {
+        background-color: #2a2a2b;  /* Fondo más claro al pasar el ratón */
+    }
+    )");
  
      // Establecer una altura y anchura fija para el botón
      ReconnectButton->setFixedSize(200, 50);  // Establece un tamaño fijo
@@ -259,7 +259,7 @@
  
      setLayout(mainLayout);
  
-     //checkRejoin();
+     checkRejoin();
  
      // ------------- BARRAS (BARS) -------------
      bottomBar = new QFrame(this);
