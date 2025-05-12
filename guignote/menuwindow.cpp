@@ -275,6 +275,7 @@
      connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
          RejoinWindow *rjWin = new RejoinWindow(
              this->salas,
+             this->salasPausadas,
              this->fondo,
              this->userKey,
              this->usr,

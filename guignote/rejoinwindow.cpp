@@ -32,8 +32,8 @@
  * Configura el diálogo (sin bordes y con estilo), carga el token,
  * fija tamaño y estilo, y llama a setupUI() para construir la interfaz.
  */
-RejoinWindow::RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent)
-    : QDialog(parent), salas(jsonArray) {
+RejoinWindow::RejoinWindow(QJsonArray salas, QJsonArray salasPausadas, int fondo, QString &userKey, QString usr, QWidget *parent)
+    : QDialog(parent), salas(salas), salasPausadas(salasPausadas) {
     this->fondo = fondo;
     this->usr = usr;
     this->userKey = userKey;
@@ -59,6 +59,7 @@ void RejoinWindow::setupUI() {
     mainLayout->setAlignment(Qt::AlignTop);
 
     mainLayout->addLayout(createHeaderLayout());
+    mainLayout->addLayout(checkboxLayout());
     populateSalas();
 
     setLayout(mainLayout);
@@ -73,10 +74,13 @@ void RejoinWindow::setupUI() {
  */
 QHBoxLayout* RejoinWindow::createHeaderLayout() {
     QHBoxLayout *headerLayout = new QHBoxLayout();
-    titleLabel = new QLabel("Perfil", this);
+
+    // Título
+    titleLabel = new QLabel("Reconexión", this);
     titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     titleLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold;");
 
+    // Botón de cerrar
     closeButton = new QPushButton(this);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
     closeButton->setIconSize(QSize(18, 18));
@@ -87,11 +91,45 @@ QHBoxLayout* RejoinWindow::createHeaderLayout() {
         );
     connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
 
+    // Agregar los widgets al layout
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
     headerLayout->addWidget(closeButton);
+
     return headerLayout;
 }
+
+QHBoxLayout* RejoinWindow::checkboxLayout(){
+    QHBoxLayout *layout = new QHBoxLayout();
+
+    // Crear el QCheckBox
+    pausadas = new QCheckBox("Salas Pausadas", this);
+    pausadas->setStyleSheet(R"(
+        QCheckBox { color: #ffffff; font-size: 14px; }
+        QCheckBox::indicator { width: 16px; height: 16px; }
+        QCheckBox::indicator:unchecked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+            image: url(:/icons/cross.png);
+        }
+    )");
+
+    // Conectar el cambio de estado del checkbox a la variable 'pausadas'
+    connect(pausadas, &QCheckBox::toggled, this, [this](bool checked) {
+        pausadasB = checked;  // Asigna el estado del checkbox a la variable 'pausadas'
+        qDebug() << "Estado de pausadas:" << pausadasB;
+    });
+
+    layout->addWidget(pausadas);  // Agregar el QCheckBox debajo del título
+    layout->setAlignment(pausadas, Qt::AlignCenter);
+
+    return layout;
+}
+
 
 /**
  * @brief Rellena el diálogo con las salas reconectables.

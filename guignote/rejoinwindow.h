@@ -19,6 +19,7 @@
 #include <QIcon>
 #include <QJsonArray>
 #include <QWebSocket>
+#include <QCheckBox>
 
 /**
  * @class RejoinWindow
@@ -39,7 +40,7 @@ public:
      * @param usr Nombre del usuario.
      * @param parent Widget padre (opcional).
      */
-    explicit RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent = nullptr);
+    explicit RejoinWindow(QJsonArray salas, QJsonArray salasPausadas, int fondo, QString &userKey, QString usr, QWidget *parent = nullptr);
 
 private:
     /**
@@ -52,6 +53,8 @@ private:
      * @return Layout horizontal con encabezado.
      */
     QHBoxLayout* createHeaderLayout();
+
+    QHBoxLayout* checkboxLayout();
 
     /**
      * @brief Llena la lista con las salas disponibles.
@@ -80,6 +83,7 @@ private:
 
     // --- Atributos privados ---
     QJsonArray salas;              ///< Lista de partidas disponibles para reconexión.
+    QJsonArray salasPausadas;
     QPushButton *closeButton;      ///< Botón para cerrar la ventana.
     QLabel *titleLabel;            ///< Título de la ventana.
     QVBoxLayout *mainLayout;       ///< Layout vertical principal.
@@ -89,6 +93,9 @@ private:
     int id;                        ///< ID interno del jugador (si aplica).
     QString token;                 ///< Token de autenticación.
     QWebSocket *webSocket = nullptr; ///< Conexión WebSocket para comunicación en tiempo real.
+
+    QCheckBox *pausadas;
+    bool pausadasB;
 };
 
 #endif // REJOINWINDOW_H
