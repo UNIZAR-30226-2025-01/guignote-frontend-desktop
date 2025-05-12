@@ -24,6 +24,78 @@
 #include <QMenu>
 #include "ventanasalirpartida.h"
 
+void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNetworkAccessManager* netMgr, std::function<void()> onComplete) {
+    if (jugadores.isEmpty()) {
+        if (onComplete) onComplete();
+        return;
+    }
+
+    int* pendientes = new int(jugadores.size());
+
+    for (Jugador* jugador : jugadores) {
+        if (!jugador) {
+            (*pendientes)--;
+            if (*pendientes == 0 && onComplete) onComplete();
+            continue;
+        }
+
+        QUrl urlId(QStringLiteral("http://188.165.76.134:8000/usuarios/usuarios/id/%1/").arg(jugador->nombre));
+        QNetworkReply* replyId = netMgr->get(QNetworkRequest(urlId));
+
+        QObject::connect(replyId, &QNetworkReply::finished, this, [=]() {
+            if (replyId->error() != QNetworkReply::NoError) {
+                qWarning() << "[SKIN] Error ID para" << jugador->nombre;
+                replyId->deleteLater();
+                (*pendientes)--;
+                if (*pendientes == 0 && onComplete) onComplete();
+                return;
+            }
+
+            QJsonDocument doc = QJsonDocument::fromJson(replyId->readAll());
+            replyId->deleteLater();
+            int userId = doc.object().value("user_id").toInt(-1);
+            if (userId < 0) {
+                (*pendientes)--;
+                if (*pendientes == 0 && onComplete) onComplete();
+                return;
+            }
+
+            QUrl urlEq(QStringLiteral("http://188.165.76.134:8000/usuarios/get_equipped_items/%1/").arg(userId));
+            QNetworkReply* replyEq = netMgr->get(QNetworkRequest(urlEq));
+
+            QObject::connect(replyEq, &QNetworkReply::finished, this, [=]() {
+                if (replyEq->error() != QNetworkReply::NoError) {
+                    qWarning() << "[SKIN] Error skin para" << jugador->nombre;
+                    replyEq->deleteLater();
+                    (*pendientes)--;
+                    if (*pendientes == 0 && onComplete) onComplete();
+                    return;
+                }
+
+                QJsonDocument doc = QJsonDocument::fromJson(replyEq->readAll());
+                replyEq->deleteLater();
+                if (!doc.isObject()) {
+                    (*pendientes)--;
+                    if (*pendientes == 0 && onComplete) onComplete();
+                    return;
+                }
+
+                int skinRawId = doc.object().value("equipped_skin").toObject().value("id").toInt(-1);
+                if (skinRawId > 0) {
+                    int skinId = skinRawId - 1;
+                    this->mapaSkinsJugadores[jugador->nombre] = skinId;
+                    qDebug() << "[SKIN] Guardado:" << jugador->nombre << "→" << skinId;
+                }
+
+                (*pendientes)--;
+                if (*pendientes == 0 && onComplete) onComplete();
+            });
+        });
+    }
+}
+
+
+
 /**
  * @brief Constructor de EstadoPartida.
  *
@@ -63,7 +135,6 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QStri
             }
         )");
     }
-    Carta::skin = style;
 
     //
     // ——— BGM DE PARTIDA ———
@@ -159,17 +230,17 @@ void EstadoPartida::init() {
         this->procesarMensajeWebSocket(mensaje);
     });
 
-     connect(websocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error) {
+    connect(websocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error) {
         qWarning() << "Error en WebSocket:" << websocket->errorString();
-         // Cerrar WebSocket
-         websocket->close();
-         // Volver al menú principal
-         if (onSalir) {
+        // Cerrar WebSocket
+        websocket->close();
+        // Volver al menú principal
+        if (onSalir) {
             onSalir();
-         }
-         // Destruir este widget
-         this->deleteLater();
-     });
+        }
+        // Destruir este widget
+        this->deleteLater();
+    });
 
     qDebug() << "Conectando a:" << wsUrl;
     websocket->open(QUrl(wsUrl));
@@ -215,8 +286,6 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
                     .toInt(-1);
     if (rawId > 0) {
         m_equippedSkinId = rawId - 1;
-        // Aplicamos directamente al renderer de Carta
-        Carta::skin = m_equippedSkinId;
         // Si ya arrancó la partida, refresca la vista:
         if (partidaIniciada) dibujarEstado();
     }
@@ -298,19 +367,6 @@ void EstadoPartida::limpiar() {
  * @param data Objeto JSON con los datos de la partida.
  */
 void EstadoPartida::actualizarEstado(const QJsonObject& data) {
-    limpiar();
-
-    QJsonArray jugadoresJson = data.value("jugadores").toArray();
-    for(const QJsonValue& val : jugadoresJson) {
-        QJsonObject obj = val.toObject();
-        Jugador* j = new Jugador;
-        j->id = obj["id"].toInt();
-        j->nombre = obj["nombre"].toString();
-        j->equipo = obj["equipo"].toInt();
-        j->numCartas = obj["num_cartas"].toInt();
-        jugadores.append(j);
-        mapJugadores[j->id] = j;
-    }
 
     chatId = data.value("chat_id").toInt();
     mazoRestante = data.value("mazo_restante").toInt();
@@ -335,15 +391,21 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
         QJsonObject cartaObj = cartaVal.toObject();
         QString palo = cartaObj["palo"].toString();
         QString valor = QString::number(cartaObj["valor"].toInt());
-        yo->mano->agnadirCarta(new Carta(palo, valor));
+        Carta* c = new Carta(palo, valor);
+        c->setSkin(mapaSkinsJugadores.value(yo->nombre, m_equippedSkinId));
+        yo->mano->agnadirCarta(c);
     }
+
 
     if(jugadores.size() == 2) {
         for(Jugador* j : jugadores) {
             if(j->id != miId) {
                 j->mano = new Mano(Orientacion::TOP, this, this);
-                for(int i = 0; i < j->numCartas; ++i)
-                    j->mano->agnadirCarta(new Carta());
+                for (int i = 0; i < j->numCartas; ++i) {
+                    Carta* c = new Carta();
+                    c->setSkin(mapaSkinsJugadores.value(j->nombre, 0));
+                    j->mano->agnadirCarta(c);
+                }
             }
         }
     } else {
@@ -357,8 +419,12 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
                     orient = (k++ == 0) ? Orientacion::LEFT : Orientacion::RIGHT;
                 }
                 j->mano = new Mano(orient, this, this);
-                for(int i = 0; i < j->numCartas; ++i)
-                    j->mano->agnadirCarta(new Carta());
+                for(int i = 0; i < j->numCartas; ++i) {
+                    Carta* c = new Carta();
+                    c->setSkin(mapaSkinsJugadores.value(j->nombre, 0));
+                    j->mano->agnadirCarta(c);
+                }
+
             }
             j->mano->ocultarCartaJugada();
         }
@@ -556,7 +622,7 @@ void EstadoPartida::onCartaDobleClick(Carta* carta) {
 
         this->enviarMsg(
             msg
-        );
+            );
     }
     qDebug() << "Jugar carta";
 }
@@ -570,7 +636,7 @@ void EstadoPartida::onCantar() {
         msg["accion"] = "cantar";
         this->enviarMsg(
             msg
-        );
+            );
     }
     qDebug() << "Cantar";
 }
@@ -584,7 +650,7 @@ void EstadoPartida::onCambiarSiete() {
         msg["accion"] = "cambiar_siete";
         this->enviarMsg(
             msg
-        );
+            );
     }
     qDebug() << "Cambiar siete";
 }
@@ -599,7 +665,7 @@ void EstadoPartida::onPausa() {
         msg["accion"] = "pausa";
         this->enviarMsg(
             msg
-        );
+            );
     }
     qDebug() << "Pausa";
 }
@@ -613,7 +679,7 @@ void EstadoPartida::onAnularPausa() {
         msg["accion"] = "anular_pausa";
         this->enviarMsg(
             msg
-        );
+            );
     }
     qDebug() << "Reanudar";
 }
@@ -732,79 +798,102 @@ void EstadoPartida::procesarSiguienteEvento() {
  * @param callback Función a ejecutar una vez completada la animación.
  */
 void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> callback) {
-    int jugadorId = data["jugador"].toObject()["id"].toInt();
+    int jugadorId         = data["jugador"].toObject()["id"].toInt();
     QJsonObject cartaJson = data["carta"].toObject();
-    QString paloJugado = cartaJson["palo"].toString();
-    QString valorJugado = QString::number(cartaJson["valor"].toInt());
+    QString paloJugado    = cartaJson["palo"].toString();
+    QString valorJugado   = QString::number(cartaJson["valor"].toInt());
 
     Jugador* jugador = mapJugadores.value(jugadorId, nullptr);
-    if(!jugador || !jugador->mano) return;
-
-    Carta* cartaParaAnimar = nullptr;
-    QPoint origenAnimacion;
-
-    // Yo juego la carta
-    if(jugadorId == miId) {
-        cartaParaAnimar = jugador->mano->extraerCarta(paloJugado, valorJugado);
-        cartaParaAnimar->interactuable = false;
-        if(cartaParaAnimar) {
-            origenAnimacion = cartaParaAnimar->mapToGlobal(QPoint(0, 0));
-            cartaParaAnimar->setParent(this);
-        } else {
-            cartaParaAnimar = new Carta(paloJugado, valorJugado, this);
-            origenAnimacion = jugador->mano->mapToGlobal(
-                QPoint(jugador->mano->width()/2, jugador->mano->height()/2)
-            );
-        }
-    }
-    // Juega otro jugador
-    else {
-        Carta* cartaPlaceholder = jugador->mano->pop();
-        if(cartaPlaceholder) {
-            origenAnimacion = cartaPlaceholder->mapToGlobal(QPoint(0, 0));
-            cartaPlaceholder->hide();
-            cartaPlaceholder->deleteLater();
-        } else {
-            origenAnimacion = jugador->mano->mapToGlobal(
-                QPoint(jugador->mano->width()/2, jugador->mano->height()/2)
-            );
-        }
-        cartaParaAnimar = new Carta(paloJugado, valorJugado, this);
-    }
-
-    // Si algo va mal
-    if(!cartaParaAnimar) {
-        jugador->mano->actualizarCartaJugada(paloJugado, valorJugado);
-        jugador->mano->dibujar();
-        this->dibujarEstado();
+    if (!jugador || !jugador->mano) {
+        if (callback) callback();
         return;
     }
 
-    // Animar
-    QPoint origenAnimacionLocal = this->mapFromGlobal(origenAnimacion);
+    Carta* cartaParaAnimar = nullptr;
+    QPoint origenGlobal;    // posición en coordenadas globales
+
+    if (jugadorId == miId) {
+        // Si soy yo, extraigo la carta de mi mano
+        cartaParaAnimar = jugador->mano->extraerCarta(paloJugado, valorJugado);
+        if (cartaParaAnimar) {
+            // Captura la posición global ANTES de reparentar
+            origenGlobal = cartaParaAnimar->mapToGlobal(QPoint(0,0));
+            // Ahora sí cambiamos de padre
+            cartaParaAnimar->setParent(this);
+        } else {
+            // Si no la tenemos en la mano, la creamos en el centro de la mano
+            cartaParaAnimar = new Carta(paloJugado, valorJugado, this);
+            origenGlobal = jugador->mano->mapToGlobal(
+                QPoint(jugador->mano->width()/2, jugador->mano->height()/2)
+                );
+        }
+        cartaParaAnimar->interactuable = false;
+        cartaParaAnimar->setSkin(
+            mapaSkinsJugadores.value(jugador->nombre, m_equippedSkinId)
+            );
+    }
+    else {
+        // Carta de otro jugador: usamos un placeholder de la mano
+        Carta* placeholder = jugador->mano->pop();
+        if (placeholder) {
+            origenGlobal = placeholder->mapToGlobal(QPoint(0,0));
+            placeholder->deleteLater();
+        } else {
+            origenGlobal = jugador->mano->mapToGlobal(
+                QPoint(jugador->mano->width()/2, jugador->mano->height()/2)
+                );
+        }
+        int skinRival = mapaSkinsJugadores.value(jugador->nombre, /*fallback=*/0);
+        cartaParaAnimar = new Carta(paloJugado, valorJugado, this);
+        cartaParaAnimar->setSkin(skinRival);
+    }
+
+    // Si no hubiera carta, actualizamos directamente y salimos
+    if (!cartaParaAnimar) {
+        jugador->mano->actualizarCartaJugada(paloJugado, valorJugado,
+                                             mapaSkinsJugadores.value(jugador->nombre, 0));
+        jugador->mano->dibujar();
+        dibujarEstado();
+        if (callback) callback();
+        return;
+    }
+
+    // Convertimos origen de global a local y posicionamos
+    QPoint origenLocal = mapFromGlobal(origenGlobal);
     cartaParaAnimar->setOrientacion(jugador->mano->getOrientacion());
-    cartaParaAnimar->move(origenAnimacionLocal);
+    cartaParaAnimar->move(origenLocal);
     cartaParaAnimar->show();
     cartaParaAnimar->raise();
-    QPoint destinoAnimacion = jugador->mano->mapToGlobal(jugador->mano->getZonaDeJuego());
-    QPoint destinoAnimacionLocal = this->mapFromGlobal(destinoAnimacion);
 
+    // Calculamos destino (zona de baza) en local
+    QPoint destinoGlobal = jugador->mano->mapToGlobal(jugador->mano->getZonaDeJuego());
+    QPoint destinoLocal  = mapFromGlobal(destinoGlobal);
+
+    // Creamos la animación
     QPropertyAnimation* anim = new QPropertyAnimation(cartaParaAnimar, "pos", this);
     anim->setDuration(500);
-    anim->setStartValue(origenAnimacionLocal);
-    anim->setEndValue(destinoAnimacionLocal);
     anim->setEasingCurve(QEasingCurve::OutCubic);
+    anim->setStartValue(origenLocal);
+    anim->setEndValue(destinoLocal);
 
     connect(anim, &QPropertyAnimation::finished, this, [=]() {
-        jugador->mano->actualizarCartaJugada(paloJugado, valorJugado);
+        // Al terminar, actualizamos la carta en la baza
+        int skinId = mapaSkinsJugadores.value(jugador->nombre, 0);
+        jugador->mano->actualizarCartaJugada(paloJugado, valorJugado, skinId);
+
         cartaParaAnimar->hide();
         cartaParaAnimar->deleteLater();
+
         jugador->mano->dibujar();
-        this->dibujarEstado();
+        dibujarEstado();
         if (callback) callback();
     });
+
     anim->start(QAbstractAnimation::DeleteWhenStopped);
 }
+
+
+
 
 /**
  * @brief Procesa un evento de tipo 'card_drawn', reparte cartas con animaciones.
@@ -829,8 +918,9 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
         if(!jugador || !jugador->mano || jugador->mano->getNumCartas() >= 6)
             continue;
 
-        Carta* carta = new Carta();
-        if(jugador->id == miId) carta = new Carta(palo, valor);
+        Carta* carta = (jugador->id == miId) ? new Carta(palo, valor) : new Carta();
+        carta->setSkin(mapaSkinsJugadores.value(jugador->nombre, 0));
+
 
         QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect(carta); // Parent effect to the card
         opacityEffect->setOpacity(0.0); // Start completely transparent
@@ -880,6 +970,21 @@ void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> 
         return;
     });
 }
+
+void EstadoPartida::cargarJugadoresDesdeJson(const QJsonObject& data) {
+    QJsonArray jugadoresJson = data.value("jugadores").toArray();
+    for(const QJsonValue& val : jugadoresJson) {
+        QJsonObject obj = val.toObject();
+        Jugador* j = new Jugador;
+        j->id = obj["id"].toInt();
+        j->nombre = obj["nombre"].toString();
+        j->equipo = obj["equipo"].toInt();
+        j->numCartas = obj["num_cartas"].toInt();
+        jugadores.append(j);
+        mapJugadores[j->id] = j;
+    }
+}
+
 
 /**
  * @brief Inicializa los botones de acción y etiquetas de puntuación.
@@ -943,13 +1048,26 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
     ocultarOverlayEspera();
 
     crearEsquinas();
-
+    limpiar();
     if(!getPartidaIniciada()) {
         this->iniciarBotonesYEtiquetas();
         this->setPartidaIniciada(true);
     }
-    this->actualizarEstado(data);
-    this->dibujarEstado();
+    cargarJugadoresDesdeJson(data);
+
+    cargarSkinsJugadores(jugadores, m_netMgr, [=]() {
+        this->actualizarEstado(data);  // ahora sí dibujará con las skins
+        this->dibujarEstado();
+
+        tiempoTurnoDefault = data.value("tiempo_turno").toInt();
+        iniciarTimerVisual(tiempoTurnoDefault);
+
+        QTimer::singleShot(500, this, [=]() {
+            this->dibujarEstado();
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    });
 
     // Arrancamos el temporizador visual con el tiempo que llega del backend
     tiempoTurnoDefault = data.value("tiempo_turno").toInt();
@@ -1127,54 +1245,56 @@ void EstadoPartida::vibrarYDetenerTimerVisual() {
  */
 void EstadoPartida::procesarRoundResult(QJsonObject data, std::function<void()> callback) {
     QJsonObject ganador = data.value("ganador").toObject();
-    QString nombre = ganador.value("nombre").toString("Desconocido");
     int equipo = ganador.value("equipo").toInt(-1);
+    QString nombre = ganador.value("nombre").toString("Desconocido");
 
     QString mensaje = QString("¡%1 ganó la baza para el equipo %2!")
-                          .arg(nombre)
-                          .arg(equipo);
+                          .arg(nombre).arg(equipo);
 
     int puntos1 = data.value("puntos_equipo_1").toInt();
     int puntos2 = data.value("puntos_equipo_2").toInt();
 
-    // Mostrar overlay y luego actualizar puntuaciones
-    this->mostrarMensaje(mensaje, [=]() {
-        int completados = 0;
+    mostrarMensaje(mensaje, [=]() {
         auto onDone = [this, callback]() {
             if (callback) callback();
         };
-
         if (puntos1 != puntosEquipo1)
-            this->actualizarPuntuacion(1, puntos1, onDone);
+            actualizarPuntuacion(1, puntos1, onDone);
         else
-            this->actualizarPuntuacion(2, puntos2, onDone);
+            actualizarPuntuacion(2, puntos2, onDone);
     });
 
-    for(Jugador* j : jugadores) {
-        if(!j || !j->mano) continue;
+    // Animación de las cartas jugadas
+    for (Jugador* j : jugadores) {
+        if (!j || !j->mano) continue;
 
-        Carta* copia = new Carta(j->mano->jugada()->getPalo(), j->mano->jugada()->getValor(), this);
-        QPoint posGlobal = j->mano->jugada()->mapToGlobal(QPoint(0, 0));
-        QPoint posLocal = this->mapFromGlobal(posGlobal);
+        Carta* original = j->mano->jugada();
+        int skinId = mapaSkinsJugadores.value(j->nombre, 0);
+        Carta* copia = new Carta(original->getPalo(), original->getValor(), this);
+        copia->setSkin(skinId);
+
+        QPoint globalPos = original->mapToGlobal(QPoint(0, 0));
+        copia->move(mapFromGlobal(globalPos));
         copia->setOrientacion(j->mano->getOrientacion());
-        copia->move(posLocal);
         j->mano->ocultarCartaJugada();
         copia->show();
         copia->raise();
 
-        QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(copia);
+        auto* effect = new QGraphicsOpacityEffect(copia);
         copia->setGraphicsEffect(effect);
-        QPropertyAnimation* anim = new QPropertyAnimation(effect, "opacity");
-        anim->setDuration(1000);
-        anim->setStartValue(1.0);
-        anim->setEndValue(0.0);
-        anim->setEasingCurve(QEasingCurve::OutCubic);
-        connect(anim, &QPropertyAnimation::finished, copia, [copia]() {
+        auto* fade = new QPropertyAnimation(effect, "opacity");
+        fade->setDuration(1000);
+        fade->setStartValue(1.0);
+        fade->setEndValue(0.0);
+        fade->setEasingCurve(QEasingCurve::OutCubic);
+
+        connect(fade, &QPropertyAnimation::finished, copia, [copia]() {
             copia->deleteLater();
         });
-        anim->start(QAbstractAnimation::DeleteWhenStopped);
+        fade->start(QAbstractAnimation::DeleteWhenStopped);
     }
 }
+
 
 /**
  * @brief Procesa solicitud de pausa ('pause').
@@ -1241,7 +1361,7 @@ void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callba
                          "color: white; font-size: 18px;"
                          "padding: 6px 12px;"
                          "border-radius: 6px; border: 1px solid #888; }"
-    );
+                         );
     popup->adjustSize();
     popup->move(this->mapFromGlobal(QCursor::pos()));
     popup->show();
@@ -1614,7 +1734,7 @@ void EstadoPartida::crearMenu() {
         closeButton->setStyleSheet(
             "QPushButton { background-color: #c2c2c3; border: none; border-radius: 17px; }"
             "QPushButton:hover { background-color: #9b9b9b; }"
-        );
+            );
         closeButton->setGeometry(equivalenciaWindow->width() - 45, 10, 35, 35); // Ubicación del botón en la esquina
         connect(closeButton, &QPushButton::clicked, equivalenciaWindow, &QWidget::close);
 

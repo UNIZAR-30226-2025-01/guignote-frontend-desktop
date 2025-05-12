@@ -143,9 +143,10 @@ QPoint Mano::getZonaDeJuego() const {
  * @param palo Nuevo palo de la carta.
  * @param valor Nuevo valor de la carta.
  */
-void Mano::actualizarCartaJugada(const QString& palo, const QString& valor) {
+void Mano::actualizarCartaJugada(const QString& palo, const QString& valor, int skinId) {
     zonaJuego->setPaloValor(palo, valor);
     zonaJuego->setOrientacion(this->orientacion);
+    zonaJuego->setSkin(skinId);
 }
 
 /**
