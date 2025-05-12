@@ -90,6 +90,44 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QStri
 
     effectOutput->setVolume(sfxVol / 100.0);
     effectPlayer->setSource(QUrl("qrc:/bgm/card_draw.mp3"));
+
+
+    // ——— INICIALIZACIÓN DEL TEMPORIZADOR VISUAL ———
+    turnoTimer        = new QTimer(this);
+    connect(turnoTimer, &QTimer::timeout, this, &EstadoPartida::actualizarTimer);
+
+    labelTimer        = new QLabel(this);
+    labelTimer->setStyleSheet(R"(
+        QLabel {
+            font-size: 48px;
+            font-weight: bold;
+            color: gold;
+            background-color: rgba(0, 0, 0, 128);
+            border-radius: 12px;
+            padding: 8px 16px;
+        }
+    )");
+    labelTimer->setAlignment(Qt::AlignCenter);
+    labelTimer->hide();
+
+    // Etiqueta fija "Tiempo restante"
+    labelTimerTexto = new QLabel("Tiempo restante", this);
+    labelTimerTexto->setStyleSheet(R"(
+        QLabel {
+            font-size: 24px;
+            color: white;
+            background-color: transparent;
+        }
+    )");
+    labelTimerTexto->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    labelTimerTexto->hide();
+
+    // ——— SFX TICKTACK ÚLTIMOS 10S ———
+    tickOutput = new QAudioOutput(this);
+    tickPlayer = new QMediaPlayer(this);
+    tickPlayer->setAudioOutput(tickOutput);
+    tickOutput->setVolume(sfxVol / 100.0);
+    tickPlayer->setSource(QUrl("qrc:/bgm/ticktack.mp3"));
 }
 
 /**
@@ -838,6 +876,11 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
     }
     this->actualizarEstado(data);
     this->dibujarEstado();
+
+    // Arrancamos el temporizador visual con el tiempo que llega del backend
+    tiempoTurnoDefault = data.value("tiempo_turno").toInt();
+    iniciarTimerVisual(tiempoTurnoDefault);
+
     QTimer::singleShot(500, this, [=]() {
         this->dibujarEstado();
         enEjecucion = false;
@@ -853,8 +896,22 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
  * @param callback Función tras cerrar el mensaje.
  */
 void EstadoPartida::procesarTurnUpdate(QJsonObject data, std::function<void()> callback) {
-    QString mensaje = data.value("message").toString("Turno desconocido");
-    this->mostrarMensaje(mensaje, callback);
+    // Determinamos si es tu turno o de otro jugador
+    int jugadorId = data.value("jugador").toObject().value("id").toInt();
+    QString mensaje;
+    if (jugadorId == miId) {
+        mensaje = "Es tu turno";
+    } else {
+        QString nombre = data.value("jugador").toObject().value("nombre").toString();
+        mensaje = QString("Turno de %1").arg(nombre);
+    }
+    // Reiniciamos el temporizador para que empiece justo al llegar el turno
+    iniciarTimerVisual(tiempoTurnoDefault);
+    // Mostramos el overlay, pero ya con el timer corriendo de fondo
+    this->mostrarMensaje(mensaje, [=]() {
+        // Cuando el overlay desaparezca, seguimos con el siguiente evento
+        callback();
+    });
 }
 
 /**
@@ -878,6 +935,114 @@ void EstadoPartida::procesarEndGame(QJsonObject data, std::function<void()> /*ca
         if(this->onSalir) this->onSalir();
         this->deleteLater();
     }, this);
+}
+
+/**
+ * @brief Inicia y muestra un contador regresivo basado en segundos.
+ * @param segundos Duración inicial del turno en segundos.
+ */
+void EstadoPartida::iniciarTimerVisual(int segundos) {
+    segundosRestantes = segundos;
+    labelTimer->setText(QString::number(segundosRestantes));
+    labelTimer->adjustSize();
+    // Posicionar en la esquina superior derecha con texto a la izquierda
+    int padding = 16;
+    int xNum  = this->width() - labelTimer->width() - padding;
+    int yPos  = padding;
+    labelTimer->move(xNum, yPos);
+    labelTimer->raise();
+
+    // Mostrar y posicionar etiqueta "Tiempo restante"
+    labelTimerTexto->adjustSize();
+    int xTxt = xNum - labelTimerTexto->width() - 8; // 8px de separación
+    // Centrar verticalmente con el número
+    int yTxt = yPos + (labelTimer->height() - labelTimerTexto->height())/2;
+    labelTimerTexto->move(xTxt, yTxt);
+    labelTimerTexto->raise();
+    labelTimer->show();
+    labelTimerTexto->show();
+    turnoTimer->start(1000);
+}
+
+/**
+ * @brief Slot que actualiza la etiqueta del timer cada segundo.
+ */
+void EstadoPartida::actualizarTimer() {
+    segundosRestantes--;
+    if (segundosRestantes <= 0) {
+        // Paramos el QTimer y hacemos el “shake” en 0
+        turnoTimer->stop();
+        vibrarYDetenerTimerVisual();
+        return;
+    }
+
+    // Actualizamos texto
+    labelTimer->setText(QString::number(segundosRestantes));
+
+    // Si quedan <=10s, hacemos un “pop” animado
+    if (segundosRestantes <= 10) {
+        // reproducir sonido de cuenta atrás
+        tickPlayer->stop();
+        tickPlayer->play();
+        QRect geom = labelTimer->geometry();
+        QRect bigger = geom.adjusted(-5, -5, 5, 5);
+        auto *pulse = new QPropertyAnimation(labelTimer, "geometry", this);
+        pulse->setDuration(200);
+        pulse->setKeyValueAt(0.0, geom);
+        pulse->setKeyValueAt(0.5, bigger);
+        pulse->setKeyValueAt(1.0, geom);
+        pulse->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+}
+
+/**
+ * @brief Detiene y oculta el temporizador visual.
+ */
+void EstadoPartida::detenerTimerVisual() {
+    turnoTimer->stop();
+    labelTimer->hide();
+    labelTimerTexto->hide();
+}
+
+/**
+ * @brief Animación tipo "vibrar" para avisar fin de tiempo y ocultar labels.
+ */
+void EstadoPartida::vibrarYDetenerTimerVisual() {
+    // Posiciones originales
+    QPoint origNum = labelTimer->pos();
+    QPoint origTxt = labelTimerTexto->pos();
+
+    // Grupo paralelo para ambos labels
+    QParallelAnimationGroup* group = new QParallelAnimationGroup(this);
+
+    // Animación de shake para número
+    QPropertyAnimation* shakeNum = new QPropertyAnimation(labelTimer, "pos", this);
+    shakeNum->setDuration(300);
+    shakeNum->setKeyValueAt(0.0, origNum);
+    shakeNum->setKeyValueAt(0.25, origNum + QPoint(-5, 0));
+    shakeNum->setKeyValueAt(0.5, origNum + QPoint(5, 0));
+    shakeNum->setKeyValueAt(0.75, origNum + QPoint(-5, 0));
+    shakeNum->setKeyValueAt(1.0, origNum);
+    group->addAnimation(shakeNum);
+
+    // Animación de shake para texto
+    QPropertyAnimation* shakeTxt = new QPropertyAnimation(labelTimerTexto, "pos", this);
+    shakeTxt->setDuration(300);
+    shakeTxt->setKeyValueAt(0.0, origTxt);
+    shakeTxt->setKeyValueAt(0.25, origTxt + QPoint(-5, 0));
+    shakeTxt->setKeyValueAt(0.5, origTxt + QPoint(5, 0));
+    shakeTxt->setKeyValueAt(0.75, origTxt + QPoint(-5, 0));
+    shakeTxt->setKeyValueAt(1.0, origTxt);
+    group->addAnimation(shakeTxt);
+
+    // Al acabar la vibración, reiniciamos el contador al valor inicial
+    connect(group, &QParallelAnimationGroup::finished, this, [=]() {
+        segundosRestantes = tiempoTurnoDefault;
+        labelTimer->setText(QString::number(segundosRestantes));
+        // arranca de nuevo el timer
+        turnoTimer->start(1000);
+    });
+    group->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 /**
