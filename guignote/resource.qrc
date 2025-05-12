@@ -130,5 +130,7 @@
         <file>icons/gameslist.png</file>
         <file>icons/darkenedgameslist.png</file>
         <file>bgm/ticktack.mp3</file>
+        <file>decks/base/area.png</file>
+        <file>decks/poker/area.png</file>
     </qresource>
 </RCC>

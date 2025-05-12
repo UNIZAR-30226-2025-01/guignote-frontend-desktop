@@ -24,7 +24,7 @@
 #include <QAudioOutput>
 #include <QtWebSockets/QWebSocket>
 #include <QQueue>
-#include "gamemessagewindow.h"
+#include <QNetworkReply>
 
 /**
  * @struct Jugador
@@ -37,7 +37,8 @@ struct Jugador {
     Mano* mano; ///< Mano actual del jugador.
     int numCartas; ///< Número de cartas en la mano.
     QLabel* nombreLabel;
-
+    QString ultimoPaloJugado = "";
+    QString ultimoValorJugado = "";
 };
 
 /**
