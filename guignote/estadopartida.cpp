@@ -144,9 +144,17 @@ void EstadoPartida::init() {
         this->procesarMensajeWebSocket(mensaje);
     });
 
-    connect(websocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error) {
+     connect(websocket, &QWebSocket::errorOccurred, this, [=](QAbstractSocket::SocketError error) {
         qWarning() << "Error en WebSocket:" << websocket->errorString();
-    });
+         // Cerrar WebSocket
+         websocket->close();
+         // Volver al menú principal
+         if (onSalir) {
+            onSalir();
+         }
+         // Destruir este widget
+         this->deleteLater();
+     });
 
     qDebug() << "Conectando a:" << wsUrl;
     websocket->open(QUrl(wsUrl));
@@ -1360,19 +1368,56 @@ void EstadoPartida::mostrarOverlayEspera(int jugadoresCola, int jugadoresMax) {
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
     overlayEspera->setGeometry(0, 0, screenSize.width(), screenSize.height());
     overlayEspera->setStyleSheet("background-color: rgba(0, 0, 0, 160);");
-    overlayEspera->setAttribute(Qt::WA_TransparentForMouseEvents);
-    overlayEspera->lower();
     overlayEspera->setAttribute(Qt::WA_DeleteOnClose);
 
-    labelEspera = new QLabel(QString("Esperando jugadores... (%1/%2)").arg(jugadoresCola).arg(jugadoresMax), overlayEspera);
+    // Container transparente
+    QWidget *container = new QWidget(overlayEspera);
+    container->setAttribute(Qt::WA_TranslucentBackground);
+    container->setStyleSheet("background: transparent;");
+
+    QVBoxLayout *layout = new QVBoxLayout(container);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(16);
+
+    labelEspera = new QLabel(QString("Esperando jugadores... (%1/%2)").arg(jugadoresCola).arg(jugadoresMax), container);
     labelEspera->setAlignment(Qt::AlignCenter);
     labelEspera->setStyleSheet("color: white; font-size: 40px; font-weight: bold;");
+    layout->addWidget(labelEspera, 0, Qt::AlignCenter);
 
-    QVBoxLayout* layout = new QVBoxLayout(overlayEspera);
-    layout->addWidget(labelEspera);
-    overlayEspera->setLayout(layout);
+    QPushButton *cancelButton = new QPushButton("Cancelar", container);
+    cancelButton->setFixedSize(200, 50);
+    cancelButton->setStyleSheet(R"(
+        QPushButton {
+            font-size: 20px;
+            color: #171718;
+            background-color: #c2c2c3;
+            border-radius: 8px;
+        }
+        QPushButton:hover {
+            background-color: #9b9b9b;
+        }
+    )");
+    layout->addWidget(cancelButton, 0, Qt::AlignCenter);
+
+    connect(cancelButton, &QPushButton::clicked, this, [=]() {
+        if (websocket) websocket->close();
+        if (onSalir) onSalir();
+        this->deleteLater();
+    });
+
+    container->setLayout(layout);
+    // Layout raíz para centrar horizontalmente y empujar hacia abajo
+    QVBoxLayout *root = new QVBoxLayout(overlayEspera);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->addStretch();                                        // <–– empuja todo hacia abajo
+    root->insertSpacing(0, 200);
+    root->addWidget(container, 0, Qt::AlignHCenter);           // centrar horizontal
+    root->addStretch();                                        // y equilibrar abajo
+    overlayEspera->setLayout(root);
     overlayEspera->show();
 }
+
+
 
 /**
  * @brief Actualiza el texto del overlay de espera.
