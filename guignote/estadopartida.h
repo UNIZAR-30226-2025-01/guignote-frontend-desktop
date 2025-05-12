@@ -25,7 +25,7 @@
 #include <QAudioOutput>
 #include <QtWebSockets/QWebSocket>
 #include <QQueue>
-#include "gamemessagewindow.h"
+#include <QNetworkReply>
 
 /**
  * @struct Jugador
@@ -37,6 +37,9 @@ struct Jugador {
     int equipo; ///< Número de equipo al que pertenece.
     Mano* mano; ///< Mano actual del jugador.
     int numCartas; ///< Número de cartas en la mano.
+    QLabel* nombreLabel;
+    QString ultimoPaloJugado = "";
+    QString ultimoValorJugado = "";
 };
 
 /**
@@ -259,6 +262,9 @@ private:
 
     QAudioOutput*    tickOutput;
     QMediaPlayer*    tickPlayer;
+    QMap<Jugador*, QLabel*> m_labelJugadores;
+    QLabel* turnoPermanenteLabel = nullptr;
+
 private slots:
     /**
      * @brief Slot que actualiza la etiqueta del timer cada segundo.

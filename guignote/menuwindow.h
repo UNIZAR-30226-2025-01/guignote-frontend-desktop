@@ -89,6 +89,7 @@ private:
     int id;
     QPushButton *ReconnectButton = nullptr;
     QJsonArray salas;
+    QJsonArray salasPausadas;
     QVBoxLayout *mainLayout;
     void checkRejoin();
 
@@ -105,6 +106,8 @@ private:
     // Skins seleccionadas
     int fondo = 1;
     QTimer *rejoinTimer;
+
+    bool nameHasLoaded = false;
 };
 
 #endif // MENUWINDOW_H

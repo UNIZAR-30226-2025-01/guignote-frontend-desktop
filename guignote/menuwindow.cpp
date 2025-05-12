@@ -124,51 +124,86 @@
      }
  }
  
- void MenuWindow::checkRejoin(){
+ void MenuWindow::checkRejoin() {
      QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
-     QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
-     request.setRawHeader("Auth", token.toUtf8());
+
+     // Primer consulta: salas reconectables
+     QNetworkRequest requestReconectables(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
+     requestReconectables.setRawHeader("Auth", token.toUtf8());
      qDebug() << "Comprobamos salas reconectables...";
- 
-     QNetworkReply *reply = networkManager->get(request);
-     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-         // Comprueba errores de red
-         qDebug() << "Obtenemos respuesta sobre las salas reconectables...";
-         if (reply->error() != QNetworkReply::NoError) {
-             qDebug() << "Error de red:" << reply->errorString();
-             reply->deleteLater();
+
+     QNetworkReply *replyReconectables = networkManager->get(requestReconectables);
+
+     // Segunda consulta: salas pausadas
+     QNetworkRequest requestPausadas(QUrl("http://188.165.76.134:8000/salas/pausadas/"));
+     requestPausadas.setRawHeader("Auth", token.toUtf8());
+     qDebug() << "Comprobamos salas pausadas...";
+
+     QNetworkReply *replyPausadas = networkManager->get(requestPausadas);
+
+     connect(replyReconectables, &QNetworkReply::finished, this, [this, replyReconectables, replyPausadas]() {
+         // Comprobación de errores para salas reconectables
+         if (replyReconectables->error() != QNetworkReply::NoError) {
+             qDebug() << "Error de red (reconectables):" << replyReconectables->errorString();
+             replyReconectables->deleteLater();
              return;
          }
- 
-         // Lee y parsea el JSON
-         const QByteArray data = reply->readAll();
-         QJsonParseError parseError;
-         QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
-         if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-             qDebug() << "Error parseando JSON:" << parseError.errorString();
-             reply->deleteLater();
+
+         const QByteArray dataReconectables = replyReconectables->readAll();
+         QJsonParseError parseErrorReconectables;
+         QJsonDocument docReconectables = QJsonDocument::fromJson(dataReconectables, &parseErrorReconectables);
+         if (parseErrorReconectables.error != QJsonParseError::NoError || !docReconectables.isObject()) {
+             qDebug() << "Error parseando JSON (reconectables):" << parseErrorReconectables.errorString();
+             replyReconectables->deleteLater();
              return;
          }
- 
-         QJsonObject obj = doc.object();
-         // Verifica que exista el array "salas"
-         if (!obj.contains("salas") || !obj.value("salas").isArray()) {
-             qDebug() << "La respuesta no contiene el campo 'salas'";
-             reply->deleteLater();
+
+         QJsonObject objReconectables = docReconectables.object();
+         if (!objReconectables.contains("salas") || !objReconectables.value("salas").isArray()) {
+             qDebug() << "La respuesta de salas reconectables no contiene el campo 'salas'";
+             replyReconectables->deleteLater();
+         } else {
+             salas = objReconectables.value("salas").toArray();
+         }
+
+         // Comprobación de errores para salas pausadas
+         if (replyPausadas->error() != QNetworkReply::NoError) {
+             qDebug() << "Error de red (pausadas):" << replyPausadas->errorString();
+             replyPausadas->deleteLater();
              return;
          }
- 
-         salas = obj.value("salas").toArray();
-         if (salas.isEmpty()) {
-             qDebug() << "No hay salas reconectables.";
+
+         const QByteArray dataPausadas = replyPausadas->readAll();
+         QJsonParseError parseErrorPausadas;
+         QJsonDocument docPausadas = QJsonDocument::fromJson(dataPausadas, &parseErrorPausadas);
+         if (parseErrorPausadas.error != QJsonParseError::NoError || !docPausadas.isObject()) {
+             qDebug() << "Error parseando JSON (pausadas):" << parseErrorPausadas.errorString();
+             replyPausadas->deleteLater();
+             return;
+         }
+
+         QJsonObject objPausadas = docPausadas.object();
+         if (!objPausadas.contains("salas") || !objPausadas.value("salas").isArray()) {
+             qDebug() << "La respuesta de salas pausadas no contiene el campo 'salas'";
+             replyPausadas->deleteLater();
+         } else {
+             salasPausadas = objPausadas.value("salas").toArray();
+         }
+
+         // Lógica para mostrar el botón
+         if (salas.isEmpty() && salasPausadas.isEmpty()) {
+             qDebug() << "No hay salas reconectables ni pausadas.";
              ReconnectButton->hide();
          } else {
-             qDebug() << "Salas reconectables encontradas:";
+             qDebug() << "Salas reconectables o pausadas encontradas:";
              ReconnectButton->show();
          }
-         reply->deleteLater();
+
+         replyReconectables->deleteLater();
+         replyPausadas->deleteLater();
      });
  }
+
  
  // Constructor de la clase MenuWindow
  MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :
@@ -203,9 +238,11 @@
  
      // ------------- EVENTOS DE CLICK EN CARTAS -------------
      connect(boton1v1, &ImageButton::clicked, this, [this, userKey]() {
+         if (!nameHasLoaded) return;
          jugarPartida(userKey, token, 2);
      });
      connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
+         if (!nameHasLoaded) return;
          jugarPartida( userKey, token, 4);
      });
  
@@ -238,8 +275,10 @@
  
      // Conectar la señal del botón con el slot
      connect(ReconnectButton, &QPushButton::clicked, this, [this]() {
+         if (!nameHasLoaded) return;
          RejoinWindow *rjWin = new RejoinWindow(
              this->salas,
+             this->salasPausadas,
              this->fondo,
              this->userKey,
              this->usr,
@@ -272,6 +311,7 @@
      invisibleButton->setStyleSheet("background: transparent; border: none;");
      invisibleButton->setCursor(Qt::PointingHandCursor);
      connect(invisibleButton, &QPushButton::clicked, [=]() {
+         if (!nameHasLoaded) return;
          MyProfileWindow *profileWin = new MyProfileWindow(userKey, this);
          profileWin->setModal(true);
          profileWin->show();
@@ -313,6 +353,8 @@
                                               ).arg(nombre).arg(ELO).arg(rank);
  
                      usrLabel->setText(UsrELORank);
+
+                     nameHasLoaded = true;
  
                      // ------------- MÚSICA -------------
                      backgroundPlayer = new QMediaPlayer(this);
@@ -351,6 +393,7 @@
  
      // ------------- EVENTOS DE CLICK EN ICONOS -------------
      connect(settings, &Icon::clicked, [=]() {
+         if (!nameHasLoaded) return;
          settings->setImage(":/icons/darkenedaudio.png", 60, 60);
          SettingsWindow *settingsWin = new SettingsWindow(this, this, usr);
          settingsWin->setModal(true);
@@ -360,6 +403,7 @@
          settingsWin->exec();
      });
      connect(friends, &Icon::clicked, this, [=]() {
+         if (!nameHasLoaded) return;
          friends->setImage(":/icons/darkenedfriends.png", 60, 60);
          auto *fw = new friendswindow(userKey, this);
          fw->setModal(true);
@@ -368,6 +412,7 @@
      });
  
      connect(exit, &Icon::clicked, this, [this]() {
+         if (!nameHasLoaded) return;
          exit->setImage(":/icons/darkeneddoor.png", 60, 60);
          QDialog *confirmDialog = new QDialog(this);
          confirmDialog->setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -430,6 +475,7 @@
          centerTimer->start();
      });
      connect(inventory, &Icon::clicked, this, [this]() {
+         if (!nameHasLoaded) return;
          inventory->setImage(":/icons/darkenedchest.png", 60, 60);
          InventoryWindow *inventoryWin = new InventoryWindow(this,usr);
          inventoryWin->setModal(true);
@@ -439,6 +485,7 @@
          inventoryWin->exec();
      });
      connect(rankings, &Icon::clicked, this, [this, userKey]() {
+         if (!nameHasLoaded) return;
          rankings->setImage(":/icons/darkenedtrophy.png", 60, 60);
  
          RankingWindow *rankingWin = new RankingWindow(userKey, this);
@@ -451,6 +498,7 @@
          rankingWin->exec();
      });
      connect(customGames, &Icon::clicked, this, [userKey, this](){
+         if (!nameHasLoaded) return;
          customGames->setImage(":/icons/darkenedgameslist.png", 50, 50);
 
          // Crear pantalla nueva aquí.

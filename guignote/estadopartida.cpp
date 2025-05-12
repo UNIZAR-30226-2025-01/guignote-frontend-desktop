@@ -22,7 +22,9 @@
 #include <QDialog>
 #include <QJsonDocument>
 #include <QMenu>
+#include "settingswindow.h"
 #include "ventanasalirpartida.h"
+#include "gamemessagewindow.h"
 
 void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNetworkAccessManager* netMgr, std::function<void()> onComplete) {
     if (jugadores.isEmpty()) {
@@ -198,7 +200,7 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QStri
     tickOutput = new QAudioOutput(this);
     tickPlayer = new QMediaPlayer(this);
     tickPlayer->setAudioOutput(tickOutput);
-    tickOutput->setVolume(sfxVol / 100.0);
+    tickOutput->setVolume(sfxVol * 0.5/ 100.0);
     tickPlayer->setSource(QUrl("qrc:/bgm/ticktack.mp3"));
 
     //
@@ -357,6 +359,11 @@ void EstadoPartida::limpiar() {
         overlay = nullptr;
         overlayMsg = nullptr;
     }
+    for (auto lbl : m_labelJugadores.values()) {
+        lbl->deleteLater();
+    }
+    m_labelJugadores.clear();
+
 }
 
 /**
@@ -372,9 +379,8 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
 
     // — Carta de triunfo —
     QJsonObject triunfo = data.value("carta_triunfo").toObject();
-    QString palo  = triunfo["palo"].toString();
-    QString valor = QString::number(triunfo["valor"].toInt());
-    cartaTriunfo = new Carta(palo, valor, this);
+    cartaTriunfo = new Carta(triunfo["palo"].toString(),
+                             QString::number(triunfo["valor"].toInt()), this);
     cartaTriunfo->show();
 
     // — Mazo central —
@@ -386,7 +392,7 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
     Jugador* yo = mapJugadores.value(miId, nullptr);
     if (!yo) return;
 
-    // — Mi mano boca arriba —
+    // — Mano del jugador local —
     yo->mano = new Mano(Orientacion::DOWN, this, this);
     QJsonArray misCartas = data.value("mis_cartas").toArray();
     for (const QJsonValue& cartaVal : misCartas) {
@@ -396,7 +402,7 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
         c->setSkin(mapaSkinsJugadores.value(yo->nombre, m_equippedSkinId));
         yo->mano->agnadirCarta(c);
     }
-    // — Pintar también el placeholder adelantado con mi skin —
+
     if (Carta* ph = yo->mano->jugada()) {
         ph->setSkin(mapaSkinsJugadores.value(yo->nombre, m_equippedSkinId));
     }
@@ -410,49 +416,50 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
 
             j->mano = new Mano(Orientacion::TOP, this, this);
             int skinRival = mapaSkinsJugadores.value(j->nombre, 0);
-
-            // reparto boca abajo
             for (int i = 0; i < j->numCartas; ++i) {
                 Carta* c = new Carta();
                 c->setSkin(skinRival);
                 j->mano->agnadirCarta(c);
             }
-            // y pintar su placeholder adelantado
             if (Carta* ph = j->mano->jugada()) {
                 ph->setSkin(skinRival);
             }
             j->mano->ocultarCartaJugada();
         }
-    }
-    else {
-        // 2 vs 2 (o más)
-        Orientacion orient;
+    } else {
+        // 2 vs 2 u otros casos
         int k = 0;
         for (Jugador* j : jugadores) {
             if (j->id == miId) continue;
 
-            // definir orientación
-            orient = (j->equipo == yo->equipo)
-                         ? Orientacion::TOP
-                         : ((k++ == 0) ? Orientacion::LEFT : Orientacion::RIGHT);
-
+            Orientacion orient = (j->equipo == yo->equipo)
+                                     ? Orientacion::TOP
+                                     : ((k++ == 0) ? Orientacion::LEFT : Orientacion::RIGHT);
             j->mano = new Mano(orient, this, this);
             int skinRival = mapaSkinsJugadores.value(j->nombre, 0);
-
-            // reparto boca abajo
             for (int i = 0; i < j->numCartas; ++i) {
                 Carta* c = new Carta();
                 c->setSkin(skinRival);
                 j->mano->agnadirCarta(c);
             }
-            // pintar placeholder adelantado
             if (Carta* ph = j->mano->jugada()) {
                 ph->setSkin(skinRival);
             }
             j->mano->ocultarCartaJugada();
         }
     }
+
+    // — Aplicar carta jugada si existía —
+    for (Jugador* j : jugadores) {
+        if (!j->ultimoPaloJugado.isEmpty() && j->mano) {
+            Carta* played = j->mano->jugada();
+            if (played) {
+                played->setPaloValor(j->ultimoPaloJugado, j->ultimoValorJugado);
+            }
+        }
+    }
 }
+
 
 
 
@@ -497,6 +504,37 @@ void EstadoPartida::dibujarEstado() {
 
     for(Jugador* j : jugadores) {
         if(j->mano) j->mano->dibujar();
+        if (m_labelJugadores.contains(j)) {
+            QLabel* lbl = m_labelJugadores[j];
+            Orientacion orient = j->mano->getOrientacion();
+            QPoint handPos = j->mano->pos();
+            QSize handSize = j->mano->size();
+            int x, y;
+
+            switch (orient) {
+            case Orientacion::DOWN:
+                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
+                y = handPos.y() - lbl->height() - 4;
+                break;
+            case Orientacion::TOP:
+                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
+                y = handPos.y() + handSize.height() + 4;
+                break;
+            case Orientacion::LEFT:
+                x = handPos.x() + handSize.width() + 4;
+                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
+                break;
+            case Orientacion::RIGHT:
+            default:
+                x = handPos.x() - lbl->width() - 4;
+                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
+                break;
+            }
+
+            lbl->move(x, y);
+            lbl->show();
+            lbl->raise();
+        }
     }
 
     // 2 jugadores (1vs1)
@@ -933,61 +971,74 @@ void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> c
  * @param callback Función a ejecutar tras finalizar todas las animaciones.
  */
 void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> callback) {
-
     QJsonObject cartaJson = data.value("carta").toObject();
     QString palo = cartaJson["palo"].toString();
     QString valor = QString::number(cartaJson["valor"].toInt());
 
-    QParallelAnimationGroup *animationGroup = new QParallelAnimationGroup(this);
+    QParallelAnimationGroup* animationGroup = new QParallelAnimationGroup(this);
 
-    // Actualizar cartas restantes en mazo central
+    // 1) Actualizar cartas restantes
     mazoRestante -= jugadores.size();
-    if(mazoRestante <= 0) mazo->hide();
+    if (mazoRestante <= 0 && mazo) mazo->hide();
 
-    // Actualizar manos
-    for(Jugador* jugador : jugadores) {
-        if(!jugador || !jugador->mano || jugador->mano->getNumCartas() >= 6)
+    // 2) Repartir a cada jugador
+    for (Jugador* jugador : jugadores) {
+        if (!jugador || !jugador->mano || jugador->mano->getNumCartas() >= 6)
             continue;
 
-        Carta* carta = (jugador->id == miId) ? new Carta(palo, valor) : new Carta();
-        carta->setSkin(mapaSkinsJugadores.value(jugador->nombre, 0));
+        // Crear carta: si es para ti, tiene contenido; si no, es oculta
+        Carta* carta = (jugador->id == miId)
+                           ? new Carta(palo, valor)
+                           : new Carta();
 
+        // Asignar skin: tu skin o el del rival
+        int skin = (jugador->id == miId)
+                       ? m_equippedSkinId
+                       : mapaSkinsJugadores.value(jugador->nombre, 0);
+        carta->setSkin(skin);
 
-        QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect(carta); // Parent effect to the card
-        opacityEffect->setOpacity(0.0); // Start completely transparent
+        // Efecto de opacidad inicial
+        QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect(carta);
+        opacityEffect->setOpacity(0.0);
         carta->setGraphicsEffect(opacityEffect);
 
         jugador->mano->agnadirCarta(carta);
         this->dibujarEstado();
 
+        // Animación de fade-in
         QPropertyAnimation* anim = new QPropertyAnimation(opacityEffect, "opacity", animationGroup);
         anim->setDuration(1000);
         anim->setStartValue(0.0);
-        anim->setEndValue(1.0);;
+        anim->setEndValue(1.0);
         anim->setEasingCurve(QEasingCurve::InCubic);
         animationGroup->addAnimation(anim);
     }
 
+    // 3) Post-animación
     connect(animationGroup, &QParallelAnimationGroup::finished, this, [=]() {
-        if(mazoRestante <= 0) {
-            this->cartaTriunfo->hide();
-            this->mazo->hide();
-        }
+        if (mazoRestante <= 0 && cartaTriunfo)
+            cartaTriunfo->hide();
+
         this->dibujarEstado();
         if (callback) callback();
     });
 
-    if(animationGroup->animationCount() > 0) {
+    // 4) Lanzar animaciones (o saltarlas si no hay)
+    if (animationGroup->animationCount() > 0) {
         animationGroup->start(QAbstractAnimation::DeleteWhenStopped);
     } else {
         delete animationGroup;
         this->dibujarEstado();
+        if (callback) callback();
     }
+
+    // 5) Sonido de efecto
     if (effectPlayer) {
         effectPlayer->stop();
         effectPlayer->play();
     }
 }
+
 
 /**
  * @brief Procesa cambio de fase ('phase_update'), calcula puntos de triunfo.
@@ -1068,6 +1119,25 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
     pausadosLabel->setAlignment(Qt::AlignCenter);
 
     this->crearMenu();
+
+    // ——— Label fijo de Turno ———
+    turnoPermanenteLabel = new QLabel(this);
+    turnoPermanenteLabel->setStyleSheet(R"(
+        QLabel {
+            font-size: 24px;
+            color: white;
+            background-color: rgba(0, 0, 0, 150);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    )");
+    turnoPermanenteLabel->setText("Esperando turno...");
+    turnoPermanenteLabel->adjustSize();
+    // Posicionar justo a la derecha del botón de menú (32 + 44 + 16 = 92)
+    turnoPermanenteLabel->move(92, 32);
+    turnoPermanenteLabel->show();
+    turnoPermanenteLabel->raise();
+
 }
 
 /**
@@ -1110,8 +1180,22 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
  * @param callback Función tras cerrar el mensaje.
  */
 void EstadoPartida::procesarTurnUpdate(QJsonObject data, std::function<void()> callback) {
+
     // Determinamos si es tu turno o de otro jugador
     int jugadorId = data.value("jugador").toObject().value("id").toInt();
+    QString textoTurno;
+    if (jugadorId == miId) {
+        textoTurno = "Tu turno";
+    } else {
+        QString nombre = data.value("jugador").toObject().value("nombre").toString();
+        textoTurno = QString("Turno de %1").arg(nombre);
+    }
+    if (turnoPermanenteLabel) {
+        turnoPermanenteLabel->setText(textoTurno);
+        turnoPermanenteLabel->adjustSize();
+        // (Opcional) si quieres reajustar siempre x=92,y=32:
+        turnoPermanenteLabel->move(92, 32);
+    }
     QString mensaje;
     if (jugadorId == miId) {
         mensaje = "Es tu turno";
@@ -1771,6 +1855,25 @@ void EstadoPartida::crearMenu() {
 
         equivalenciaWindow->move(64, 64);
         equivalenciaWindow->show();
+    });
+
+    QAction *sonidoAction = new QAction("Sonido", this);
+    menu->addAction(sonidoAction);
+    connect(sonidoAction, &QAction::triggered, this, [this]() {
+        // Abrimos la ventana de ajustes
+        SettingsWindow *settingsWin = new SettingsWindow(this, this, miNombre);
+        settingsWin->setModal(true);
+        // Al cerrarla, recargamos volúmenes:
+        connect(settingsWin, &QDialog::finished, this, [this](int) {
+            QSettings cfg("Grace Hopper",
+                          QString("Sota, Caballo y Rey_%1").arg(miNombre));
+            int bgmVol  = cfg.value("sound/volume",        50).toInt();
+            int sfxVol  = cfg.value("sound/effectsVolume", 50).toInt();
+            if (audioOutput) audioOutput->setVolume(bgmVol / 100.0);
+            if (effectOutput) effectOutput->setVolume(sfxVol / 100.0);
+            if (tickOutput)   tickOutput->setVolume(sfxVol * 0.5 / 100.0);
+        });
+        settingsWin->exec();
     });
 
     QAction *salirAction = new QAction("Salir", this);

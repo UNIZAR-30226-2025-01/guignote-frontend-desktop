@@ -15,7 +15,7 @@
  */
 Mano::Mano(Orientacion orientacion, EstadoPartida* estadoPartida, QWidget* parent)
     : QWidget(parent), orientacion(orientacion), estadoPartida(estadoPartida) {
-    zonaJuego = new Carta(this);
+    zonaJuego = new Carta("area", "", this);
     zonaJuego->setOrientacion(orientacion);
 }
 
@@ -153,7 +153,7 @@ void Mano::actualizarCartaJugada(const QString& palo, const QString& valor, int 
  * @brief Oculta la carta jugada mostrando el reverso.
  */
 void Mano::ocultarCartaJugada() {
-    zonaJuego->setPaloValor("Back", "");
+    zonaJuego->setPaloValor("area", "");
 }
 
 /**

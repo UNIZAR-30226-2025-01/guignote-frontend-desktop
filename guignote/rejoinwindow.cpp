@@ -32,11 +32,23 @@
  * Configura el diálogo (sin bordes y con estilo), carga el token,
  * fija tamaño y estilo, y llama a setupUI() para construir la interfaz.
  */
-RejoinWindow::RejoinWindow(QJsonArray jsonArray, int fondo, QString &userKey, QString usr, QWidget *parent)
-    : QDialog(parent), salas(jsonArray) {
+RejoinWindow::RejoinWindow(QJsonArray salas, QJsonArray salasPausadas, int fondo, QString &userKey, QString usr, QWidget *parent)
+    : QDialog(parent), salas(salas), salasPausadas(salasPausadas) {
     this->fondo = fondo;
     this->usr = usr;
     this->userKey = userKey;
+
+    if (salas.isEmpty()) {
+        qDebug() << "No hay salas reconectables";
+    } else {
+        qDebug() << "Número de salas reconectables:" << salas.size();
+    }
+
+    if (salasPausadas.isEmpty()) {
+        qDebug() << "No hay salas pausadas";
+    } else {
+        qDebug() << "Número de salas pausadas:" << salasPausadas.size();
+    }
 
     token = loadAuthToken(userKey);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
@@ -59,7 +71,10 @@ void RejoinWindow::setupUI() {
     mainLayout->setAlignment(Qt::AlignTop);
 
     mainLayout->addLayout(createHeaderLayout());
+    mainLayout->addLayout(checkboxLayout());
+    salasLayout = new QVBoxLayout();
     populateSalas();
+    mainLayout->addLayout(salasLayout);
 
     setLayout(mainLayout);
 }
@@ -73,10 +88,13 @@ void RejoinWindow::setupUI() {
  */
 QHBoxLayout* RejoinWindow::createHeaderLayout() {
     QHBoxLayout *headerLayout = new QHBoxLayout();
-    titleLabel = new QLabel("Perfil", this);
+
+    // Título
+    titleLabel = new QLabel("Reconexión", this);
     titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     titleLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold;");
 
+    // Botón de cerrar
     closeButton = new QPushButton(this);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
     closeButton->setIconSize(QSize(18, 18));
@@ -87,11 +105,46 @@ QHBoxLayout* RejoinWindow::createHeaderLayout() {
         );
     connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
 
+    // Agregar los widgets al layout
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
     headerLayout->addWidget(closeButton);
+
     return headerLayout;
 }
+
+QHBoxLayout* RejoinWindow::checkboxLayout(){
+    QHBoxLayout *layout = new QHBoxLayout();
+
+    // Crear el QCheckBox
+    pausadas = new QCheckBox("Salas Pausadas", this);
+    pausadas->setStyleSheet(R"(
+        QCheckBox { color: #ffffff; font-size: 14px; }
+        QCheckBox::indicator { width: 16px; height: 16px; }
+        QCheckBox::indicator:unchecked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #c2c2c3;
+            border: 1px solid #545454;
+            image: url(:/icons/cross.png);
+        }
+    )");
+
+    // Conectar el cambio de estado del checkbox a la variable 'pausadas'
+    connect(pausadas, &QCheckBox::toggled, this, [this](bool checked) {
+        pausadasB = checked;  // Asigna el estado del checkbox a la variable 'pausadas'
+        populateSalas();
+        qDebug() << "Estado de pausadas:" << pausadasB;
+    });
+
+    layout->addWidget(pausadas);  // Agregar el QCheckBox debajo del título
+    layout->setAlignment(pausadas, Qt::AlignCenter);
+
+    return layout;
+}
+
 
 /**
  * @brief Rellena el diálogo con las salas reconectables.
@@ -100,7 +153,17 @@ QHBoxLayout* RejoinWindow::createHeaderLayout() {
  * ocupación y un botón "Entrar" que llama a rejoin().
  */
 void RejoinWindow::populateSalas() {
-    for (const QJsonValue &val : salas) {
+    // Limpiar solo el layout que contiene las salas
+    QLayoutItem *item;
+    while ((item = salasLayout->takeAt(0)) != nullptr) {
+        delete item->widget();  // Eliminar solo los widgets de las salas
+        delete item;            // Eliminar el item del layout
+    }
+
+    // Seleccionamos el JsonArray basado en el valor de partidasB
+    QJsonArray arraySalas = pausadasB ? salasPausadas : salas;
+
+    for (const QJsonValue &val : arraySalas) {
 
         // Dentro del bucle de populateSalas(), justo al inicio:
         QJsonObject obj = val.toObject();
@@ -121,6 +184,7 @@ void RejoinWindow::populateSalas() {
 
         // ——— Creamos un contenedor con fondo más claro ———
         QWidget *container = new QWidget(this);
+        container->setProperty("isSalaWidget", true);  // Marcamos el widget como relacionado con las salas
         container->setStyleSheet(
             "background-color: #232326;"   // ligeramente más claro que #171718
             "border-radius: 10px;"
@@ -166,10 +230,11 @@ void RejoinWindow::populateSalas() {
         container->setLayout(row);
 
         // ——— Añadimos un pequeño margen vertical entre contenedores ———
-        mainLayout->addWidget(container);
-        mainLayout->setSpacing(10);
+        salasLayout->addWidget(container);
+        salasLayout->setSpacing(10);
     }
 }
+
 
 /**
  * @brief Extrae el token de autenticación desde el archivo de configuración.
@@ -218,8 +283,9 @@ void RejoinWindow::rejoin(QString idPart) {
     qDebug() << "Conectando a:" << url;
 
     // Creamos la nueva ventana (EstadoPartida o GameWindow)
-    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [this]() {
-        auto* menu = new MenuWindow(userKey);
+    QString usrKey = userKey;
+    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [usrKey]() {
+        auto* menu = new MenuWindow(usrKey);
         menu->showFullScreen();
     });
 
