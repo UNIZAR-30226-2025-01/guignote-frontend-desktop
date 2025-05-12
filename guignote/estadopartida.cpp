@@ -14,6 +14,9 @@
 #include <QJsonArray>
 #include <QScreen>
 #include <QVBoxLayout>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 #include <QPushButton>
 #include <QPushButton>
 #include <QDialog>
@@ -90,6 +93,22 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QStri
 
     effectOutput->setVolume(sfxVol / 100.0);
     effectPlayer->setSource(QUrl("qrc:/bgm/card_draw.mp3"));
+
+    //  ——— Obtener skin equipada al arrancar ———
+    m_equippedSkinId = -1;
+    m_netMgr          = new QNetworkAccessManager(this);
+    {
+        // 1) Pedir user_id a partir de miNombre
+        QUrl urlId(QStringLiteral(
+                       "http://188.165.76.134:8000/usuarios/usuarios/id/%1/")
+                       .arg(miNombre));
+        auto* replyId = m_netMgr->get(QNetworkRequest(urlId));
+        connect(replyId, &QNetworkReply::finished, this, [this, replyId]() {
+            onGotUserId(replyId);
+        });
+
+    }
+
 }
 
 /**
@@ -113,6 +132,54 @@ void EstadoPartida::init() {
     qDebug() << "Conectando a:" << wsUrl;
     websocket->open(QUrl(wsUrl));
 }
+
+void EstadoPartida::onGotUserId(QNetworkReply* reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        reply->deleteLater();
+        return;
+    }
+    auto doc = QJsonDocument::fromJson(reply->readAll());
+    reply->deleteLater();
+    int userId = doc.object().value("user_id").toInt(-1);
+    if (userId < 0) return;
+
+    // 2) Con el ID, pedimos los equipped_items
+    QUrl urlEq(QStringLiteral(
+                   "http://188.165.76.134:8000/usuarios/get_equipped_items/%1/")
+                   .arg(userId));
+    auto* replyEq = m_netMgr->get(QNetworkRequest(urlEq));
+    connect(replyEq, &QNetworkReply::finished, this, [this, replyEq]() {
+        onGotEquippedItems(replyEq);
+    });
+
+}
+
+void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        reply->deleteLater();
+        return;
+    }
+    auto doc = QJsonDocument::fromJson(reply->readAll());
+    reply->deleteLater();
+    if (!doc.isObject()) return;
+
+    // Obtenemos el ID y le restamos 1 para adaptarlo a Carta::skin
+    int rawId = doc.object()
+                    .value("equipped_skin")
+                    .toObject()
+                    .value("id")
+                    .toInt(-1);
+    if (rawId > 0) {
+        m_equippedSkinId = rawId - 1;
+        // Aplicamos directamente al renderer de Carta
+        Carta::skin = m_equippedSkinId;
+        // Si ya arrancó la partida, refresca la vista:
+        if (partidaIniciada) dibujarEstado();
+    }
+}
+
 
 /**
  * @brief Destructor de EstadoPartida.

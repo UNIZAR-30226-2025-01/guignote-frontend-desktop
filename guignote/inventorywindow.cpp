@@ -412,6 +412,11 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
     deckGroup = new QButtonGroup(this);
     deckGroup->setExclusive(true);
 
+    // Esto **sólo** una vez:
+    connect(deckGroup, QOverload<int>::of(&QButtonGroup::idClicked),
+            this, &InventoryWindow::onDeckSelected,
+            Qt::UniqueConnection);
+
     auto *vDeck = new QVBoxLayout(deckPage);
     vDeck->setAlignment(Qt::AlignTop);
     QLabel *lblDeck = new QLabel("Gestión de Barajas");
@@ -501,6 +506,34 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
         b2->setChecked(true);
 }
 
+// inventorywindow.cpp
+
+void InventoryWindow::onDeckSelected(int skinId)
+{
+    // 1) Guardar localmente
+    QSettings s("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(m_userId));
+    s.setValue("selectedDeck", skinId);
+
+    // 2) Enviar la petición al backend para equipar la skin
+    QNetworkRequest req(QUrl(
+        QStringLiteral("http://188.165.76.134:8000/usuarios/equip_skin/%1/")
+            .arg(m_numericUserId)
+        ));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    QJsonObject body{{"skin_id", skinId}};
+    QNetworkReply* reply = m_netMgr->post(req, QJsonDocument(body).toJson());
+
+    connect(reply, &QNetworkReply::finished, this, [reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "Skin equipada correctamente:" << reply->readAll();
+        } else {
+            qWarning() << "Error equipando skin:" << reply->errorString();
+        }
+        reply->deleteLater();
+    });
+}
+
+
 /**
  * @brief Slot que responde al cambio de pestaña en la barra lateral.
  * @param row Índice de la pestaña seleccionada.
@@ -515,34 +548,50 @@ void InventoryWindow::onTabChanged(int row)
 
 void InventoryWindow::onGetUserIdReply(QNetworkReply *reply)
 {
-    // 1) Comprobar error y borrar reply
+    // 1) Comprueba error y borra reply
     if (reply->error() != QNetworkReply::NoError) {
         qWarning() << "Error obteniendo numeric ID:" << reply->errorString();
         reply->deleteLater();
         return;
     }
-    QJsonDocument docId = QJsonDocument::fromJson(reply->readAll());
+    auto docId = QJsonDocument::fromJson(reply->readAll());
     reply->deleteLater();
-    if (!docId.isObject()) return;
-
-    // 2) Extraer user_id
     m_numericUserId = docId.object().value("user_id").toInt(-1);
     if (m_numericUserId < 0) {
-        qWarning() << "Respuesta inválida, no hay user_id";
+        qWarning() << "No vino user_id válido";
         return;
     }
 
+    // 2) Primero: obtener la skin equipada
+    QUrl urlEq(QStringLiteral(
+                   "http://188.165.76.134:8000/usuarios/get_equipped_items/%1/")
+                   .arg(m_numericUserId));
+    QNetworkRequest reqEq(urlEq);
+    auto *replyEq = m_netMgr->get(reqEq);
+    connect(replyEq, &QNetworkReply::finished, this, [this, replyEq]() {
+        if (replyEq->error() == QNetworkReply::NoError) {
+            auto doc = QJsonDocument::fromJson(replyEq->readAll());
+            if (doc.isObject())
+                m_equippedSkinId = doc.object()
+                                       .value("equipped_skin")
+                                       .toObject()
+                                       .value("id")
+                                       .toInt(-1);
+        }
+        replyEq->deleteLater();
 
-    // 4) Con ID numérico listo, lanzar petición de skins
-    QUrl urlSkins(QStringLiteral(
-                      "http://188.165.76.134:8000/usuarios/get_unlocked_items/%1/")
-                      .arg(m_numericUserId));
-    QNetworkRequest reqSkins(urlSkins);
-    QNetworkReply *replySk = m_netMgr->get(reqSkins);
-    connect(replySk, &QNetworkReply::finished, this, [this, replySk]() {
-        onUnlockedSkinsReply(replySk);
+        // 3) Ahora que ya sabemos cuál está equipada, pedimos las unlocked
+        QUrl urlSkins(QStringLiteral(
+                          "http://188.165.76.134:8000/usuarios/get_unlocked_items/%1/")
+                          .arg(m_numericUserId));
+        QNetworkRequest reqSkins(urlSkins);
+        auto *replySk = m_netMgr->get(reqSkins);
+        connect(replySk, &QNetworkReply::finished, this, [this, replySk]() {
+            onUnlockedSkinsReply(replySk);
+        });
     });
 }
+
 
 
 
@@ -564,77 +613,76 @@ void InventoryWindow::onUnlockedSkinsReply(QNetworkReply *reply)
 
 void InventoryWindow::populateDeckPage(const QJsonArray &skins)
 {
-    auto vlay = static_cast<QVBoxLayout*>(deckPage->layout());
+    // 0) Limpiamos botones anteriores del grupo
+    for (auto *btn : deckGroup->buttons())
+        deckGroup->removeButton(btn);
 
-    // --- 1) Eliminar el antiguo grid si existía ---
+    // 1) Eliminar el antiguo grid si existía
+    auto *vlay = static_cast<QVBoxLayout*>(deckPage->layout());
     if (vlay->count() > 1) {
-        // Extraemos el item en la posición 1
         QLayoutItem *li = vlay->takeAt(1);
         if (li) {
-            // Si era un layout, lo borramos
-            if (auto oldLayout = li->layout()) {
+            if (auto *oldLayout = li->layout())
                 delete oldLayout;
-            }
-            // Y borramos el QLayoutItem
             delete li;
         }
     }
 
-    // --- 2) Recoger IDs desbloqueados ---
+    // 2) Recoger IDs desbloqueados
     QSet<int> unlockedIds;
     for (auto v : skins)
         unlockedIds.insert(v.toObject().value("id").toInt());
 
-    // --- 3) Mapa interno id→recurso ---
+    // 3) Mapa interno id → recurso
     static const QMap<int, QString> resourceMap = {
         {1, ":/tiles/base.png"},
         {2, ":/tiles/poker.png"}
     };
 
-    // --- 4) Construir el nuevo grid ---
+    // 4) Construir el nuevo grid
     auto *grid = new QGridLayout;
     grid->setSpacing(15);
     const int cols = 3;
     for (int idx = 1; idx <= 6; ++idx) {
-        QString label = QString("Baraja %1").arg(idx);
-        QPixmap pix;
         bool ok = unlockedIds.contains(idx) && resourceMap.contains(idx);
+        QPixmap pix;
         if (ok) pix.load(resourceMap[idx]);
 
-        CardTile *tile = new CardTile(label, pix);
+        CardTile *tile = new CardTile(QString("Baraja %1").arg(idx), pix);
         tile->setEnabled(ok);
         tile->setCheckable(ok);
-        if (ok) deckGroup->addButton(tile, idx);
+        if (ok)
+            deckGroup->addButton(tile, idx);
 
-        int row = (idx-1)/cols, col = (idx-1)%cols;
+        int row = (idx - 1) / cols;
+        int col = (idx - 1) % cols;
         grid->addWidget(tile, row, col);
     }
 
-    // --- 5) Insertar el nuevo grid en la posición 1 ---
+    // 5) Insertar el grid en la posición 1
     vlay->insertLayout(1, grid);
 
-    // --- 6) Restaurar o asignar selección ---
-    QString cfg = QString("Sota, Caballo y Rey_%1").arg(m_userId);
-    QSettings settings("Grace Hopper", cfg);
-    int stored = settings.value("selectedDeck", -1).toInt();
-    if (unlockedIds.contains(stored) && deckGroup->button(stored)) {
-        deckGroup->button(stored)->setChecked(true);
-    } else if (!unlockedIds.isEmpty()) {
-        int firstId = *unlockedIds.begin();
-        if (auto *btn = deckGroup->button(firstId)) {
-            btn->setChecked(true);
-            settings.setValue("selectedDeck", firstId);
+    // 6) Restaurar la skin equipada por el servidor (o fallback local)
+    if (m_equippedSkinId > 0 && deckGroup->button(m_equippedSkinId)) {
+        deckGroup->button(m_equippedSkinId)->setChecked(true);
+    } else {
+        QSettings settings("Grace Hopper",
+                           QString("Sota, Caballo y Rey_%1").arg(m_userId));
+        int stored = settings.value("selectedDeck", -1).toInt();
+        if (auto *b = deckGroup->button(stored)) {
+            b->setChecked(true);
+        }
+        else if (!skins.isEmpty()) {
+            int first = skins.first().toObject().value("id").toInt();
+            if (auto *b2 = deckGroup->button(first)) {
+                b2->setChecked(true);
+                settings.setValue("selectedDeck", first);
+            }
         }
     }
 
-    // --- 7) Guardar futura selección al pulsar ---
-    connect(deckGroup, QOverload<int>::of(&QButtonGroup::idClicked),
-            this, [cfg](int id){
-                QSettings s("Grace Hopper", cfg);
-                s.setValue("selectedDeck", id);
-            });
-
 }
+
 
 
 
