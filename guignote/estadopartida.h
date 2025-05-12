@@ -94,6 +94,17 @@ public:
      */
     void dibujarEstado();
 
+    /**
+     * @brief Inicia y muestra un contador regresivo basado en segundos.
+     * @param segundos Duración inicial del turno en segundos.
+     */
+    void iniciarTimerVisual(int segundos);
+
+    /**
+     * @brief Detiene y oculta el temporizador visual.
+     */
+    void detenerTimerVisual();
+
     std::function<void()> onSalir; ///< Función callback ejecutada al salir de la partida.
 
     // Procesamiento de eventos desde el servidor
@@ -214,6 +225,28 @@ private:
 
     // Chat partida
     int idChatPartida;
+
+    /** Temporizador interno que dispara cada segundo */
+    QTimer* turnoTimer;
+    /** Etiqueta donde se mostrará el countdown */
+    QLabel* labelTimer;
+    /** Segundos restantes del turno */
+    int segundosRestantes;
+    /** Duración por defecto del turno (inicializada en start_game) */
+    int tiempoTurnoDefault;
+    /** Etiqueta con el texto fijo "Tiempo restante" */
+    QLabel* labelTimerTexto;
+
+    QAudioOutput*    tickOutput;
+    QMediaPlayer*    tickPlayer;
+private slots:
+    /**
+     * @brief Slot que actualiza la etiqueta del timer cada segundo.
+     */
+    void actualizarTimer();
+
+    /** @brief Realiza vibración y detiene temporizador visual con ambos labels. */
+    void vibrarYDetenerTimerVisual();
 };
 
 #endif // ESTADOPARTIDA_H
