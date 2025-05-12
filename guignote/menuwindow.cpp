@@ -124,51 +124,86 @@
      }
  }
  
- void MenuWindow::checkRejoin(){
+ void MenuWindow::checkRejoin() {
      QNetworkAccessManager *networkManager = new QNetworkAccessManager(this);
-     QNetworkRequest request(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
-     request.setRawHeader("Auth", token.toUtf8());
+
+     // Primer consulta: salas reconectables
+     QNetworkRequest requestReconectables(QUrl("http://188.165.76.134:8000/salas/reconectables/"));
+     requestReconectables.setRawHeader("Auth", token.toUtf8());
      qDebug() << "Comprobamos salas reconectables...";
- 
-     QNetworkReply *reply = networkManager->get(request);
-     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-         // Comprueba errores de red
-         qDebug() << "Obtenemos respuesta sobre las salas reconectables...";
-         if (reply->error() != QNetworkReply::NoError) {
-             qDebug() << "Error de red:" << reply->errorString();
-             reply->deleteLater();
+
+     QNetworkReply *replyReconectables = networkManager->get(requestReconectables);
+
+     // Segunda consulta: salas pausadas
+     QNetworkRequest requestPausadas(QUrl("http://188.165.76.134:8000/salas/pausadas/"));
+     requestPausadas.setRawHeader("Auth", token.toUtf8());
+     qDebug() << "Comprobamos salas pausadas...";
+
+     QNetworkReply *replyPausadas = networkManager->get(requestPausadas);
+
+     connect(replyReconectables, &QNetworkReply::finished, this, [this, replyReconectables, replyPausadas]() {
+         // Comprobación de errores para salas reconectables
+         if (replyReconectables->error() != QNetworkReply::NoError) {
+             qDebug() << "Error de red (reconectables):" << replyReconectables->errorString();
+             replyReconectables->deleteLater();
              return;
          }
- 
-         // Lee y parsea el JSON
-         const QByteArray data = reply->readAll();
-         QJsonParseError parseError;
-         QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
-         if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-             qDebug() << "Error parseando JSON:" << parseError.errorString();
-             reply->deleteLater();
+
+         const QByteArray dataReconectables = replyReconectables->readAll();
+         QJsonParseError parseErrorReconectables;
+         QJsonDocument docReconectables = QJsonDocument::fromJson(dataReconectables, &parseErrorReconectables);
+         if (parseErrorReconectables.error != QJsonParseError::NoError || !docReconectables.isObject()) {
+             qDebug() << "Error parseando JSON (reconectables):" << parseErrorReconectables.errorString();
+             replyReconectables->deleteLater();
              return;
          }
- 
-         QJsonObject obj = doc.object();
-         // Verifica que exista el array "salas"
-         if (!obj.contains("salas") || !obj.value("salas").isArray()) {
-             qDebug() << "La respuesta no contiene el campo 'salas'";
-             reply->deleteLater();
+
+         QJsonObject objReconectables = docReconectables.object();
+         if (!objReconectables.contains("salas") || !objReconectables.value("salas").isArray()) {
+             qDebug() << "La respuesta de salas reconectables no contiene el campo 'salas'";
+             replyReconectables->deleteLater();
+         } else {
+             salas = objReconectables.value("salas").toArray();
+         }
+
+         // Comprobación de errores para salas pausadas
+         if (replyPausadas->error() != QNetworkReply::NoError) {
+             qDebug() << "Error de red (pausadas):" << replyPausadas->errorString();
+             replyPausadas->deleteLater();
              return;
          }
- 
-         salas = obj.value("salas").toArray();
-         if (salas.isEmpty()) {
-             qDebug() << "No hay salas reconectables.";
+
+         const QByteArray dataPausadas = replyPausadas->readAll();
+         QJsonParseError parseErrorPausadas;
+         QJsonDocument docPausadas = QJsonDocument::fromJson(dataPausadas, &parseErrorPausadas);
+         if (parseErrorPausadas.error != QJsonParseError::NoError || !docPausadas.isObject()) {
+             qDebug() << "Error parseando JSON (pausadas):" << parseErrorPausadas.errorString();
+             replyPausadas->deleteLater();
+             return;
+         }
+
+         QJsonObject objPausadas = docPausadas.object();
+         if (!objPausadas.contains("salas") || !objPausadas.value("salas").isArray()) {
+             qDebug() << "La respuesta de salas pausadas no contiene el campo 'salas'";
+             replyPausadas->deleteLater();
+         } else {
+             salasPausadas = objPausadas.value("salas").toArray();
+         }
+
+         // Lógica para mostrar el botón
+         if (salas.isEmpty() && salasPausadas.isEmpty()) {
+             qDebug() << "No hay salas reconectables ni pausadas.";
              ReconnectButton->hide();
          } else {
-             qDebug() << "Salas reconectables encontradas:";
+             qDebug() << "Salas reconectables o pausadas encontradas:";
              ReconnectButton->show();
          }
-         reply->deleteLater();
+
+         replyReconectables->deleteLater();
+         replyPausadas->deleteLater();
      });
  }
+
  
  // Constructor de la clase MenuWindow
  MenuWindow::MenuWindow(const QString &userKey, QWidget *parent) :

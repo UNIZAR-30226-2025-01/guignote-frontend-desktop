@@ -89,6 +89,7 @@ private:
     int id;
     QPushButton *ReconnectButton = nullptr;
     QJsonArray salas;
+    QJsonArray salasPausadas;
     QVBoxLayout *mainLayout;
     void checkRejoin();
 
