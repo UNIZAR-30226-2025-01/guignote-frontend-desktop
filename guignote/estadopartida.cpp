@@ -24,6 +24,7 @@
 #include <QMenu>
 #include "settingswindow.h"
 #include "ventanasalirpartida.h"
+#include "gamemessagewindow.h"
 
 /**
  * @brief Constructor de EstadoPartida.
@@ -314,6 +315,11 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
         j->nombre = obj["nombre"].toString();
         j->equipo = obj["equipo"].toInt();
         j->numCartas = obj["num_cartas"].toInt();
+        if(obj.contains("carta_jugada") && !obj["carta_jugada"].isNull()) {
+            QJsonObject cartaJugada = obj["carta_jugada"].toObject();
+            j->ultimoPaloJugado = cartaJugada["palo"].toString();
+            j->ultimoValorJugado = QString::number(cartaJugada["valor"].toInt());
+        }
         jugadores.append(j);
         mapJugadores[j->id] = j;
         QLabel* nameLabel = new QLabel(j->nombre, this);
@@ -379,6 +385,14 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
                     j->mano->agnadirCarta(new Carta());
             }
             j->mano->ocultarCartaJugada();
+        }
+    }
+
+    for(Jugador* j : jugadores) {
+        if(!j->ultimoPaloJugado.isEmpty()) {
+            j->mano->jugada()->setPaloValor(
+                j->ultimoPaloJugado, j->ultimoValorJugado
+            );
         }
     }
 }
@@ -878,8 +892,9 @@ void EstadoPartida::procesarCardDrawn(QJsonObject data, std::function<void()> ca
         if(!jugador || !jugador->mano || jugador->mano->getNumCartas() >= 6)
             continue;
 
-        Carta* carta = new Carta();
+        Carta* carta = nullptr;
         if(jugador->id == miId) carta = new Carta(palo, valor);
+        else carta = new Carta();
 
         QGraphicsOpacityEffect* opacityEffect = new QGraphicsOpacityEffect(carta); // Parent effect to the card
         opacityEffect->setOpacity(0.0); // Start completely transparent
