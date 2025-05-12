@@ -274,6 +274,17 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                                 replyUnlock->deleteLater();
                                 mgrUnlock->deleteLater();
                             });
+
+                            QJsonObject body2; body2["skin_id"] = 2;
+                            QNetworkReply *replyUnlock2 = mgrUnlock->post(reqUnlock, QJsonDocument(body2).toJson());
+                            connect(replyUnlock2, &QNetworkReply::finished, this, [replyUnlock2, mgrUnlock]() {
+                                if (replyUnlock2->error() != QNetworkReply::NoError)
+                                    qWarning() << "unlock_skin(2) failed:" << replyUnlock2->errorString();
+                                else
+                                    qDebug()   << "unlock_skin(2) success";
+                                replyUnlock2->deleteLater();
+                                mgrUnlock->deleteLater();
+                            });
                         });
                         // ————————————————————————————————————————————————
 
