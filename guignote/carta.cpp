@@ -99,6 +99,7 @@ void Carta::setOrientacion(Orientacion orientacion) {
 void Carta::cargarImagen() {
     QString _skin = "base";
     if (Carta::skin == 1) _skin = "poker";
+    if (Carta::skin == 2) _skin = "paint";
 
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
 
