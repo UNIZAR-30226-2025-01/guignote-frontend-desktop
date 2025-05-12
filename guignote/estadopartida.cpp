@@ -22,6 +22,7 @@
 #include <QDialog>
 #include <QJsonDocument>
 #include <QMenu>
+#include "settingswindow.h"
 #include "ventanasalirpartida.h"
 
 /**
@@ -127,7 +128,7 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QStri
     tickOutput = new QAudioOutput(this);
     tickPlayer = new QMediaPlayer(this);
     tickPlayer->setAudioOutput(tickOutput);
-    tickOutput->setVolume(sfxVol / 100.0);
+    tickOutput->setVolume(sfxVol * 0.5/ 100.0);
     tickPlayer->setSource(QUrl("qrc:/bgm/ticktack.mp3"));
 
     //
@@ -288,6 +289,11 @@ void EstadoPartida::limpiar() {
         overlay = nullptr;
         overlayMsg = nullptr;
     }
+    for (auto lbl : m_labelJugadores.values()) {
+        lbl->deleteLater();
+    }
+    m_labelJugadores.clear();
+
 }
 
 /**
@@ -310,6 +316,18 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
         j->numCartas = obj["num_cartas"].toInt();
         jugadores.append(j);
         mapJugadores[j->id] = j;
+        QLabel* nameLabel = new QLabel(j->nombre, this);
+        nameLabel->setStyleSheet(
+            "QLabel {"
+            "  font-size: 16px;"
+            "  color: white;"
+            "  background-color: rgba(0, 0, 0, 150);"
+            "  padding: 4px 8px;"
+            "  border-radius: 4px;"
+            "}"
+            );
+        nameLabel->adjustSize();
+        m_labelJugadores[j] = nameLabel;
     }
 
     chatId = data.value("chat_id").toInt();
@@ -405,6 +423,37 @@ void EstadoPartida::dibujarEstado() {
 
     for(Jugador* j : jugadores) {
         if(j->mano) j->mano->dibujar();
+        if (m_labelJugadores.contains(j)) {
+            QLabel* lbl = m_labelJugadores[j];
+            Orientacion orient = j->mano->getOrientacion();
+            QPoint handPos = j->mano->pos();
+            QSize handSize = j->mano->size();
+            int x, y;
+
+            switch (orient) {
+            case Orientacion::DOWN:
+                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
+                y = handPos.y() - lbl->height() - 4;
+                break;
+            case Orientacion::TOP:
+                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
+                y = handPos.y() + handSize.height() + 4;
+                break;
+            case Orientacion::LEFT:
+                x = handPos.x() + handSize.width() + 4;
+                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
+                break;
+            case Orientacion::RIGHT:
+            default:
+                x = handPos.x() - lbl->width() - 4;
+                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
+                break;
+            }
+
+            lbl->move(x, y);
+            lbl->show();
+            lbl->raise();
+        }
     }
 
     // 2 jugadores (1vs1)
@@ -932,6 +981,25 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
     pausadosLabel->setAlignment(Qt::AlignCenter);
 
     this->crearMenu();
+
+    // ——— Label fijo de Turno ———
+    turnoPermanenteLabel = new QLabel(this);
+    turnoPermanenteLabel->setStyleSheet(R"(
+        QLabel {
+            font-size: 24px;
+            color: white;
+            background-color: rgba(0, 0, 0, 150);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    )");
+    turnoPermanenteLabel->setText("Esperando turno...");
+    turnoPermanenteLabel->adjustSize();
+    // Posicionar justo a la derecha del botón de menú (32 + 44 + 16 = 92)
+    turnoPermanenteLabel->move(92, 32);
+    turnoPermanenteLabel->show();
+    turnoPermanenteLabel->raise();
+
 }
 
 /**
@@ -970,8 +1038,22 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
  * @param callback Función tras cerrar el mensaje.
  */
 void EstadoPartida::procesarTurnUpdate(QJsonObject data, std::function<void()> callback) {
+
     // Determinamos si es tu turno o de otro jugador
     int jugadorId = data.value("jugador").toObject().value("id").toInt();
+    QString textoTurno;
+    if (jugadorId == miId) {
+        textoTurno = "Tu turno";
+    } else {
+        QString nombre = data.value("jugador").toObject().value("nombre").toString();
+        textoTurno = QString("Turno de %1").arg(nombre);
+    }
+    if (turnoPermanenteLabel) {
+        turnoPermanenteLabel->setText(textoTurno);
+        turnoPermanenteLabel->adjustSize();
+        // (Opcional) si quieres reajustar siempre x=92,y=32:
+        turnoPermanenteLabel->move(92, 32);
+    }
     QString mensaje;
     if (jugadorId == miId) {
         mensaje = "Es tu turno";
@@ -1620,6 +1702,25 @@ void EstadoPartida::crearMenu() {
 
         equivalenciaWindow->move(64, 64);
         equivalenciaWindow->show();
+    });
+
+    QAction *sonidoAction = new QAction("Sonido", this);
+    menu->addAction(sonidoAction);
+    connect(sonidoAction, &QAction::triggered, this, [this]() {
+        // Abrimos la ventana de ajustes
+        SettingsWindow *settingsWin = new SettingsWindow(this, this, miNombre);
+        settingsWin->setModal(true);
+        // Al cerrarla, recargamos volúmenes:
+        connect(settingsWin, &QDialog::finished, this, [this](int) {
+            QSettings cfg("Grace Hopper",
+                          QString("Sota, Caballo y Rey_%1").arg(miNombre));
+            int bgmVol  = cfg.value("sound/volume",        50).toInt();
+            int sfxVol  = cfg.value("sound/effectsVolume", 50).toInt();
+            if (audioOutput) audioOutput->setVolume(bgmVol / 100.0);
+            if (effectOutput) effectOutput->setVolume(sfxVol / 100.0);
+            if (tickOutput)   tickOutput->setVolume(sfxVol * 0.5 / 100.0);
+        });
+        settingsWin->exec();
     });
 
     QAction *salirAction = new QAction("Salir", this);
