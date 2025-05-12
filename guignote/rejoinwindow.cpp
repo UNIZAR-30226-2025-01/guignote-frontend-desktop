@@ -19,6 +19,7 @@
 #include <QPushButton>
 #include <QWebSocket>
 #include "menuwindow.h"
+#include <QApplication>
 
 /**
  * @brief Constructor de RejoinWindow.
@@ -171,96 +172,6 @@ void RejoinWindow::populateSalas() {
 }
 
 /**
- * @brief Maneja mensajes entrantes por WebSocket.
- * @param userKey Clave del usuario para contexto.
- * @param mensaje Cadena JSON recibida.
- *
- * Parsear el JSON, detectar eventos ("player_joined", "start_game")
- * y actuar en consecuencia (debug, abrir GameWindow y cerrar diálogo).
- */
-void RejoinWindow::manejarMensaje(const QString &userKey, const QString &mensaje) {
-    QJsonDocument doc = QJsonDocument::fromJson(mensaje.toUtf8());
-    if (!doc.isObject()) {
-        qWarning() << "❌ Mensaje no es JSON válido.";
-        return;
-    }
-
-    QWidget *w = parentWidget();
-    MenuWindow *menuWin = qobject_cast<MenuWindow*>(w);
-
-    QJsonObject root = doc.object();
-    QString tipo = root.value("type").toString();
-    QJsonObject data = root.value("data").toObject();
-
-    if (tipo == "player_joined") {
-        QString nombre = data["usuario"].toObject()["nombre"].toString();
-        int id = data["usuario"].toObject()["id"].toInt();
-        int chatId = data["chat_id"].toInt();
-
-        qDebug() << "ChatID: " << chatId;
-
-        qDebug() << "👤 Se ha unido un jugador:" << nombre << "(ID:" << id << ")";
-
-        if(nombre == usr){
-            this->id = id;
-        }
-    }
-
-    else if (tipo == "start_game") {
-        int mazoRestante = data["mazo_restante"].toInt();
-        bool faseArrastre = data["fase_arrastre"].toBool();
-        int chatId = data["chat_id"].toInt();
-
-        QJsonObject cartaTriunfo = data["carta_triunfo"].toObject();
-        QString paloTriunfo = cartaTriunfo["palo"].toString();
-        int valorTriunfo = cartaTriunfo["valor"].toInt();
-
-        QJsonArray cartasJugador = data["mis_cartas"].toArray();
-        QJsonArray jugadores = data["jugadores"].toArray();
-
-        qDebug() << "🎮 Inicio de partida";
-        qDebug() << "🃏 Triunfo:" << paloTriunfo << valorTriunfo;
-        qDebug() << "📦 Cartas en mazo:" << mazoRestante;
-        qDebug() << "💬 Chat ID:" << chatId;
-
-        // — Nuevo: listamos id y número de cartas de cada jugador —
-        for (const QJsonValue &v : jugadores) {
-            if (!v.isObject()) continue;
-            QJsonObject jo = v.toObject();
-            int pid        = jo.value("id").toInt();
-            int numCartas  = jo.value("num_cartas").toInt();
-            qDebug() << "👤 Jugador" << pid << "→" << numCartas << "cartas";
-        }
-
-        int numJugadores = jugadores.size();
-        qDebug() << "hay " << numJugadores << " jugadores";
-        int type = -1;
-        switch (numJugadores) {
-        case 2:
-            type = 1;
-            break;
-        case 4:
-            type = 2;
-            break;
-        default:
-            break;
-        }
-
-        // — Construimos el GameWindow y lo colocamos donde estaba el menú —
-        /*GameWindow *gameWindow = new GameWindow(
-            userKey, type, 1, data, id, webSocket, usr, menuWin
-            );
-        gameWindow->setGeometry(w->geometry());
-        gameWindow->show();
-
-        QWidget *top = this->window();
-        top->close();*/
-    }
-
-}
-
-
-/**
  * @brief Extrae el token de autenticación desde el archivo de configuración.
  * @param userKey Clave del usuario usada para formar la ruta del .conf.
  * @return Cadena con el token, o vacía si ocurre un error.
@@ -301,26 +212,38 @@ QString RejoinWindow::loadAuthToken(const QString &userKey) {
  * conecta las señales y abre la conexión al servidor.
  */
 void RejoinWindow::rejoin(QString idPart) {
-
-    qDebug() << "creamos socket";
-    webSocket = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
-
-    // conexión original
-    connect(webSocket, &QWebSocket::connected, [this]() {
-        qDebug() << "WebSocket conectado correctamente.";
-    });
-
-    connect(webSocket, &QWebSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
-        qDebug() << "Error en WebSocket:" << error;
-    });
-    connect(webSocket, &QWebSocket::textMessageReceived, this, [=](const QString &mensaje) {
-        this->manejarMensaje(userKey, mensaje);
-    });
-
-
     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2")
                       .arg(token)
                       .arg(idPart);
     qDebug() << "Conectando a:" << url;
-    webSocket->open(QUrl(url));
+
+    // Creamos la nueva ventana (EstadoPartida o GameWindow)
+    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [this]() {
+        auto* menu = new MenuWindow(userKey);
+        menu->showFullScreen();
+    });
+
+    gameWindow->setAttribute(Qt::WA_DeleteOnClose);
+    gameWindow->setWindowFlag(Qt::Window); // Asegura que sea una ventana independiente
+
+    // Le damos la misma geometría que el menú actual
+    gameWindow->showFullScreen();
+
+    QTimer::singleShot(125, gameWindow, [gameWindow]() {
+        gameWindow->init();
+    });
+
+    /* ⚠️ Parar música antes de cerrar
+    if (backgroundPlayer) {
+        backgroundPlayer->stop();
+        backgroundPlayer->deleteLater();
+        backgroundPlayer = nullptr;
+    }
+    */
+
+    for (QWidget *w : QApplication::topLevelWidgets()) {
+        if (w != gameWindow) {
+            w->close();
+        }
+    }
 }

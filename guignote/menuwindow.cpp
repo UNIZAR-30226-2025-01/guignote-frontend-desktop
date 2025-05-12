@@ -89,6 +89,7 @@
  }
  
  void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int capacidad) {
+     qDebug() << "Uniendose a partida";
      QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
      .arg(token)
          .arg(capacidad);
@@ -186,7 +187,7 @@
      this->setAttribute(Qt::WA_DeleteOnClose);
      connect(rejoinTimer, &QTimer::timeout,
              this, &MenuWindow::checkRejoin);
-     rejoinTimer->start(5000);
+     rejoinTimer->start(1000);
  
      ui->setupUi(this);
      // Activa el relleno de fondo desde la hoja de estilo
