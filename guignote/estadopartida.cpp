@@ -36,6 +36,7 @@
 EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
+    this->bg = bg;
     if(bg == 0) {
         this->setStyleSheet(R"(
             /* Fondo de la ventana con gradiente verde */
@@ -870,6 +871,9 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
  */
 void EstadoPartida::procesarStartGame(QJsonObject data) {
     ocultarOverlayEspera();
+
+    crearEsquinas();
+
     if(!getPartidaIniciada()) {
         this->iniciarBotonesYEtiquetas();
         this->setPartidaIniciada(true);
@@ -1576,4 +1580,70 @@ void EstadoPartida::crearMenu() {
     )");
 
     button->show();
+}
+
+void EstadoPartida::crearEsquinas() {
+    if (esquinasCreadas) return;
+    esquinasCreadas = true;
+
+    QString img;
+    if(bg == 0){
+        img = ":/images/set-golden-border-ornaments/gold_ornaments.png";
+    } else {
+        img = ":/images/set-golden-border-ornaments/black_ornaments.png";
+    }
+
+    QPixmap ornamentPixmap(img);
+
+    QLabel *cornerTopLeft = new QLabel(this);
+    QLabel *cornerTopRight = new QLabel(this);
+    QLabel *cornerBottomLeft = new QLabel(this);
+    QLabel *cornerBottomRight = new QLabel(this);
+    QSize ornamentSize = QSize(300, 299);
+
+    cornerTopLeft->setPixmap(ornamentPixmap.scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+    QTransform transformH;
+    transformH.scale(-1, 1);
+    cornerTopRight->setPixmap(
+        ornamentPixmap.transformed(transformH, Qt::SmoothTransformation)
+            .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        );
+
+    QTransform transformV;
+    transformV.scale(1, -1);
+    cornerBottomLeft->setPixmap(
+        ornamentPixmap.transformed(transformV, Qt::SmoothTransformation)
+            .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        );
+
+    QTransform transformHV;
+    transformHV.scale(-1, -1);
+    cornerBottomRight->setPixmap(
+        ornamentPixmap.transformed(transformHV, Qt::SmoothTransformation)
+            .scaled(ornamentSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+        );
+
+    QList<QLabel*> corners = {cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight};
+    for (QLabel* corner : corners) {
+        corner->setFixedSize(ornamentSize);
+        corner->setAttribute(Qt::WA_TransparentForMouseEvents);
+        corner->setAttribute(Qt::WA_TranslucentBackground);
+        corner->setStyleSheet("background: transparent;");
+        corner->raise();
+    }
+
+    int w = this->width();
+    int h = this->height();
+    int topOffset = 0;
+
+    cornerTopLeft->move(0, topOffset);
+    cornerTopRight->move(w - cornerTopRight->width(), topOffset);
+    cornerBottomLeft->move(0, h - cornerBottomLeft->height());
+    cornerBottomRight->move(w - cornerBottomRight->width(), h - cornerBottomRight->height());
+
+    cornerTopLeft->show();
+    cornerTopRight->show();
+    cornerBottomLeft->show();
+    cornerBottomRight->show();
 }

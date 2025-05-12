@@ -169,6 +169,10 @@ public slots:
     void onAnularPausa();
 
 private:
+    int bg;
+    bool esquinasCreadas = false;
+    void crearEsquinas();
+
     // Métodos auxiliares
     void limpiar();
     void actualizarEstado(const QJsonObject& data);
