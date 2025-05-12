@@ -456,7 +456,7 @@ void CustomGamesWindow::joinGame(QString idPart, int cap){
     qDebug() << "Conectando a:" << url;
 
     // Creamos la nueva ventana (EstadoPartida o GameWindow)
-    EstadoPartida *gameWindow = new EstadoPartida(usr, url, 1, 1, [this]() {
+    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */ 1, [this]() {
         auto* menu = new MenuWindow(userKey);
         menu->showFullScreen();
     });

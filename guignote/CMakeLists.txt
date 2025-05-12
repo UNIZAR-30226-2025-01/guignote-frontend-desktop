@@ -29,6 +29,7 @@ set(PROJECT_SOURCES
     userprofilewindow.cpp userprofilewindow.h
     loadingwindow.cpp     loadingwindow.h
     friendsmessagewindow.cpp friendsmessagewindow.h
+    gamemessagewindow.cpp gamemessagewindow.h
     rankingwindow.cpp     rankingwindow.h
     orientacion.h
     ventanasalirpartida.h ventanasalirpartida.cpp

@@ -23,6 +23,7 @@
 #include <QAudioOutput>
 #include <QtWebSockets/QWebSocket>
 #include <QQueue>
+#include "gamemessagewindow.h"
 
 /**
  * @struct Jugador
@@ -57,7 +58,7 @@ public:
      * @param onSalir Función callback que se ejecuta al salir de la partida.
      * @param parent Widget padre (opcional).
      */
-    EstadoPartida(QString miNombre, const QString& wsUrl, int bg = 0, int style = 0,
+    EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg = 0, int style = 0,
                   std::function<void()> onSalir = nullptr, QWidget* parent = nullptr);
 
     /**
@@ -71,10 +72,10 @@ public:
     void init();
 
     /**
-     * @brief Establece el ID del jugador local.
+     * @brief Establece el ID del jugador local y su token.
      * @param id Identificador del jugador.
      */
-    void setMiId(int id);
+    void setMiIdToken(int id, const QString& token);
 
     /**
      * @brief Verifica si la partida ha comenzado.
@@ -163,6 +164,8 @@ private:
     void iniciarBotonesYEtiquetas();
     void enviarMsg(QJsonObject& msg);
 
+    void crearMenu();
+
     // Estado del juego
     Carta* cartaTriunfo = nullptr;
     QVector<Jugador*> jugadores;
@@ -171,6 +174,7 @@ private:
     int puntosEquipo2 = 0;
     int mazoRestante = 0;
     int chatId, miId;
+    QString miToken;
     Carta* mazo = nullptr;
     bool enPausa = false;
     int jugadoresPausa = 0;
@@ -207,6 +211,9 @@ private:
     QAudioOutput* effectOutput     = nullptr;
 
     QString wsUrl; ///< URL del servidor WebSocket.
+
+    // Chat partida
+    int idChatPartida;
 };
 
 #endif // ESTADOPARTIDA_H

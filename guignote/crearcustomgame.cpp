@@ -276,7 +276,7 @@ void CrearCustomGame::crearPartida(){
 
 
     // Creamos la nueva ventana (EstadoPartida o GameWindow)
-    EstadoPartida *gameWindow = new EstadoPartida(usr, url, 1, 1, [this]() {
+    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, 1, 1, [this]() {
         auto* menu = new MenuWindow(userKey);
         menu->showFullScreen();
     });

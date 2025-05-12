@@ -18,6 +18,7 @@
 #include <QPushButton>
 #include <QDialog>
 #include <QJsonDocument>
+#include <QMenu>
 #include "ventanasalirpartida.h"
 
 /**
@@ -32,9 +33,9 @@
  * @param onSalir Callback que se llamará al salir de la partida.
  * @param parent Widget padre (opcional).
  */
-EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int style,
+EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
-    : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl) {
+    : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
     if(bg == 0) {
         this->setStyleSheet(R"(
             /* Fondo de la ventana con gradiente verde */
@@ -61,30 +62,6 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& wsUrl, int bg, int
         )");
     }
     Carta::skin = style;
-
-    // Sólo para skin "poker" (style == 1), creamos el legendLabel oculto y escalado:
-    if (style == 1) {
-        legendLabel = new QLabel(this);
-
-        // Cargamos y escalamos el pixmap a 100px de ancho (manteniendo proporción):
-        QPixmap raw(":/legends/legendpoker.png");
-        int targetW = 150;
-        int targetH = raw.height() * targetW / raw.width();
-        QPixmap scaled = raw.scaled(targetW, targetH,
-                                    Qt::KeepAspectRatio,
-                                    Qt::SmoothTransformation);
-
-        legendLabel->setPixmap(scaled);
-        legendLabel->setAttribute(Qt::WA_TranslucentBackground);
-
-        // 50% de opacidad:
-        auto *opacity = new QGraphicsOpacityEffect(legendLabel);
-        opacity->setOpacity(0.5);
-        legendLabel->setGraphicsEffect(opacity);
-
-        // Oculto hasta que empiece la partida
-        legendLabel->hide();
-    }
 
     //
     // ——— BGM DE PARTIDA ———
@@ -158,11 +135,6 @@ EstadoPartida::~EstadoPartida() {
         effectPlayer = nullptr;
     }
     // Los QAudioOutput se borran automáticamente como hijos de this
-
-    if (legendLabel) {
-        legendLabel->deleteLater();
-        legendLabel = nullptr;
-    }
 
     this->limpiar();
 }
@@ -288,7 +260,8 @@ void EstadoPartida::actualizarEstado(const QJsonObject& data) {
  * @brief Establece el identificador del jugador local.
  * @param id Identificador único del jugador.
  */
-void EstadoPartida::setMiId(int id) {
+void EstadoPartida::setMiIdToken(int id, const QString& token) {
+    miToken = token;
     miId = id;
 }
 
@@ -317,14 +290,6 @@ void EstadoPartida::dibujarEstado() {
 
     QSize screenSize = QGuiApplication::primaryScreen()->availableGeometry().size();
     int width = screenSize.width(), height = screenSize.height();
-
-    if (legendLabel) {
-        // Lo colocamos a la izquierda, centrado verticalmente
-        int x = 0;
-        int y = height/2 - legendLabel->height()/2;
-        legendLabel->move(x, y);
-        legendLabel->raise();
-    }
 
     Jugador* yo = mapJugadores.value(miId, nullptr);
     if(!yo || !yo->mano) return;
@@ -856,6 +821,8 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
         "}"
         );
     pausadosLabel->setAlignment(Qt::AlignCenter);
+
+    this->crearMenu();
 }
 
 /**
@@ -865,9 +832,6 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
  */
 void EstadoPartida::procesarStartGame(QJsonObject data) {
     ocultarOverlayEspera();
-
-    // — Mostrar la leyenda sólo al empezar la partida —
-    if (legendLabel) legendLabel->show();
     if(!getPartidaIniciada()) {
         this->iniciarBotonesYEtiquetas();
         this->setPartidaIniciada(true);
@@ -1063,10 +1027,9 @@ void EstadoPartida::procesarError(QJsonObject data, std::function<void()> callba
 
     connect(group, &QSequentialAnimationGroup::finished, this, [popup, callback]() {
         popup->deleteLater();
-        if (callback) callback();
     });
-
     group->start(QAbstractAnimation::DeleteWhenStopped);
+    if (callback) callback();
 }
 
 
@@ -1116,30 +1079,28 @@ void EstadoPartida::procesarCambioSiete(QJsonObject data, std::function<void()> 
     QJsonObject jugadorData = data["jugador"].toObject();
     int jugadorId = jugadorData["id"].toInt();
     QString jugadorNombre = jugadorData["nombre"].toString();
-
-    QJsonObject cartaRobadaJson = data["carta_robada"].toObject();
-    QString paloTriunfo = cartaRobadaJson["palo"].toString();
-    QString valorTriunfo = cartaRobadaJson["valor"].toString();
+    QString valor = "7";
 
     Jugador* jugador = mapJugadores.value(jugadorId, nullptr);
-
-    // El jugador no existe
     if(!jugador || !jugador->mano) return;
 
-    // Buscar 7 del jugador e intercambiarlo por la carta de triunfo
-    bool cambio = false;
-    for(int i = 0; i < jugador->mano->getNumCartas() && !cambio; ++i) {
-        Carta* aux = jugador->mano->getCarta(i);
-        if(aux->getPalo() == paloTriunfo && aux->getValor() == "7") {
-            cartaTriunfo->setPaloValor(paloTriunfo, "7");
-            aux->setPaloValor(paloTriunfo, valorTriunfo);
-            cambio = true;
+    if(jugadorId == miId) {
+        Carta* c = nullptr;
+        for(int i = 0; i < jugador->mano->getNumCartas(); ++i) {
+            c = jugador->mano->getCarta(i);
+            if(c->getPalo() == cartaTriunfo->getPalo() && c->getValor() == "7") {
+                c->setPaloValor(cartaTriunfo->getPalo(), cartaTriunfo->getValor());
+                break;
+            }
         }
+        if(!c) return;
     }
 
+    this->cartaTriunfo->setPaloValor(cartaTriunfo->getPalo(), valor);
+
     // Mostrar mensaje
-    QString msg = QString("%1 ha cambiado su 7 de triunfo por la carta %2 de triunfo")
-                      .arg(jugadorNombre).arg(valorTriunfo);
+    QString msg = QString("%1 ha cambiado su 7 de triunfo por la carta de triunfo")
+                      .arg(jugadorNombre);
     this->mostrarMensaje(msg, callback);
 }
 
@@ -1288,7 +1249,7 @@ void EstadoPartida::manejarEventoPrePartida(const QString& tipo, const QJsonObje
             QString nom = data.value("usuario").toObject().value("nombre").toString();
             int id = data.value("usuario").toObject().value("id").toInt();
             if(nom == miNombre) {
-                this->setMiId(id);
+                this->setMiIdToken(id, data.value("chat_id").toString());
             }
         }
 
@@ -1325,4 +1286,120 @@ void EstadoPartida::setVolume(int volumePercentage) {
     if (audioOutput) {
         audioOutput->setVolume(volumePercentage / 100.0);
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+/// Menú lateral
+//////////////////////////////////////////////////////////////////////////////////////
+
+void EstadoPartida::crearMenu() {
+    QPushButton *button = new QPushButton(this);
+    button->setIcon(QIcon(":/icons/settings.png"));
+    button->setIconSize(QSize(44, 44));
+    button->setGeometry(32, 32, 44, 44);
+    QMenu* menu = new QMenu(this);
+
+    QAction *chatAction = new QAction("Chat", this);
+    menu->addAction(chatAction);
+    connect(chatAction, &QAction::triggered, this, [this]() {
+        auto* chat = new GameMessageWindow(miNombre, this, QString::number(chatId), QString::number(miId));
+        chat->show();
+    });
+
+    QAction *equivalenciaAction = new QAction("Equivalencia", this);
+    menu->addAction(equivalenciaAction);
+    connect(equivalenciaAction, &QAction::triggered, this, [this]() {
+        QWidget *equivalenciaWindow = new QWidget(this);
+        equivalenciaWindow->setAttribute(Qt::WA_DeleteOnClose);
+        equivalenciaWindow->setWindowTitle("Equivalencia");
+
+        QLabel* legendLabel = new QLabel(equivalenciaWindow);
+
+        QPixmap raw(":/legends/legendpoker.png");
+        int targetW = 150, targetH = raw.height() * targetW / raw.width();
+        QPixmap scaled = raw.scaled(targetW, targetH, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+        legendLabel->setPixmap(scaled);
+        legendLabel->setAlignment(Qt::AlignCenter);
+        legendLabel->setScaledContents(true);
+        legendLabel->setAttribute(Qt::WA_TranslucentBackground);
+
+        auto *opacity = new QGraphicsOpacityEffect(legendLabel);
+        opacity->setOpacity(0.5);
+        legendLabel->setGraphicsEffect(opacity);
+
+        equivalenciaWindow->resize(scaled.size());
+
+        QPushButton *closeButton = new QPushButton("Cerrar", equivalenciaWindow);
+        closeButton->setGeometry(10, 10, 100, 40);
+        connect(closeButton, &QPushButton::clicked, equivalenciaWindow, &QWidget::close);
+
+        equivalenciaWindow->show();
+    });
+
+    QAction *salirAction = new QAction("Salir", this);
+    menu->addAction(salirAction);
+    connect(salirAction, &QAction::triggered, this, [this]() {
+        if(onSalir) this->onSalir();
+        this->deleteLater();
+    });
+
+    connect(button, &QPushButton::clicked, this, [=]() {
+        if (menu->isVisible()) menu->hide();
+        else menu->exec(button->mapToGlobal(QPoint(0, button->height())));
+    });
+
+    button->setStyleSheet(R"(
+        QPushButton {
+            background: transparent;
+            border: 2px solid transparent;
+            padding: 0;
+        }
+
+        QPushButton:hover {
+            background: transparent; border: 2px solid #666;
+        }
+
+        QPushButton:pressed {
+            background: transparent; border: 2px solid #444;
+        }
+    )");
+
+    menu->setStyleSheet(R"(
+        QMenu { border: 2px solid #666; }
+
+        QMenu::item {
+            font-size: 24px; color: white;
+            background: qlineargradient(
+                x1: 0, y1: 0,
+                x2: 0, y2: 1,
+                stop: 0 #1e1e1e,
+                stop: 1 #000000
+            );
+            padding: 16px 24px;
+            border: none;
+            text-align: center;
+        }
+
+        QMenu::item:selected {
+            background: qlineargradient(
+                x1: 0, y1: 0,
+                x2: 0, y2: 1,
+                stop: 0 #3a3a3a,
+                stop: 1 #222222
+            );
+            color: #ffffff;
+        }
+
+        QMenu::item:pressed {
+            background: qlineargradient(
+                x1: 0, y1: 0,
+                x2: 0, y2: 1,
+                stop: 0 #444444,
+                stop: 1 #2a2a2a
+            );
+        }
+    )");
+
+    button->show();
 }

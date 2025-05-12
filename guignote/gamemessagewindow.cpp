@@ -43,6 +43,7 @@ GameMessageWindow::GameMessageWindow(const QString &userKey, QWidget *parent, co
     // Ventana sin borde y estilo
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
+    setAttribute(Qt::WA_DeleteOnClose);
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(600, 680);
 
@@ -79,7 +80,6 @@ void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
     QString httpReq = QString(
                           "GET /chat_partida/obtener/?chat_id=%1 HTTP/1.1\r\n"
                           "Host: 188.165.76.134:8000\r\n"
-                          "Àuth: %2\r\n"
                           "Auth: %2\r\n"
                           "Connection: close\r\n"
                           "\r\n"
@@ -112,6 +112,7 @@ void GameMessageWindow::loadChatHistoryFromServer(const QString &userKey) {
     QJsonDocument doc = QJsonDocument::fromJson(body);
     if (!doc.isObject()) {
         qDebug() << "Respuesta de historial no es JSON válido.";
+        qDebug() << "Raw response:" << QString(raw);
         return;
     }
     QJsonArray mensajes = doc.object()["mensajes"].toArray();
