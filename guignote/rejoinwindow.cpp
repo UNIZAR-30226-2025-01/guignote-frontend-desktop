@@ -283,8 +283,9 @@ void RejoinWindow::rejoin(QString idPart) {
     qDebug() << "Conectando a:" << url;
 
     // Creamos la nueva ventana (EstadoPartida o GameWindow)
-    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [this]() {
-        auto* menu = new MenuWindow(userKey);
+    QString usrKey = userKey;
+    EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [usrKey]() {
+        auto* menu = new MenuWindow(usrKey);
         menu->showFullScreen();
     });
 
