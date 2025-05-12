@@ -14,8 +14,6 @@
 #include <QScreen>
 #include <QGraphicsOpacityEffect>
 
-int Carta::skin = 0;
-
 /**
  * @brief Constructor por defecto.
  *
@@ -91,6 +89,7 @@ void Carta::setOrientacion(Orientacion orientacion) {
     }
 }
 
+
 /**
  * @brief Carga la imagen de la carta según su palo, valor y estilo (skin).
  *
@@ -112,6 +111,15 @@ void Carta::cargarImagen() {
 
     this->setPixmap(img[orientacion % 2]);
     this->resize(img[orientacion % 2].size());
+}
+
+/**
+ * @brief Establece el estilo (skin) de la carta y recarga la imagen.
+ * @param skinId Identificador del skin (0: base, 1: poker, etc.)
+ */
+void Carta::setSkin(int skinId) {
+    this->skin = skinId;
+    cargarImagen();
 }
 
 /**

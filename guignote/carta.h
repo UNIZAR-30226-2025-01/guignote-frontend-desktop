@@ -30,7 +30,7 @@ class Carta : public QLabel {
     Q_OBJECT
 
 public:
-    static int skin; ///< Identificador del conjunto gráfico (skin) usado para representar las cartas.
+    int skin = 0; ///< Identificador del conjunto gráfico (skin) usado para representar las cartas.
 
     /**
      * @brief Constructor por defecto.
@@ -71,6 +71,8 @@ public:
      * @param y Coordenada vertical.
      */
     void setPosicion(int x, int y);
+
+    void setSkin(int skinId);
 
     /**
      * @brief Establece la orientación de la carta.

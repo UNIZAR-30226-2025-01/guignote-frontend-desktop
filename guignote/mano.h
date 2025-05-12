@@ -25,7 +25,7 @@ public:
     // Carta jugada
     Carta* jugada();
     QPoint getZonaDeJuego() const;
-    void actualizarCartaJugada(const QString& palo, const QString& valor);
+    void actualizarCartaJugada(const QString& palo, const QString& valor, int skinId);
     void ocultarCartaJugada();
 
     // GUI

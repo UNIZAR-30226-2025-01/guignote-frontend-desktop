@@ -19,6 +19,7 @@
 #include <QWidget>
 #include <QMap>
 #include <QJsonObject>
+#include <functional>
 #include <QTimer>
 #include <QMediaPlayer>
 #include <QAudioOutput>
@@ -144,6 +145,7 @@ public:
     void setVolume(int volumePercentage);
 
     QString miNombre = ""; ///< Nombre del jugador local.
+    QMap<QString, int> mapaSkinsJugadores;
 
 public slots:
     /**
@@ -174,6 +176,9 @@ public slots:
 
     void onGotUserId         (QNetworkReply* reply);
     void onGotEquippedItems  (QNetworkReply* reply);
+
+    void cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNetworkAccessManager* netMgr, std::function<void()> onComplete);
+    void cargarJugadoresDesdeJson(const QJsonObject& data);
 
 
 private:
