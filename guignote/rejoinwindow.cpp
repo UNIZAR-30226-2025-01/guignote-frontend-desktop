@@ -38,6 +38,18 @@ RejoinWindow::RejoinWindow(QJsonArray salas, QJsonArray salasPausadas, int fondo
     this->usr = usr;
     this->userKey = userKey;
 
+    if (salas.isEmpty()) {
+        qDebug() << "No hay salas reconectables";
+    } else {
+        qDebug() << "Número de salas reconectables:" << salas.size();
+    }
+
+    if (salasPausadas.isEmpty()) {
+        qDebug() << "No hay salas pausadas";
+    } else {
+        qDebug() << "Número de salas pausadas:" << salasPausadas.size();
+    }
+
     token = loadAuthToken(userKey);
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
@@ -60,7 +72,9 @@ void RejoinWindow::setupUI() {
 
     mainLayout->addLayout(createHeaderLayout());
     mainLayout->addLayout(checkboxLayout());
+    salasLayout = new QVBoxLayout();
     populateSalas();
+    mainLayout->addLayout(salasLayout);
 
     setLayout(mainLayout);
 }
@@ -121,6 +135,7 @@ QHBoxLayout* RejoinWindow::checkboxLayout(){
     // Conectar el cambio de estado del checkbox a la variable 'pausadas'
     connect(pausadas, &QCheckBox::toggled, this, [this](bool checked) {
         pausadasB = checked;  // Asigna el estado del checkbox a la variable 'pausadas'
+        populateSalas();
         qDebug() << "Estado de pausadas:" << pausadasB;
     });
 
@@ -138,7 +153,17 @@ QHBoxLayout* RejoinWindow::checkboxLayout(){
  * ocupación y un botón "Entrar" que llama a rejoin().
  */
 void RejoinWindow::populateSalas() {
-    for (const QJsonValue &val : salas) {
+    // Limpiar solo el layout que contiene las salas
+    QLayoutItem *item;
+    while ((item = salasLayout->takeAt(0)) != nullptr) {
+        delete item->widget();  // Eliminar solo los widgets de las salas
+        delete item;            // Eliminar el item del layout
+    }
+
+    // Seleccionamos el JsonArray basado en el valor de partidasB
+    QJsonArray arraySalas = pausadasB ? salasPausadas : salas;
+
+    for (const QJsonValue &val : arraySalas) {
 
         // Dentro del bucle de populateSalas(), justo al inicio:
         QJsonObject obj = val.toObject();
@@ -159,6 +184,7 @@ void RejoinWindow::populateSalas() {
 
         // ——— Creamos un contenedor con fondo más claro ———
         QWidget *container = new QWidget(this);
+        container->setProperty("isSalaWidget", true);  // Marcamos el widget como relacionado con las salas
         container->setStyleSheet(
             "background-color: #232326;"   // ligeramente más claro que #171718
             "border-radius: 10px;"
@@ -204,10 +230,11 @@ void RejoinWindow::populateSalas() {
         container->setLayout(row);
 
         // ——— Añadimos un pequeño margen vertical entre contenedores ———
-        mainLayout->addWidget(container);
-        mainLayout->setSpacing(10);
+        salasLayout->addWidget(container);
+        salasLayout->setSpacing(10);
     }
 }
+
 
 /**
  * @brief Extrae el token de autenticación desde el archivo de configuración.

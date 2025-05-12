@@ -87,6 +87,7 @@ private:
     QPushButton *closeButton;      ///< Botón para cerrar la ventana.
     QLabel *titleLabel;            ///< Título de la ventana.
     QVBoxLayout *mainLayout;       ///< Layout vertical principal.
+    QVBoxLayout *salasLayout;
     int fondo;                     ///< Estilo visual actual.
     QString usr;                   ///< Nombre de usuario.
     QString userKey;               ///< Clave del usuario.
@@ -95,7 +96,7 @@ private:
     QWebSocket *webSocket = nullptr; ///< Conexión WebSocket para comunicación en tiempo real.
 
     QCheckBox *pausadas;
-    bool pausadasB;
+    bool pausadasB = false;
 };
 
 #endif // REJOINWINDOW_H
