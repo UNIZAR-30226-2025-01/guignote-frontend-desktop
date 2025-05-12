@@ -1523,12 +1523,13 @@ void EstadoPartida::crearMenu() {
         equivalenciaWindow->setAttribute(Qt::WA_DeleteOnClose);
         equivalenciaWindow->setWindowTitle("Equivalencia");
 
-        QLabel* legendLabel = new QLabel(equivalenciaWindow);
+        equivalenciaWindow->setStyleSheet(
+            "background-color: #171718; border-radius: 30px; padding: 20px;");
 
+        QLabel* legendLabel = new QLabel(equivalenciaWindow);
         QPixmap raw(":/legends/legendpoker.png");
         int targetW = 150, targetH = raw.height() * targetW / raw.width();
         QPixmap scaled = raw.scaled(targetW, targetH, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
         legendLabel->setPixmap(scaled);
         legendLabel->setAlignment(Qt::AlignCenter);
         legendLabel->setScaledContents(true);
@@ -1538,12 +1539,20 @@ void EstadoPartida::crearMenu() {
         opacity->setOpacity(0.5);
         legendLabel->setGraphicsEffect(opacity);
 
-        equivalenciaWindow->resize(scaled.size());
+        equivalenciaWindow->resize(scaled.size() + QSize(40, 40));  // Agregar espacio alrededor de la imagen
 
-        QPushButton *closeButton = new QPushButton("Cerrar", equivalenciaWindow);
-        closeButton->setGeometry(10, 10, 100, 40);
+        QPushButton *closeButton = new QPushButton(equivalenciaWindow);
+        closeButton->setIcon(QIcon(":/icons/cross.png"));
+        closeButton->setIconSize(QSize(22, 22));
+        closeButton->setFixedSize(35, 35);
+        closeButton->setStyleSheet(
+            "QPushButton { background-color: #c2c2c3; border: none; border-radius: 17px; }"
+            "QPushButton:hover { background-color: #9b9b9b; }"
+        );
+        closeButton->setGeometry(equivalenciaWindow->width() - 45, 10, 35, 35); // Ubicación del botón en la esquina
         connect(closeButton, &QPushButton::clicked, equivalenciaWindow, &QWidget::close);
 
+        equivalenciaWindow->move(64, 64);
         equivalenciaWindow->show();
     });
 
