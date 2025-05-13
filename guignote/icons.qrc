@@ -26,5 +26,6 @@
         <file>icons/darkenedaudio.png</file>
         <file>icons/gameslist.png</file>
         <file>icons/darkenedgameslist.png</file>
+        <file>icons/ranks.png</file>
     </qresource>
 </RCC>
