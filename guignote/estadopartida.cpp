@@ -113,7 +113,7 @@ void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNe
 EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
-    this->bg = 2;
+    this->bg = bg;
     if(this->bg == 0) {
         this->setStyleSheet(R"(
             QWidget {
