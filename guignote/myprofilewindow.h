@@ -44,6 +44,8 @@ public:
     explicit MyProfileWindow(const QString &userKey, QWidget *parent = nullptr);
 
 private:
+    QLabel* profileIconLabel;    // para el icono
+    QLabel* nameLabel;           // tu label de texto existente
     // --- Elementos de la UI ---
     QVBoxLayout   *mainLayout;     ///< Layout principal de la ventana.
     QLabel        *titleLabel;     ///< Título del perfil.
@@ -86,6 +88,14 @@ private:
     QDialog* createDialogLogOut(QWidget *parent, const QString &message);
     QDialog* createDialogBorrarUsr(QWidget *parent, const QString &message);
     QDialog* createDialogSetPfp(QWidget *parent, const QString &message);
+    // vectores para rangos
+    QVector<int> m_thresholds;
+    QVector<QString> m_icons;
+    QVector<QString> m_rangos;
+
+    // widgets para mostrar icono y nombre de rango
+    QLabel* rankIconLabel;
+    QLabel* rankNameLabel;
 };
 
 #endif // MYPROFILEWINDOW_H

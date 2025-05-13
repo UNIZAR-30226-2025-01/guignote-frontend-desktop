@@ -31,7 +31,6 @@ set(PROJECT_SOURCES
     friendsmessagewindow.cpp friendsmessagewindow.h
     gamemessagewindow.cpp gamemessagewindow.h
     rankingwindow.cpp     rankingwindow.h
-    rankswindow.cpp       rankswindow.h               # ✅ Añadido aquí
     orientacion.h
     ventanasalirpartida.h ventanasalirpartida.cpp
     botonaccion.h botonaccion.cpp

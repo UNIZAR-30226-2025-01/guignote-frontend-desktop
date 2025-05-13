@@ -176,22 +176,25 @@ void RanksWindow::fetchElo() {
 
     QNetworkRequest req(QUrl("http://188.165.76.134:8000/usuarios/elo/"));
     req.setRawHeader("Auth", token.toUtf8());
-    auto *reply = networkManager->get(req);
+    auto* reply = networkManager->get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {
             auto doc = QJsonDocument::fromJson(reply->readAll());
             if (doc.isObject()) {
                 int finalElo = doc.object().value("elo").toInt();
 
-                QString rango_str;
-                if (finalElo < 1200) rango_str = "Guiri";
-                else if (finalElo < 1600) rango_str = "Casual";
-                else if (finalElo < 2100) rango_str = "Parroquiano";
-                else if (finalElo < 2700) rango_str = "Octogenario";
-                else rango_str = "Leyenda del Imserso";
+                // 1) calcular índice de rango
+                int idx = 0;
+                while (idx < m_thresholds.size() && finalElo >= m_thresholds[idx]) ++idx;
 
-                eloLabel->setText(QString("Rango: %1").arg(rango_str));
+                // 2) actualizar icono
+                QPixmap pm(QString(":/icons/%1.png").arg(m_icons[idx]));
+                rangoIconLabel->setPixmap(pm.scaled(32,32,Qt::KeepAspectRatio,Qt::SmoothTransformation));
 
+                // 3) actualizar texto
+                eloLabel->setText(QString("Rango: %1").arg(m_rangos[idx]));
+
+                // 4) animar barra
                 QPropertyAnimation* anim = new QPropertyAnimation(barWidget, "elo", this);
                 anim->setStartValue(0);
                 anim->setEndValue(finalElo);
@@ -206,36 +209,64 @@ void RanksWindow::fetchElo() {
     });
 }
 
-void RanksWindow::setupUI() {
-    // colores y umbrales
-    QVector<QString> colors     = { "#fc03a5", "#045bcc", "#e0c200", "#3ea607", "#f0055b" };
-    QVector<int>     thresholds = { 1200, 1600, 2100, 2700 };
-    QVector<QString> icons      = { "flip-flops", "sofa", "beer", "80", "yogi" };
-    QVector<QString> rangos     = { "Guiri", "Casual", "Parroquiano", "Octogenario", "Leyenda" };
 
+
+void RanksWindow::setupUI() {
+    //  — Colores, thresholds, iconos y textos de rango —
+    m_thresholds = { 1200, 1600, 2100, 2700 };
+    m_icons      = { "flip-flops", "sofa", "beer", "80", "yogi" };
+    m_rangos     = { "Guiri", "Casual", "Parroquiano", "Octogenario", "Leyenda del Imserso" };
+    QVector<QString> colors = { "#fc03a5", "#045bcc", "#e0c200", "#3ea607", "#f0055b" };
+
+    setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
+    setAttribute(Qt::WA_StyledBackground, true);
+    setStyleSheet(R"(
+        QDialog {
+            background-color: #171718;
+            border-radius: 30px;
+            padding: 20px;
+        }
+    )");
+    setFixedSize(900, 650);
 
     auto* outerLayout = new QVBoxLayout(this);
-    outerLayout->setContentsMargins(40, 40, 40, 40);
+    outerLayout->setContentsMargins(40,40,40,40);
 
     auto* content = new QWidget(this);
     content->setAttribute(Qt::WA_TranslucentBackground);
     content->setStyleSheet("background: transparent;");
+    outerLayout->addWidget(content);
 
     auto* mainLayout = new QVBoxLayout(content);
     mainLayout->setContentsMargins(0,0,0,0);
     mainLayout->setSpacing(15);
-    outerLayout->addWidget(content);
 
-    // encabezado
-    auto *headerLayout = new QHBoxLayout();
-    auto *title = new QLabel("Tabla de Rangos", this);
-    eloLabel = new QLabel("Tu rango: Guiri", this);
+    // — Encabezado: icono + texto a la izquierda, título en medio, cerrar a la derecha —
+    auto* headerLayout = new QHBoxLayout();
+    headerLayout->setSpacing(12);
+
+    // Icono de rango (vacío al principio)
+    rangoIconLabel = new QLabel(this);
+    rangoIconLabel->setFixedSize(32,32);
+    rangoIconLabel->setStyleSheet("background: transparent;");
+    headerLayout->addWidget(rangoIconLabel, 0, Qt::AlignVCenter);
+
+    // Texto de rango
+    eloLabel = new QLabel("Rango: …", this);
     eloLabel->setStyleSheet("background: transparent; color: #bbbbbb; font-size: 18px;");
-    mainLayout->addWidget(eloLabel, 0, Qt::AlignLeft);
-    title->setStyleSheet("background: transparent; color: white; font: bold 28px;");
-    headerLayout->addWidget(title);
+    headerLayout->addWidget(eloLabel, 0, Qt::AlignVCenter);
+
     headerLayout->addStretch();
-    auto *closeBtn = new QPushButton(this);
+
+    // Título central
+    QLabel* title = new QLabel("Tabla de Rangos", this);
+    title->setStyleSheet("background: transparent; color: white; font: bold 28px;");
+    headerLayout->addWidget(title, 0, Qt::AlignVCenter);
+
+    headerLayout->addStretch();
+
+    // Botón cerrar
+    auto* closeBtn = new QPushButton(this);
     closeBtn->setIcon(QIcon(":/icons/cross.png"));
     closeBtn->setIconSize(QSize(22,22));
     closeBtn->setFixedSize(35,35);
@@ -244,63 +275,56 @@ void RanksWindow::setupUI() {
         QPushButton:hover { background-color: #9b9b9b; }
     )");
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
-    headerLayout->addWidget(closeBtn);
+    headerLayout->addWidget(closeBtn, 0, Qt::AlignVCenter);
+
     mainLayout->addLayout(headerLayout);
 
-    // centrar verticalmente
+    // — Espacio flexible —
     mainLayout->addStretch();
 
-    // iconos encima
-    auto *iconsW = new QWidget(this);
+    // — Barra de rangos —
+    barWidget = new RangeBarWidget(colors, m_thresholds, this);
+    barWidget->setFixedWidth(880);
+    mainLayout->addWidget(barWidget, 0, Qt::AlignHCenter);
+
+    // — Iconos y nombres de cada tramo bajo la barra —
+    QWidget* iconsW = new QWidget(this);
     iconsW->setAttribute(Qt::WA_TranslucentBackground);
-    iconsW->setStyleSheet("background: transparent;");
-    iconsW->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    auto *iconsL = new QHBoxLayout(iconsW);
+    iconsW->setFixedWidth(880);
+    auto* iconsL = new QHBoxLayout(iconsW);
     iconsL->setContentsMargins(0,0,0,0);
     iconsL->setSpacing(0);
-    int segW = 880 / colors.size();
-    for (int i = 0; i < icons.size(); ++i) {
-        QString iconName = icons[i];
-        QString rangoName = rangos[i];
 
+    int segW = 880 / m_icons.size();
+    for (int i = 0; i < m_icons.size(); ++i) {
         QWidget* item = new QWidget(iconsW);
-        item->setAttribute(Qt::WA_TranslucentBackground);
-        item->setStyleSheet("background: transparent;");
         item->setFixedWidth(segW);
-
-        QVBoxLayout* vbox = new QVBoxLayout(item);
-        vbox->setContentsMargins(0, 0, 0, 0);
+        auto* vbox = new QVBoxLayout(item);
+        vbox->setContentsMargins(0,0,0,0);
         vbox->setSpacing(2);
         vbox->setAlignment(Qt::AlignHCenter);
 
-        QLabel* iconLabel = new QLabel(item);
-        iconLabel->setAttribute(Qt::WA_TranslucentBackground);
-        iconLabel->setStyleSheet("background: transparent;");
-        QPixmap pm(QString(":/icons/%1.png").arg(iconName));
-        iconLabel->setPixmap(pm.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        iconLabel->setAlignment(Qt::AlignCenter);
+        // Icono
+        QLabel* ic = new QLabel(item);
+        QPixmap pm(QString(":/icons/%1.png").arg(m_icons[i]));
+        ic->setPixmap(pm.scaled(32,32,Qt::KeepAspectRatio,Qt::SmoothTransformation));
+        ic->setAlignment(Qt::AlignCenter);
 
-        QLabel* textLabel = new QLabel(rangoName, item);
-        textLabel->setAttribute(Qt::WA_TranslucentBackground);
-        textLabel->setStyleSheet("background: transparent; color: white; font-size: 16px;");
-        textLabel->setAlignment(Qt::AlignCenter);
+        // Texto
+        QLabel* txt = new QLabel(m_rangos[i], item);
+        txt->setAlignment(Qt::AlignCenter);
+        txt->setWordWrap(true);
+        txt->setStyleSheet("color: white; font-size: 16px;");
 
-        vbox->addWidget(iconLabel);
-        vbox->addWidget(textLabel);
+        vbox->addWidget(ic);
+        vbox->addWidget(txt);
         iconsL->addWidget(item);
     }
     mainLayout->addWidget(iconsW, 0, Qt::AlignHCenter);
 
-    // barra de rangos
-    int barWidth = 880;
-    barWidget = new RangeBarWidget(colors, thresholds, this);
-    barWidget->setFixedWidth(barWidth);
-    mainLayout->addWidget(barWidget, 0, Qt::AlignHCenter);
-    iconsW->setFixedWidth(barWidth);
-    mainLayout->addWidget(iconsW, 0, Qt::AlignHCenter);
-
-    // centrar verticalmente abajo
+    // — Espacio flexible abajo —
     mainLayout->addStretch();
 }
+
 
 #include "rankswindow.moc"

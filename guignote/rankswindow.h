@@ -23,4 +23,9 @@ private:
     QString userKey;
     QNetworkAccessManager *networkManager;
     RangeBarWidget *barWidget;
+    QLabel* rangoIconLabel;
+    QLabel* rankIconLabel;
+    QVector<QString> m_icons;
+    QVector<QString> m_rangos;
+    QVector<int>     m_thresholds;
 };
