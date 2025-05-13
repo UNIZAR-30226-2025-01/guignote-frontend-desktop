@@ -434,6 +434,11 @@ MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDia
     setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
     setFixedSize(850, 680);
 
+    // Umbrales, nombres e iconos (idéntico a RanksWindow)
+    m_thresholds = { 1200, 1600, 2100, 2700 };
+    m_icons      = { "flip-flops", "sofa", "beer", "80", "yogi" };
+    m_rangos     = { "Guiri", "Casual", "Parroquiano", "Octogenario", "Leyenda del Imserso" };
+
     setupUI();
     loadNameAndStats(userKey); // Se llama a la función que carga nombre, ELO y estadísticas.
     m_userKey = userKey;
@@ -506,13 +511,30 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
     });
     profileLayout->addWidget(fotoPerfil, 0, Qt::AlignCenter);
 
-    // userLabel se actualizará con nombre y ELO desde el backend.
-    userLabel = new QLabel("<span style='font-size: 24px; font-weight: bold; color: white;'>Usuario(0)</span><br>"
-                           "<span style='font-size: 20px; font-weight: normal; color: white;'>Rango</span>", this);
+    userLabel = new QLabel(this);
     userLabel->setAlignment(Qt::AlignCenter);
     userLabel->setTextFormat(Qt::RichText);
     userLabel->setStyleSheet("color: white;");
     profileLayout->addWidget(userLabel);
+
+    // Layout para icono + nombre de rango
+    auto* rankLayout = new QHBoxLayout();
+    rankLayout->setAlignment(Qt::AlignCenter);
+
+    // Icono de rango
+    rankIconLabel = new QLabel(this);
+    // Permitir que el label escale el pixmap y no lo corte
+    rankIconLabel->setScaledContents(true);
+    rankIconLabel->setContentsMargins(0,0,0,0);
+    rankIconLabel->setFixedSize(32, 32);
+    rankLayout->addWidget(rankIconLabel);
+
+    // Nombre de rango (inicialmente vacío)
+    rankNameLabel = new QLabel("", this);
+    rankNameLabel->setStyleSheet("color: white; font-size: 20px; font-weight: normal;");
+    rankLayout->addWidget(rankNameLabel);
+
+    profileLayout->addLayout(rankLayout);
 
     // statsLabel para estadísticas adicionales.
     statsLabel = new QLabel("Victorias: 0\nDerrotas: 0\nRacha: 0\nMejor Racha: 0\nPartidas: 0\n% Victorias: 0.0%\n% Derrotas: 0.0%", this);
@@ -645,13 +667,23 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
             if (doc.isObject()) {
                 QJsonObject obj = doc.object();
                 // Actualiza userLabel con nombre y ELO.
-                QString nombre = obj.value("nombre").toString();
                 int elo = obj.value("elo").toInt();
-                QString updatedText = QString(
-                                          "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2)</span><br>"
-                                          "<span style='font-size: 20px; font-weight: normal; color: white;'>Rango</span>"
-                                          ).arg(nombre).arg(elo);
-                userLabel->setText(updatedText);
+                // 1) actualizar userLabel con nombre y ELO
+                QString nombre = obj.value("nombre").toString();
+                userLabel->setText(
+                    QString("<span style='font-size:24px;font-weight:bold;color:white;'>%1 (%2)</span>")
+                        .arg(nombre).arg(elo)
+                    );
+
+                // 2) calcular índice de rango
+                int idx = 0;
+                while (idx < m_thresholds.size() && elo >= m_thresholds[idx]) ++idx;
+
+                // 3) cargar icono y nombre de rango
+                QPixmap rpix(QString(":/icons/%1.png").arg(m_icons[idx]));
+                // Ya escalamos con scaled(), y con setScaledContents(true) en el label no se recorta
+                rankIconLabel->setPixmap(rpix.scaled(32,32,Qt::KeepAspectRatio,Qt::SmoothTransformation));
+                rankNameLabel->setText(m_rangos[idx]);
 
                 // Extrae y actualiza las estadísticas.
                 int victorias = obj.value("victorias").toInt();
