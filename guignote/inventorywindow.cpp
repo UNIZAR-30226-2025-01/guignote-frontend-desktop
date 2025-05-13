@@ -27,6 +27,7 @@
 #include <QPixmap>
 #include <QApplication>
 #include <QGraphicsOpacityEffect>
+#include <algorithm>
 #include <QPropertyAnimation>
 #include <QEasingCurve>
 #include <QPainter>
@@ -440,56 +441,25 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
         onGetUserIdReply(replyId);
     });
 
-
     /* ====================  Página 2 : Tapetes ==================== */
-    QWidget *matPage = new QWidget;
+
+    matPage = new QWidget;
     matPage->setStyleSheet("background:#1e1e1e;");
     makeFadeEffect(matPage);
     matGroup = new QButtonGroup(this);
     matGroup->setExclusive(true);
-    QVBoxLayout *vMat = new QVBoxLayout(matPage);
+
+    // Esto **sólo** una vez:
+    connect(matGroup, QOverload<int>::of(&QButtonGroup::idClicked),
+            this, &InventoryWindow::onMatSelected,
+            Qt::UniqueConnection);
+
+    auto *vMat = new QVBoxLayout(matPage);
     vMat->setAlignment(Qt::AlignTop);
     QLabel *lblMat = new QLabel("Gestión de Tapetes");
     lblMat->setStyleSheet("color:#fff;font-size:24px;font-weight:bold;");
     vMat->addWidget(lblMat, 0, Qt::AlignHCenter);
 
-    QStringList matImages = {
-        ":/tiles/tapetebase.png", // tapete 1
-        "", "", "", "", ""
-    };
-    QGridLayout *gridMat = new QGridLayout;
-    gridMat->setSpacing(15);
-    for (int i = 0; i < 6; ++i) {
-        // Carga directa desde recurso (queda null si ruta vacía)
-        QPixmap pix(matImages[i]);
-
-        // Construye la tarjeta con su imagen (si la hay)
-        CardTile *tile = new CardTile(
-            QString("Tapete %1").arg(i+1),
-            pix
-            );
-
-        // Solo habilitar y checkable si la pixmap no está vacía
-        bool has = !pix.isNull();
-        tile->setCheckable(has);
-        tile->setEnabled(has);
-
-        // Si tiene imagen, lo añadimos al grupo para selección
-        if (has)
-            matGroup->addButton(tile, i);
-
-        gridMat->addWidget(tile, i/3, i%3);
-    }
-    vMat->addLayout(gridMat);
-
-    // Conecta la selección para persistir en QSettings
-    connect(matGroup, &QButtonGroup::idClicked,
-            this, [=](int id){
-                QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
-                QSettings settings("Grace Hopper", config);
-                settings.setValue("selectedMat", id);
-                settings.sync();                // (opcional) escribe al momento
-            });
     stackedWidget->addWidget(matPage);
 
     /* ---------- señales ---------- */
@@ -497,13 +467,6 @@ InventoryWindow::InventoryWindow(QWidget *parent, QString usr) : QDialog(parent)
     connect(sidebar, &QListWidget::currentRowChanged,
             this,    &InventoryWindow::onTabChanged);
 
-    QString config = QString("Sota, Caballo y Rey_%1").arg(usr);
-    QSettings s("Grace Hopper", config);        // ① mismo scope que al salvar
-
-
-    int selMat = s.value("selectedMat", 0).toInt();
-    if (auto *b2 = matGroup->button(selMat))   // ② restaura check
-        b2->setChecked(true);
 }
 
 // inventorywindow.cpp
@@ -562,35 +525,56 @@ void InventoryWindow::onGetUserIdReply(QNetworkReply *reply)
         return;
     }
 
-    // 2) Primero: obtener la skin equipada
+    // 2) Obtener skin y tapete equipado
     QUrl urlEq(QStringLiteral(
                    "http://188.165.76.134:8000/usuarios/get_equipped_items/%1/")
                    .arg(m_numericUserId));
     QNetworkRequest reqEq(urlEq);
-    auto *replyEq = m_netMgr->get(reqEq);
+    QNetworkReply *replyEq = m_netMgr->get(reqEq);
     connect(replyEq, &QNetworkReply::finished, this, [this, replyEq]() {
         if (replyEq->error() == QNetworkReply::NoError) {
             auto doc = QJsonDocument::fromJson(replyEq->readAll());
-            if (doc.isObject())
-                m_equippedSkinId = doc.object()
-                                       .value("equipped_skin")
+            if (doc.isObject()) {
+                auto o = doc.object();
+                m_equippedSkinId = o.value("equipped_skin")
                                        .toObject()
-                                       .value("id")
-                                       .toInt(-1);
+                                       .value("id").toInt(-1);
+                m_equippedMatId  = o.value("equipped_tapete")
+                                      .toObject()
+                                      .value("id").toInt(-1);
+            }
         }
         replyEq->deleteLater();
 
-        // 3) Ahora que ya sabemos cuál está equipada, pedimos las unlocked
-        QUrl urlSkins(QStringLiteral(
-                          "http://188.165.76.134:8000/usuarios/get_unlocked_items/%1/")
-                          .arg(m_numericUserId));
-        QNetworkRequest reqSkins(urlSkins);
-        auto *replySk = m_netMgr->get(reqSkins);
-        connect(replySk, &QNetworkReply::finished, this, [this, replySk]() {
-            onUnlockedSkinsReply(replySk);
+        // 3) Pedir TODOS los ítems desbloqueados
+        QUrl urlUnl(QStringLiteral(
+                        "http://188.165.76.134:8000/usuarios/get_unlocked_items/%1/")
+                        .arg(m_numericUserId));
+        QNetworkReply *replyUnl = m_netMgr->get(QNetworkRequest(urlUnl));
+        connect(replyUnl, &QNetworkReply::finished, this, [this, replyUnl]() {
+            // 3.1) Comprobar errores
+            if (replyUnl->error() != QNetworkReply::NoError) {
+                qWarning() << "Error al obtener ítems desbloqueados:"
+                           << replyUnl->errorString();
+                replyUnl->deleteLater();
+                return;
+            }
+            // 3.2) Leer y parsear JSON
+            QByteArray data = replyUnl->readAll();
+            replyUnl->deleteLater();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (!doc.isObject()) {
+                qWarning() << "Respuesta de unlocked_items no es un objeto";
+                return;
+            }
+            QJsonObject obj = doc.object();
+            // 3.3) Extraer y poblar
+            populateDeckPage(obj.value("unlocked_skins").toArray());
+            populateMatPage(obj.value("unlocked_tapetes").toArray());
         });
     });
 }
+
 
 
 
@@ -610,6 +594,23 @@ void InventoryWindow::onUnlockedSkinsReply(QNetworkReply *reply)
     QJsonArray skins = doc.object().value("unlocked_skins").toArray();
     populateDeckPage(skins);
 }
+
+void InventoryWindow::onUnlockedMatsReply(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Error al obtener tapetes:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+    auto doc = QJsonDocument::fromJson(reply->readAll());
+    reply->deleteLater();
+    if (!doc.isObject()) return;
+    QJsonArray mats = doc.object()
+                          .value("unlocked_tapetes")
+                          .toArray();
+    populateMatPage(mats);
+}
+
 
 void InventoryWindow::populateDeckPage(const QJsonArray &skins)
 {
@@ -683,6 +684,115 @@ void InventoryWindow::populateDeckPage(const QJsonArray &skins)
     }
 
 }
+
+void InventoryWindow::populateMatPage(const QJsonArray &mats)
+{
+    // 0) Limpiamos botones anteriores del grupo
+    for (auto *btn : matGroup->buttons())
+        matGroup->removeButton(btn);
+
+    // 1) Eliminar el antiguo grid si existía
+    auto *vlay = static_cast<QVBoxLayout*>(matPage->layout());
+    if (vlay->count() > 1) {
+        QLayoutItem *li = vlay->takeAt(1);
+        if (li) {
+            if (auto *oldLayout = li->layout())
+                delete oldLayout;
+            delete li;
+        }
+    }
+
+    // 2) Recoger IDs desbloqueados
+    QSet<int> unlockedIds;
+    for (auto v : mats)
+        unlockedIds.insert(v.toObject().value("id").toInt());
+
+    // 3) Mapa interno id → recurso
+    static const QMap<int, QString> matMap = {
+        {1, ":/tiles/tapetebase.png"}
+        // Añade aquí más tapetes con imagen si los tienes
+    };
+
+    // 4) Construir el nuevo grid (siempre 6 casillas: 2 filas x 3 cols)
+    auto *grid = new QGridLayout;
+    grid->setSpacing(15);
+    const int cols    = 3;
+    const int maxMats = 6;
+    for (int idx = 1; idx <= maxMats; ++idx) {
+        bool ok = unlockedIds.contains(idx) && matMap.contains(idx);
+        QPixmap pix;
+        if (ok) pix.load(matMap[idx]);
+
+        CardTile *tile = new CardTile(QString("Tapete %1").arg(idx), pix);
+        tile->setEnabled(ok);
+        tile->setCheckable(ok);
+        if (ok)
+            matGroup->addButton(tile, idx);
+
+        int row = (idx - 1) / cols;
+        int col = (idx - 1) % cols;
+        grid->addWidget(tile, row, col);
+    }
+
+    // 5) Insertar el grid en la posición 1
+    vlay->insertLayout(1, grid);
+
+    // 6) Restaurar el tapete equipado por servidor o fallback local
+    if (m_equippedMatId > 0 && matGroup->button(m_equippedMatId)) {
+        matGroup->button(m_equippedMatId)->setChecked(true);
+    } else {
+        QSettings settings("Grace Hopper",
+                           QString("Sota, Caballo y Rey_%1").arg(m_userId));
+        int stored = settings.value("selectedMat", -1).toInt();
+        if (auto *b = matGroup->button(stored)) {
+            b->setChecked(true);
+        }
+        else if (!mats.isEmpty()) {
+            int first = mats.first().toObject().value("id").toInt();
+            if (auto *b2 = matGroup->button(first)) {
+                b2->setChecked(true);
+                settings.setValue("selectedMat", first);
+            }
+        }
+    }
+}
+
+
+
+void InventoryWindow::onMatSelected(int matId)
+{
+    // 1) guarda localmente
+    QSettings s("Grace Hopper", QString("Sota, Caballo y Rey_%1").arg(m_userId));
+    s.setValue("selectedMat", matId);
+
+    // 2) llama al endpoint equip_tapete
+    QNetworkRequest req(QUrl(
+        QStringLiteral("http://188.165.76.134:8000/usuarios/equip_tapete/%1/")
+            .arg(m_numericUserId)));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    QJsonObject body; body["tapete_id"] = matId;
+    auto *reply = m_netMgr->post(req, QJsonDocument(body).toJson());
+
+    connect(reply, &QNetworkReply::finished, this, [reply]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray raw = reply->readAll();
+            qDebug() << "[DEBUG] Respuesta equip_tapete:" << QString::fromUtf8(raw);
+
+            QJsonDocument doc = QJsonDocument::fromJson(raw);
+            if (doc.isObject()) {
+                QJsonObject obj = doc.object();
+                QJsonObject eq = obj.value("equipped_tapete").toObject();
+                int equippedId = eq.value("id").toInt(-1);
+                QString name = eq.value("name").toString();
+                qDebug() << "[DEBUG] Tapete equipado → ID:" << equippedId << "Nombre:" << name;
+            }
+        } else {
+            qWarning() << "[ERROR] Fallo al equipar tapete:" << reply->errorString();
+        }
+
+    });
+}
+
 
 
 

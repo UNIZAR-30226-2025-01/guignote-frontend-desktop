@@ -31,26 +31,25 @@ set(PROJECT_SOURCES
     friendsmessagewindow.cpp friendsmessagewindow.h
     gamemessagewindow.cpp gamemessagewindow.h
     rankingwindow.cpp     rankingwindow.h
+    rankswindow.cpp       rankswindow.h               # ✅ Añadido aquí
     orientacion.h
     ventanasalirpartida.h ventanasalirpartida.cpp
     botonaccion.h botonaccion.cpp
     estadopartida.h estadopartida.cpp
     carta.cpp carta.h
     mano.cpp mano.h
-
+    rejoinwindow.cpp rejoinwindow.h
+    customgameswindow.cpp customgameswindow.h
+    crearcustomgame.cpp crearcustomgame.h
 )
 
 qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}
-    rejoinwindow.h rejoinwindow.cpp
-    customgameswindow.h customgameswindow.cpp crearcustomgame.h crearcustomgame.cpp
-icons.qrc
-cartas_base.qrc
-cartas_poker.qrc
-cartas_paint.qrc
-otros_recursos.qrc
-sonidos.qrc
-rankswindow.h rankswindow.cpp
-
+    icons.qrc
+    cartas_base.qrc
+    cartas_poker.qrc
+    cartas_paint.qrc
+    otros_recursos.qrc
+    sonidos.qrc
 )
 
 target_link_libraries(guignote PRIVATE
@@ -59,6 +58,7 @@ target_link_libraries(guignote PRIVATE
     Qt${QT_VERSION_MAJOR}::Multimedia
     Qt${QT_VERSION_MAJOR}::WebSockets
 )
+
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(guignote)
 endif()
@@ -93,6 +93,7 @@ if(BUILD_TESTING)
         tests/test_inventorywindow.cpp
         tests/test_friendswindow.h
         tests/test_friendswindow.cpp
+<<<<<<< HEAD
         rejoinwindow.h
         rejoinwindow.cpp
         customgameswindow.h customgameswindow.cpp crearcustomgame.h crearcustomgame.cpp
@@ -103,14 +104,17 @@ if(BUILD_TESTING)
 
 
         # ← añade TODA la lógica a probar
+=======
+>>>>>>> 3c18bf08d90129a3789331912c77ddbff522c24f
     )
+
     set_source_files_properties(tests/main_tests.cpp PROPERTIES SKIP_AUTOMOC ON)
 
     target_include_directories(tests_guignote PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_link_libraries(tests_guignote PRIVATE
         Qt${QT_VERSION_MAJOR}::Widgets
-        Qt${QT_VERSION_MAJOR}::Test      # imprescindible
+        Qt${QT_VERSION_MAJOR}::Test
         Qt${QT_VERSION_MAJOR}::Network
         Qt${QT_VERSION_MAJOR}::Multimedia
         Qt${QT_VERSION_MAJOR}::WebSockets

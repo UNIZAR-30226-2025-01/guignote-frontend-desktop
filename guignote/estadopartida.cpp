@@ -113,42 +113,6 @@ void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNe
 EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
-    this->bg = bg
-        ;
-    if(this->bg == 0) {
-        this->setStyleSheet(R"(
-            QWidget {
-                background: qradialgradient(
-                    cx:0.5, cy:0.5, radius:1,
-                    fx:0.5, fy:0.5,
-                    stop:0 #1f5a1f,
-                    stop:1 #0a2a08
-                );
-            }
-        )");
-    } else if (this->bg == 1) {
-        this->setStyleSheet(R"(
-            QWidget {
-                background: qradialgradient(
-                    cx:0.5, cy:0.5, radius:1,
-                    fx:0.5, fy:0.5,
-                    stop:0 #5a1f1f,
-                    stop:1 #2a0808
-                );
-            }
-        )");
-    } else {
-        this->setStyleSheet(R"(
-            QWidget {
-                background: qradialgradient(
-                    cx:0.5, cy:0.5, radius:1,
-                    fx:0.5, fy:0.5,
-                    stop:0 #0055AA,
-                    stop:1 #2a0808
-                );
-            }
-        )");
-    }
 
     //
     // ——— BGM DE PARTIDA ———
@@ -288,22 +252,72 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
         reply->deleteLater();
         return;
     }
-    auto doc = QJsonDocument::fromJson(reply->readAll());
+
+    // 1) Leemos el payload crudo y lo imprimimos para depurar
+    QByteArray raw = reply->readAll();
+    qDebug() << "get_equipped_items RAW:" << QString::fromUtf8(raw);
+
+    // 2) Parseamos el JSON
+    auto doc = QJsonDocument::fromJson(raw);
     reply->deleteLater();
     if (!doc.isObject()) return;
+    QJsonObject obj = doc.object();
 
-    // Obtenemos el ID y le restamos 1 para adaptarlo a Carta::skin
-    int rawId = doc.object()
-                    .value("equipped_skin")
-                    .toObject()
-                    .value("id")
-                    .toInt(-1);
-    if (rawId > 0) {
-        m_equippedSkinId = rawId - 1;
-        // Si ya arrancó la partida, refresca la vista:
-        if (partidaIniciada) dibujarEstado();
+    // 3) Skin equipada (sin cambios)
+    int rawSkinId = obj.value("equipped_skin")
+                        .toObject()
+                        .value("id").toInt(-1);
+    if (rawSkinId > 0) {
+        m_equippedSkinId = rawSkinId - 1;
     }
+
+    // === A PARTIR DE AQUÍ: parseo "a prueba de balas" de equipped_tapete ===
+
+    // 4) Cogemos el valor de "equipped_tapete" (puede ser objeto o entero)
+    QJsonValue tapV = obj.value("equipped_tapete");
+    int tapeteId = -1;
+    if      (tapV.isObject()) tapeteId = tapV.toObject().value("id").toInt(-1);
+    else if (tapV.isDouble()) tapeteId = tapV.toInt(-1);
+    qDebug() << "Parsed tapeteId =" << tapeteId;  // ¡Aquí ya NO debe salir -1!
+
+    // 5) Aplicamos el gradiente y, solo en el caso "verde", retrasamos la ornamentación
+    if (tapeteId == 1) {
+        // Fondo verde
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #1f5a1f,
+                    stop:1 #0a2a08
+                );
+            }
+        )");
+        // Retrasamos la creación de las esquinas hasta el próximo ciclo de eventos,
+        // asegurándonos de que `this->width()` y `height()` ya estén inicializados.
+        QTimer::singleShot(0, this, [this]() {
+            crearEsquinas();
+        });
+
+    } else {
+        // Fondo rojo
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #5a1f1f,
+                    stop:1 #2a0808
+                );
+            }
+        )");
+    }
+
+    // Si la partida ya estaba en marcha, redibujamos
+    if (partidaIniciada)
+        dibujarEstado();
 }
+
 
 
 /**
@@ -1170,7 +1184,6 @@ void EstadoPartida::iniciarBotonesYEtiquetas() {
 void EstadoPartida::procesarStartGame(QJsonObject data) {
     ocultarOverlayEspera();
 
-    crearEsquinas();
     limpiar();
     if(!getPartidaIniciada()) {
         this->iniciarBotonesYEtiquetas();
