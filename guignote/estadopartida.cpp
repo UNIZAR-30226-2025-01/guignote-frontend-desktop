@@ -605,8 +605,6 @@ void EstadoPartida::dibujarEstado() {
     Jugador* yo = mapJugadores.value(miId, nullptr);
     if(!yo || !yo->mano) return;
 
-
-
     // 2 jugadores (1vs1)
     if(jugadores.size() == 2) {
         Jugador* oponente = (jugadores[0]->id == miId) ? jugadores[1] : jugadores[0];
@@ -632,13 +630,18 @@ void EstadoPartida::dibujarEstado() {
     }
 
     // Posicionar carta de triunfo y mazo central
-    if (cartaTriunfo && cartaTriunfo->isVisible()) {
-        cartaTriunfo->move(width/2 - cartaTriunfo->width() - 10, height/2 - cartaTriunfo->height()/2);
-        cartaTriunfo->raise();
-    }
-    if (mazo && mazo->isVisible()) {
-        mazo->move(width/2 + 10, height/2 - mazo->height()/2);
-        mazo->raise();
+    if (arrastre) {
+        if(cartaTriunfo) cartaTriunfo->hide();
+        if(mazo) mazo->hide();
+    } else {
+        if (cartaTriunfo && cartaTriunfo->isVisible()) {
+            cartaTriunfo->move(width/2 - cartaTriunfo->width() - 10, height/2 - cartaTriunfo->height()/2);
+            cartaTriunfo->raise();
+        }
+        if (mazo && mazo->isVisible()) {
+            mazo->move(width/2 + 10, height/2 - mazo->height()/2);
+            mazo->raise();
+        }
     }
 
     // Posicionar puntuaciones
@@ -1251,6 +1254,7 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
     this->puntosEquipo1 = data.value("puntos_equipo_1").toInt();
     this->puntosEquipo2 = data.value("puntos_equipo_2").toInt();
     this->jugadoresPausa = data.value("pausados").toInt();
+    this->arrastre = data.value("fase_arrastre").toBool();
 
     cargarSkinsJugadores(jugadores, m_netMgr, [=]() {
         this->actualizarEstado(data);  // ahora sí dibujará con las skins

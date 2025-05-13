@@ -210,6 +210,7 @@ private:
     bool enPausa = false;
     int jugadoresPausa = 0;
     bool partidaIniciada = false;
+    bool arrastre = false;
 
     QNetworkAccessManager* m_netMgr;        // ya lo usas para WS, reutilízalo aquí
     int                  m_equippedSkinId;  // guardará el ID que venga del backend
