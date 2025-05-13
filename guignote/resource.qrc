@@ -125,6 +125,7 @@
         <file>icons/darkenedaudio.png</file>
         <file>tiles/base.png</file>
         <file>tiles/poker.png</file>
+        <file>tiles/paint.png</file>
         <file>tiles/tapetebase.png</file>
         <file>legends/legendpoker.png</file>
         <file>icons/gameslist.png</file>

@@ -1,0 +1,47 @@
+<RCC>
+    <qresource prefix="/">
+        <file>decks/base/Back.png</file>
+        <file>decks/base/Blank.png</file>
+        <file>decks/base/area.png</file>
+        <file>decks/base/1Bastos.png</file>
+        <file>decks/base/2Bastos.png</file>
+        <file>decks/base/3Bastos.png</file>
+        <file>decks/base/4Bastos.png</file>
+        <file>decks/base/5Bastos.png</file>
+        <file>decks/base/6Bastos.png</file>
+        <file>decks/base/7Bastos.png</file>
+        <file>decks/base/10Bastos.png</file>
+        <file>decks/base/11Bastos.png</file>
+        <file>decks/base/12Bastos.png</file>
+        <file>decks/base/1Copas.png</file>
+        <file>decks/base/2Copas.png</file>
+        <file>decks/base/3Copas.png</file>
+        <file>decks/base/4Copas.png</file>
+        <file>decks/base/5Copas.png</file>
+        <file>decks/base/6Copas.png</file>
+        <file>decks/base/7Copas.png</file>
+        <file>decks/base/10Copas.png</file>
+        <file>decks/base/11Copas.png</file>
+        <file>decks/base/12Copas.png</file>
+        <file>decks/base/1Espadas.png</file>
+        <file>decks/base/2Espadas.png</file>
+        <file>decks/base/3Espadas.png</file>
+        <file>decks/base/4Espadas.png</file>
+        <file>decks/base/5Espadas.png</file>
+        <file>decks/base/6Espadas.png</file>
+        <file>decks/base/7Espadas.png</file>
+        <file>decks/base/10Espadas.png</file>
+        <file>decks/base/11Espadas.png</file>
+        <file>decks/base/12Espadas.png</file>
+        <file>decks/base/1Oros.png</file>
+        <file>decks/base/2Oros.png</file>
+        <file>decks/base/3Oros.png</file>
+        <file>decks/base/4Oros.png</file>
+        <file>decks/base/5Oros.png</file>
+        <file>decks/base/6Oros.png</file>
+        <file>decks/base/7Oros.png</file>
+        <file>decks/base/10Oros.png</file>
+        <file>decks/base/11Oros.png</file>
+        <file>decks/base/12Oros.png</file>
+    </qresource>
+</RCC>

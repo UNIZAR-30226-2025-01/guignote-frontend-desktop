@@ -37,12 +37,18 @@ set(PROJECT_SOURCES
     estadopartida.h estadopartida.cpp
     carta.cpp carta.h
     mano.cpp mano.h
-    resource.qrc
+
 )
 
 qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}
     rejoinwindow.h rejoinwindow.cpp
     customgameswindow.h customgameswindow.cpp crearcustomgame.h crearcustomgame.cpp
+icons.qrc
+cartas_base.qrc
+cartas_poker.qrc
+cartas_paint.qrc
+otros_recursos.qrc
+sonidos.qrc
 
 )
 

@@ -636,7 +636,8 @@ void InventoryWindow::populateDeckPage(const QJsonArray &skins)
     // 3) Mapa interno id → recurso
     static const QMap<int, QString> resourceMap = {
         {1, ":/tiles/base.png"},
-        {2, ":/tiles/poker.png"}
+        {2, ":/tiles/poker.png"},
+        {3, ":/tiles/paint.png"}
     };
 
     // 4) Construir el nuevo grid

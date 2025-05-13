@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>fonts/GlossypersonaluseRegular-eZL93.otf</file>
+        <file>images/app_logo.png</file>
+        <file>images/app_logo_white.png</file>
+        <file>images/app_logo_no_letters.png</file>
+        <file>images/sword_king.png</file>
+        <file>images/set-golden-border-ornaments/gold_ornaments.png</file>
+        <file>images/set-golden-border-ornaments/black_ornaments.png</file>
+        <file>images/card_backs.png</file>
+        <file>images/card_backs_2.png</file>
+        <file>images/card_fronts.png</file>
+        <file>images/cartaBoton.png</file>
+        <file>images/cartasBoton.png</file>
+        <file>tiles/base.png</file>
+        <file>tiles/poker.png</file>
+        <file>tiles/paint.png</file>
+        <file>tiles/tapetebase.png</file>
+        <file>legends/legendpoker.png</file>
+        <file>video/carga.gif</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,47 @@
+<RCC>
+    <qresource prefix="/">
+        <file>decks/paint/Back.png</file>
+        <file>decks/paint/Blank.png</file>
+        <file>decks/paint/area.png</file>
+        <file>decks/paint/1Bastos.png</file>
+        <file>decks/paint/2Bastos.png</file>
+        <file>decks/paint/3Bastos.png</file>
+        <file>decks/paint/4Bastos.png</file>
+        <file>decks/paint/5Bastos.png</file>
+        <file>decks/paint/6Bastos.png</file>
+        <file>decks/paint/7Bastos.png</file>
+        <file>decks/paint/10Bastos.png</file>
+        <file>decks/paint/11Bastos.png</file>
+        <file>decks/paint/12Bastos.png</file>
+        <file>decks/paint/1Copas.png</file>
+        <file>decks/paint/2Copas.png</file>
+        <file>decks/paint/3Copas.png</file>
+        <file>decks/paint/4Copas.png</file>
+        <file>decks/paint/5Copas.png</file>
+        <file>decks/paint/6Copas.png</file>
+        <file>decks/paint/7Copas.png</file>
+        <file>decks/paint/10Copas.png</file>
+        <file>decks/paint/11Copas.png</file>
+        <file>decks/paint/12Copas.png</file>
+        <file>decks/paint/1Espadas.png</file>
+        <file>decks/paint/2Espadas.png</file>
+        <file>decks/paint/3Espadas.png</file>
+        <file>decks/paint/4Espadas.png</file>
+        <file>decks/paint/5Espadas.png</file>
+        <file>decks/paint/6Espadas.png</file>
+        <file>decks/paint/7Espadas.png</file>
+        <file>decks/paint/10Espadas.png</file>
+        <file>decks/paint/11Espadas.png</file>
+        <file>decks/paint/12Espadas.png</file>
+        <file>decks/paint/1Oros.png</file>
+        <file>decks/paint/2Oros.png</file>
+        <file>decks/paint/3Oros.png</file>
+        <file>decks/paint/4Oros.png</file>
+        <file>decks/paint/5Oros.png</file>
+        <file>decks/paint/6Oros.png</file>
+        <file>decks/paint/7Oros.png</file>
+        <file>decks/paint/10Oros.png</file>
+        <file>decks/paint/11Oros.png</file>
+        <file>decks/paint/12Oros.png</file>
+    </qresource>
+</RCC>

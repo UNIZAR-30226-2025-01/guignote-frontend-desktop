@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>bgm/menu_jazz_lofi.mp3</file>
+        <file>bgm/partida.mp3</file>
+        <file>bgm/card_draw.mp3</file>
+        <file>bgm/ticktack.mp3</file>
+    </qresource>
+</RCC>

@@ -285,6 +285,19 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                                 replyUnlock2->deleteLater();
                                 mgrUnlock->deleteLater();
                             });
+
+                            // ➕ Tercera petición para skin 3
+                            QJsonObject body3; body3["skin_id"] = 3;
+                            QNetworkRequest reqUnlock3 = reqUnlock; // mismo URL
+                            QNetworkReply *replyUnlock3 = mgrUnlock->post(reqUnlock3, QJsonDocument(body3).toJson());
+                            QObject::connect(replyUnlock3, &QNetworkReply::finished, this, [replyUnlock3, mgrUnlock]() {
+                                if (replyUnlock3->error() != QNetworkReply::NoError)
+                                    qWarning() << "unlock_skin(3) failed:" << replyUnlock3->errorString();
+                                else
+                                    qDebug() << "unlock_skin(3) success";
+                                replyUnlock3->deleteLater();
+                                mgrUnlock->deleteLater();
+                            });
                         });
                         // ————————————————————————————————————————————————
 
