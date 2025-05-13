@@ -17,6 +17,7 @@
 #include <QJsonArray>
 #include <QTimer>
 #include "estadopartida.h"
+#include "rankswindow.h"
 
 class ImageButton;
 class Icon;
@@ -43,7 +44,7 @@ protected:
 
 
 private:
-
+    Icon *ranks = nullptr;
     Ui::MenuWindow *ui;
 
     // Botones de modos de juego

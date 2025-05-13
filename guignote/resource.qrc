@@ -176,5 +176,11 @@
         <file>decks/paint/area.png</file>
         <file>decks/paint/Back.png</file>
         <file>decks/paint/Blank.png</file>
+        <file>icons/ranks.png</file>
+        <file>icons/80.png</file>
+        <file>icons/beer.png</file>
+        <file>icons/flip-flops.png</file>
+        <file>icons/sofa.png</file>
+        <file>icons/yogi.png</file>
     </qresource>
 </RCC>

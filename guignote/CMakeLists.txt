@@ -49,6 +49,7 @@ cartas_poker.qrc
 cartas_paint.qrc
 otros_recursos.qrc
 sonidos.qrc
+rankswindow.h rankswindow.cpp
 
 )
 
