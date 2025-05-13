@@ -113,8 +113,8 @@ void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNe
 EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
-    this->bg = bg;
-    if(bg == 0) {
+    this->bg = 2;
+    if(this->bg == 0) {
         this->setStyleSheet(R"(
             QWidget {
                 background: qradialgradient(
@@ -125,13 +125,24 @@ EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QStri
                 );
             }
         )");
-    } else {
+    } else if (this->bg == 1) {
         this->setStyleSheet(R"(
             QWidget {
                 background: qradialgradient(
                     cx:0.5, cy:0.5, radius:1,
                     fx:0.5, fy:0.5,
                     stop:0 #5a1f1f,
+                    stop:1 #2a0808
+                );
+            }
+        )");
+    } else {
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #0055AA,
                     stop:1 #2a0808
                 );
             }
@@ -1977,8 +1988,10 @@ void EstadoPartida::crearEsquinas() {
     QString img;
     if(bg == 0){
         img = ":/images/set-golden-border-ornaments/gold_ornaments.png";
-    } else {
+    } else if(bg == 1) {
         img = ":/images/set-golden-border-ornaments/black_ornaments.png";
+    } else {
+        img = ":/images/set-golden-border-ornaments/silver_ornaments.png";
     }
 
     QPixmap ornamentPixmap(img);

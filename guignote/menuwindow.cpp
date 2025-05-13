@@ -90,9 +90,10 @@
  
  void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int capacidad) {
      qDebug() << "Uniendose a partida";
-     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
-     .arg(token)
-         .arg(capacidad);
+     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&es_personalizada=%3")
+            .arg(token)
+            .arg(capacidad)
+            .arg("false");
  
      // Creamos la nueva ventana (EstadoPartida o GameWindow)
      EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [userKey]() {

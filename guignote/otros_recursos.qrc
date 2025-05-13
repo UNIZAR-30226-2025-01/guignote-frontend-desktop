@@ -18,5 +18,6 @@
         <file>tiles/tapetebase.png</file>
         <file>legends/legendpoker.png</file>
         <file>video/carga.gif</file>
+        <file>images/set-golden-border-ornaments/silver_ornaments.png</file>
     </qresource>
 </RCC>
