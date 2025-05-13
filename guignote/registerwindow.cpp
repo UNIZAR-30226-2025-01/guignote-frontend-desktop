@@ -209,7 +209,6 @@ RegisterWindow::RegisterWindow(QWidget *parent)
                         QSettings settings("Grace Hopper", "Sota, Caballo y Rey");
                         settings.setValue("auth/token", token);
 
-                            // Finalizar
                             emit openLoginRequested();
                             this->close();
 

@@ -295,8 +295,8 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
         )");
         // Retrasamos la creación de las esquinas hasta el próximo ciclo de eventos,
         // asegurándonos de que `this->width()` y `height()` ya estén inicializados.
-        QTimer::singleShot(0, this, [this]() {
-            crearEsquinas();
+        QTimer::singleShot(0, this, [this,tapeteId]() {
+            crearEsquinas(tapeteId);
         });
 
     } else if (tapeteId == 2) {
@@ -311,6 +311,11 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
                 );
             }
         )");
+        // Retrasamos la creación de las esquinas hasta el próximo ciclo de eventos,
+        // asegurándonos de que `this->width()` y `height()` ya estén inicializados.
+        QTimer::singleShot(0, this, [this,tapeteId]() {
+            crearEsquinas(tapeteId);
+        });
     } else if (tapeteId == 3) {
         // Fondo Azul
         this->setStyleSheet(R"(
@@ -323,6 +328,11 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
                 );
             }
         )");
+        // Retrasamos la creación de las esquinas hasta el próximo ciclo de eventos,
+        // asegurándonos de que `this->width()` y `height()` ya estén inicializados.
+        QTimer::singleShot(0, this, [this,tapeteId]() {
+            crearEsquinas(tapeteId);
+        });
     } else if (tapeteId == 4) {
         // Fondo Negro
         this->setStyleSheet(R"(
@@ -335,6 +345,11 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
                 );
             }
         )");
+        // Retrasamos la creación de las esquinas hasta el próximo ciclo de eventos,
+        // asegurándonos de que `this->width()` y `height()` ya estén inicializados.
+        QTimer::singleShot(0, this, [this,tapeteId]() {
+            crearEsquinas(tapeteId);
+        });
     }
 
     // Si la partida ya estaba en marcha, redibujamos
@@ -2019,17 +2034,16 @@ void EstadoPartida::crearMenu() {
     button->show();
 }
 
-void EstadoPartida::crearEsquinas() {
+void EstadoPartida::crearEsquinas(int tapeteId) {
     if (esquinasCreadas) return;
     esquinasCreadas = true;
 
     QString img;
-    bg = 3;
-    if(bg == 1){
+    if(tapeteId == 1){
         img = ":/images/set-golden-border-ornaments/gold_ornaments.png";
-    } else if(bg == 2) {
+    } else if(tapeteId == 2) {
         img = ":/images/set-golden-border-ornaments/black_ornaments.png";
-    } else if(bg == 3) {
+    } else if(tapeteId == 3) {
         img = ":/images/set-golden-border-ornaments/silver_ornaments.png";
     } else {
         img = ":/images/set-golden-border-ornaments/god_ornaments.png";

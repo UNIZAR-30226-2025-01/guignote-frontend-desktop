@@ -187,7 +187,7 @@ private:
 
     int bg;
     bool esquinasCreadas = false;
-    void crearEsquinas();
+    void crearEsquinas(int tapeteId);
 
     // Métodos auxiliares
     void limpiar();

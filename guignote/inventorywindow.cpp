@@ -709,8 +709,10 @@ void InventoryWindow::populateMatPage(const QJsonArray &mats)
 
     // 3) Mapa interno id → recurso
     static const QMap<int, QString> matMap = {
-        {1, ":/tiles/tapetebase.png"}
-        // Añade aquí más tapetes con imagen si los tienes
+        {1, ":/tiles/tapetebase.png"},
+        {2, ":/tiles/rojo.png"},
+        {3, ":/tiles/azul.png"},
+        {4, ":/tiles/negro.png"}
     };
 
     // 4) Construir el nuevo grid (siempre 6 casillas: 2 filas x 3 cols)
