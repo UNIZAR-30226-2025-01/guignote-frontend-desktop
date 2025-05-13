@@ -122,6 +122,7 @@ public:
     void procesarEndGame(QJsonObject data, std::function<void()> callback = nullptr);
     void procesarPause(QJsonObject data, std::function<void()> callback = nullptr);
     void procesarResume(QJsonObject data, std::function<void()> callback = nullptr);
+    void procesarPlayerJoined(QJsonObject data, std::function<void()> callback);
     void procesarAllPause(QJsonObject data, std::function<void()> callback = nullptr);
     void procesarError(QJsonObject data, std::function<void()> callback);
     void procesarCambioSiete(QJsonObject data, std::function<void()> callback);

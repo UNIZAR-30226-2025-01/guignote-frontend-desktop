@@ -90,9 +90,10 @@
  
  void MenuWindow::jugarPartida(const QString &userKey, const QString &token, int capacidad) {
      qDebug() << "Uniendose a partida";
-     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2")
-     .arg(token)
-         .arg(capacidad);
+     QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&capacidad=%2&es_personalizada=%3")
+            .arg(token)
+            .arg(capacidad)
+            .arg("false");
  
      // Creamos la nueva ventana (EstadoPartida o GameWindow)
      EstadoPartida *gameWindow = new EstadoPartida(usr, userKey, url, /** tapete */ 1, /** skin */1, [userKey]() {
@@ -243,7 +244,7 @@
      });
      connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
          if (!nameHasLoaded) return;
-         jugarPartida( userKey, token, 4);
+         jugarPartida(userKey, token, 4);
      });
  
       // ------------- BOTON DE RECONEXION -------------
@@ -383,6 +384,7 @@
      inventory = new Icon(this);
      rankings = new Icon(this);
      customGames = new Icon(this);
+     ranks    = new Icon(this);
  
      settings->setImage(":/icons/audio.png", 50, 50);
      friends->setImage(":/icons/friends.png", 60, 60);
@@ -390,6 +392,7 @@
      inventory->setImage(":/icons/chest.png", 50, 50);
      rankings->setImage(":/icons/trophy.png", 50, 50);
      customGames->setImage(":/icons/gameslist.png", 50, 50);
+     ranks    ->setImage(":/icons/ranks.png", 50, 50);
  
      // ------------- EVENTOS DE CLICK EN ICONOS -------------
      connect(settings, &Icon::clicked, [=]() {
@@ -474,6 +477,13 @@
          });
          centerTimer->start();
      });
+     connect(ranks, &Icon::clicked, this, [=]() {
+         // (Versión sin imagen “oscurecida”; ajusta si añades una.)
+         RanksWindow *rw = new RanksWindow(userKey, this);
+         rw->setModal(true);
+         rw->exec();
+     });
+
      connect(inventory, &Icon::clicked, this, [this]() {
          if (!nameHasLoaded) return;
          inventory->setImage(":/icons/darkenedchest.png", 60, 60);
@@ -678,6 +688,7 @@
          customGames,
          rankings,
          inventory,
+         ranks,
          settings,
          exit
      };

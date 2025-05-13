@@ -113,6 +113,45 @@ void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNe
 EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
+<<<<<<< HEAD
+=======
+    this->bg = bg
+        ;
+    if(this->bg == 0) {
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #1f5a1f,
+                    stop:1 #0a2a08
+                );
+            }
+        )");
+    } else if (this->bg == 1) {
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #5a1f1f,
+                    stop:1 #2a0808
+                );
+            }
+        )");
+    } else {
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #0055AA,
+                    stop:1 #2a0808
+                );
+            }
+        )");
+    }
+>>>>>>> refs/remotes/origin/main
 
     //
     // ——— BGM DE PARTIDA ———
@@ -393,6 +432,29 @@ void EstadoPartida::limpiar() {
 }
 
 /**
+ * @brief Inicializa la información de los jugadores dado el JSON recibido.
+ * @param dato Objeto JSON con los datos del estado de la partida
+ */
+void EstadoPartida::cargarJugadoresDesdeJson(const QJsonObject& data) {
+    QJsonArray jugadoresJson = data.value("jugadores").toArray();
+    for(const QJsonValue& val : jugadoresJson) {
+        QJsonObject obj = val.toObject();
+        Jugador* j = new Jugador;
+        j->id = obj["id"].toInt();
+        j->nombre = obj["nombre"].toString();
+        j->equipo = obj["equipo"].toInt();
+        j->numCartas = obj["num_cartas"].toInt();
+        if(obj.contains("carta_jugada") && !obj["carta_jugada"].isNull()) {
+            QJsonObject cartaJugada = obj["carta_jugada"].toObject();
+            j->ultimoPaloJugado = cartaJugada["palo"].toString();
+            j->ultimoValorJugado = QString::number(cartaJugada["valor"].toInt());
+        }
+        jugadores.append(j);
+        mapJugadores[j->id] = j;
+    }
+}
+
+/**
  * @brief Actualiza el estado de la partida según el JSON recibido.
  *
  * Crea jugadores, distribuye cartas y prepara subcomponentes.
@@ -602,14 +664,14 @@ void EstadoPartida::dibujarEstado() {
     puntosEquipo1Title->show();
 
     puntosEquipo1Label->move(2 * width/6 - puntosEquipo1Label->width()/2, height/2 - puntosEquipo1Label->height()/2);
-    puntosEquipo1Label->setText(QString::number(puntosEquipo1));
+    puntosEquipo1Label->setText(QString::number(this->puntosEquipo1));
     puntosEquipo1Label->show();
 
     puntosEquipo2Title->move(4 * width/6 - puntosEquipo2Title->width()/2, height/2 - puntosEquipo2Title->height()/2 - puntosEquipo2Label->height());
     puntosEquipo2Title->show();
 
     puntosEquipo2Label->move(4 * width/6 - puntosEquipo2Label->width()/2, height/2 - puntosEquipo2Label->height()/2);
-    puntosEquipo2Label->setText(QString::number(puntosEquipo2));
+    puntosEquipo2Label->setText(QString::number(this->puntosEquipo2));
     puntosEquipo2Label->show();
 
     // Botones cantar y cambiar siete
@@ -641,6 +703,7 @@ void EstadoPartida::dibujarEstado() {
         botonPausa->raise();
     }
     if (pausadosLabel) {
+        pausadosLabel->setText(QString("%1/%2").arg(jugadoresPausa).arg(jugadores.size()));
         pausadosLabel->show();
         pausadosLabel->raise();
     }
@@ -862,7 +925,12 @@ void EstadoPartida::procesarSiguienteEvento() {
             enEjecucion = false;
             procesarSiguienteEvento();
         });
-    }else if (tipo == "end_game") {
+    } else if(tipo == "player_joined") {
+        procesarPlayerJoined(data, [this]() {
+            enEjecucion = false;
+            procesarSiguienteEvento();
+        });
+    } else if (tipo == "end_game") {
         procesarEndGame(data, nullptr);
     } else if (tipo == "all_pause") {
         procesarAllPause(data, nullptr);
@@ -985,11 +1053,6 @@ void EstadoPartida::procesarCardPlayed(QJsonObject data, std::function<void()> c
     anim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-
-
-
-
-
 /**
  * @brief Procesa un evento de tipo 'card_drawn', reparte cartas con animaciones.
  *
@@ -1079,20 +1142,6 @@ void EstadoPartida::procesarPhaseUpdate(QJsonObject data, std::function<void()> 
     });
 }
 
-void EstadoPartida::cargarJugadoresDesdeJson(const QJsonObject& data) {
-    QJsonArray jugadoresJson = data.value("jugadores").toArray();
-    for(const QJsonValue& val : jugadoresJson) {
-        QJsonObject obj = val.toObject();
-        Jugador* j = new Jugador;
-        j->id = obj["id"].toInt();
-        j->nombre = obj["nombre"].toString();
-        j->equipo = obj["equipo"].toInt();
-        j->numCartas = obj["num_cartas"].toInt();
-        jugadores.append(j);
-        mapJugadores[j->id] = j;
-    }
-}
-
 
 /**
  * @brief Inicializa los botones de acción y etiquetas de puntuación.
@@ -1180,6 +1229,10 @@ void EstadoPartida::procesarStartGame(QJsonObject data) {
         this->setPartidaIniciada(true);
     }
     cargarJugadoresDesdeJson(data);
+
+    this->puntosEquipo1 = data.value("puntos_equipo_1").toInt();
+    this->puntosEquipo2 = data.value("puntos_equipo_2").toInt();
+    this->jugadoresPausa = data.value("pausados").toInt();
 
     cargarSkinsJugadores(jugadores, m_netMgr, [=]() {
         this->actualizarEstado(data);  // ahora sí dibujará con las skins
@@ -1456,6 +1509,19 @@ void EstadoPartida::procesarResume(QJsonObject data, std::function<void()> callb
     int jugadorId = data["jugador"].toObject()["id"].toInt();
     QString nombre = data["jugador"].toObject()["nombre"].toString();
     jugadoresPausa = data["num_solicitudes_pausa"].toInt();
+    if(jugadorId == miId) {
+        enPausa = false;
+        if(botonPausa) botonPausa->setText("Solicitar pausa");
+    }
+    pausadosLabel->setText(QString("%1/%2").arg(jugadoresPausa).arg(jugadores.size()));
+    QString msg = QString("%1 ha anulado su solicitud de pausa").arg(nombre);
+    mostrarMensaje(msg, callback);
+}
+
+void EstadoPartida::procesarPlayerJoined(QJsonObject data, std::function<void()> callback) {
+    int jugadorId = data["usuario"].toObject()["id"].toInt();
+    QString nombre = data["usuario"].toObject()["nombre"].toString();
+    jugadoresPausa = data["pausados"].toInt();
     if(jugadorId == miId) {
         enPausa = false;
         if(botonPausa) botonPausa->setText("Solicitar pausa");
@@ -1975,8 +2041,10 @@ void EstadoPartida::crearEsquinas() {
     QString img;
     if(bg == 0){
         img = ":/images/set-golden-border-ornaments/gold_ornaments.png";
-    } else {
+    } else if(bg == 1) {
         img = ":/images/set-golden-border-ornaments/black_ornaments.png";
+    } else {
+        img = ":/images/set-golden-border-ornaments/silver_ornaments.png";
     }
 
     QPixmap ornamentPixmap(img);
