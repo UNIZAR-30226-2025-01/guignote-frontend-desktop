@@ -299,7 +299,7 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
             crearEsquinas();
         });
 
-    } else {
+    } else if (tapeteId == 2) {
         // Fondo rojo
         this->setStyleSheet(R"(
             QWidget {
@@ -308,6 +308,30 @@ void EstadoPartida::onGotEquippedItems(QNetworkReply* reply)
                     fx:0.5, fy:0.5,
                     stop:0 #5a1f1f,
                     stop:1 #2a0808
+                );
+            }
+        )");
+    } else if (tapeteId == 3) {
+        // Fondo Azul
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #0055AA,
+                    stop:1 #2a0808
+                );
+            }
+        )");
+    } else if (tapeteId == 4) {
+        // Fondo Negro
+        this->setStyleSheet(R"(
+            QWidget {
+                background: qradialgradient(
+                    cx:0.5, cy:0.5, radius:1,
+                    fx:0.5, fy:0.5,
+                    stop:0 #2f2f2f,
+                    stop:1 #000000
                 );
             }
         )");
@@ -2000,12 +2024,15 @@ void EstadoPartida::crearEsquinas() {
     esquinasCreadas = true;
 
     QString img;
-    if(bg == 0){
+    bg = 3;
+    if(bg == 1){
         img = ":/images/set-golden-border-ornaments/gold_ornaments.png";
-    } else if(bg == 1) {
+    } else if(bg == 2) {
         img = ":/images/set-golden-border-ornaments/black_ornaments.png";
-    } else {
+    } else if(bg == 3) {
         img = ":/images/set-golden-border-ornaments/silver_ornaments.png";
+    } else {
+        img = ":/images/set-golden-border-ornaments/god_ornaments.png";
     }
 
     QPixmap ornamentPixmap(img);
