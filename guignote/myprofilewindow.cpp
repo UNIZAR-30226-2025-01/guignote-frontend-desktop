@@ -431,7 +431,14 @@ void MyProfileWindow::choosePfp() {
 MyProfileWindow::MyProfileWindow(const QString &userKey, QWidget *parent) : QDialog(parent), m_userKey(userKey) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Dialog);
     setAttribute(Qt::WA_StyledBackground, true);
-    setStyleSheet("background-color: #171718; border-radius: 30px; padding: 20px;");
+    this->setObjectName("perfilDlg");
+    this->setStyleSheet(
+        "#perfilDlg {"
+        "  background-color: #171718;"
+        "  border-radius: 30px;"
+        "  padding: 20px;"
+        "}"
+        );
     setFixedSize(850, 680);
 
     // Umbrales, nombres e iconos (idéntico a RanksWindow)
@@ -471,7 +478,7 @@ QHBoxLayout* MyProfileWindow::createHeaderLayout() {
     QHBoxLayout *headerLayout = new QHBoxLayout();
     titleLabel = new QLabel("Perfil", this);
     titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    titleLabel->setStyleSheet("color: white; font-size: 24px; font-weight: bold;");
+    titleLabel->setStyleSheet("background: transparent; color: white; font-size: 24px; font-weight: bold;");
 
     closeButton = new QPushButton(this);
     closeButton->setIcon(QIcon(":/icons/cross.png"));
@@ -523,6 +530,12 @@ QVBoxLayout* MyProfileWindow::createProfileLayout() {
 
     // Icono de rango
     rankIconLabel = new QLabel(this);
+    rankIconLabel->setStyleSheet(
+        "background: transparent;"
+        "padding: 0px;"
+        "margin: 0px;"
+        );
+
     // Permitir que el label escale el pixmap y no lo corte
     rankIconLabel->setScaledContents(true);
     rankIconLabel->setContentsMargins(0,0,0,0);
@@ -651,91 +664,109 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
         createDialog(this, "No se encontró el token de autenticación.")->show();
         return;
     }
+
+    // Creamos un QNetworkAccessManager para estas peticiones
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     QNetworkRequest request(QUrl("http://188.165.76.134:8000/usuarios/estadisticas/"));
     request.setRawHeader("Auth", token.toUtf8());
+
+    // Petición principal
     QNetworkReply *reply = manager->get(request);
     connect(reply, &QNetworkReply::finished, this, [this, reply, manager]() {
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
         if (statusCode == 401) {
-            createDialog(this, "Su sesión ha caducado, por favor, vuelva a iniciar sesión.", true)->show();
+            createDialog(this,
+                         "Su sesión ha caducado, por favor, vuelva a iniciar sesión.",
+                         true)->show();
+            reply->deleteLater();
+            manager->deleteLater();
             return;
         }
+
         if (reply->error() == QNetworkReply::NoError) {
-            QByteArray response = reply->readAll();
-            QJsonDocument doc = QJsonDocument::fromJson(response);
+            QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
             if (doc.isObject()) {
                 QJsonObject obj = doc.object();
-                // Actualiza userLabel con nombre y ELO.
+
+                // ——— Nombre y ELO ———
                 int elo = obj.value("elo").toInt();
-                // 1) actualizar userLabel con nombre y ELO
                 QString nombre = obj.value("nombre").toString();
                 userLabel->setText(
                     QString("<span style='font-size:24px;font-weight:bold;color:white;'>%1 (%2)</span>")
-                        .arg(nombre).arg(elo)
+                        .arg(nombre)
+                        .arg(elo)
                     );
+                userLabel->setStyleSheet("background: transparent; color: white;");
 
-                // 2) calcular índice de rango
+                // ——— Rango ———
                 int idx = 0;
                 while (idx < m_thresholds.size() && elo >= m_thresholds[idx]) ++idx;
-
-                // 3) cargar icono y nombre de rango
-                QPixmap rpix(QString(":/icons/%1.png").arg(m_icons[idx]));
-                // Ya escalamos con scaled(), y con setScaledContents(true) en el label no se recorta
-                rankIconLabel->setPixmap(rpix.scaled(32,32,Qt::KeepAspectRatio,Qt::SmoothTransformation));
                 rankNameLabel->setText(m_rangos[idx]);
+                rankNameLabel->setStyleSheet("background: transparent; color: white; font-size: 22px;" );
 
-                // Extrae y actualiza las estadísticas.
-                int victorias = obj.value("victorias").toInt();
-                int derrotas = obj.value("derrotas").toInt();
-                int racha = obj.value("racha_victorias").toInt();
-                int mayorRacha = obj.value("mayor_racha_victorias").toInt();
+                // Icono de rango
+                QString iconPath = QString(":/icons/%1.png").arg(m_icons[idx]);
+                QPixmap pix(iconPath);
+                if (pix.isNull()) {
+                    qWarning() << "No se pudo cargar recurso:" << iconPath;
+                } else {
+                    rankIconLabel->setPixmap(
+                        pix.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation)
+                        );
+                }
+
+                // ——— Estadísticas ———
+                int victorias     = obj.value("victorias").toInt();
+                int derrotas      = obj.value("derrotas").toInt();
+                int racha         = obj.value("racha_victorias").toInt();
+                int mayorRacha    = obj.value("mayor_racha_victorias").toInt();
                 int totalPartidas = obj.value("total_partidas").toInt();
-                double porcentajeVictorias = obj.value("porcentaje_victorias").toDouble();
-                double porcentajeDerrotas = obj.value("porcentaje_derrotas").toDouble();
-                QString statsText = QString("Victorias: %1\nDerrotas: %2\nRacha: %3\nMejor Racha: %4\nPartidas: %5\n"
-                                            "%% Victorias: %6%\n%% Derrotas: %7%")
+                double pctVic     = obj.value("porcentaje_victorias").toDouble();
+                double pctDer     = obj.value("porcentaje_derrotas").toDouble();
+
+                QString statsText = QString(
+                                        "Victorias: %1\n"
+                                        "Derrotas: %2\n"
+                                        "Racha: %3\n"
+                                        "Mejor Racha: %4\n"
+                                        "Partidas: %5\n"
+                                        "%% Victorias: %6%\n"
+                                        "%% Derrotas: %7%"
+                                        )
                                         .arg(victorias)
                                         .arg(derrotas)
                                         .arg(racha)
                                         .arg(mayorRacha)
                                         .arg(totalPartidas)
-                                        .arg(porcentajeVictorias, 0, 'f', 1)
-                                        .arg(porcentajeDerrotas, 0, 'f', 1);
-                statsLabel->setText(statsText);
+                                        .arg(pctVic, 0, 'f', 1)
+                                        .arg(pctDer, 0, 'f', 1);
 
+                statsLabel->setText(statsText);
+                statsLabel->setStyleSheet("background: transparent; color: white; font-size: 22px;");
+
+                // ——— Foto de perfil ———
                 QString imageUrl = obj.value("imagen").toString();
                 qDebug() << "URL de la imagen de perfil:" << imageUrl;
-                QUrl url(imageUrl);
-                QNetworkRequest imgRequest(url);
-                QNetworkReply *imgReply = manager->get(imgRequest);
+
+                // Aquí corregimos el vexing-parse con llaves o con operador =
+                QNetworkRequest imgReq{ QUrl(imageUrl) };
+                // ó bien: QNetworkRequest imgReq = QNetworkRequest(QUrl(imageUrl));
+
+                QNetworkReply *imgReply = manager->get(imgReq);
                 connect(imgReply, &QNetworkReply::finished, this, [this, imgReply]() {
                     if (imgReply->error() == QNetworkReply::NoError) {
-                        QByteArray imgData = imgReply->readAll();
-                        qDebug() << "[ImgDownload] Tamaño de imgData:" << imgData.size();
-
-                        QPixmap pixmap;
-                        bool loaded = pixmap.loadFromData(imgData);
-                        qDebug() << "[ImgDownload] loadFromData() =" << loaded
-                                 << ", pixmap.isNull() =" << pixmap.isNull()
-                                 << ", tamaño pixmap =" << pixmap.size();
-
-                        if (!pixmap.loadFromData(imgData)) {
-                            qDebug() << "❌ No se pudo cargar pixmap de los datos. Tamaño de imgData:" << imgData.size();
-                            imgReply->deleteLater();
-                            return;
+                        QByteArray data = imgReply->readAll();
+                        QPixmap src;
+                        if (src.loadFromData(data)) {
+                            int diam = fotoPerfil->width();
+                            QPixmap circ = createCircularImage(src, diam);
+                            fotoPerfil->setPixmapImg(circ, diam, diam);
+                        } else {
+                            qWarning() << "No se pudo cargar pixmap de la imagen de perfil.";
                         }
-                        if (pixmap.isNull()) {
-                            qDebug() << "❌ El pixmap sigue siendo nulo después de loadFromData.";
-                            imgReply->deleteLater();
-                            return;
-                        }
-
-                        int diam = fotoPerfil->width();
-                        QPixmap circular = createCircularImage(pixmap, diam);
-                        fotoPerfil->setPixmapImg(circular, diam, diam);
                     } else {
-                        qDebug() << "Error al descargar la imagen:" << imgReply->errorString();
+                        qWarning() << "Error al descargar imagen de perfil:" << imgReply->errorString();
                     }
                     imgReply->deleteLater();
                 });
@@ -743,9 +774,15 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
         } else {
             createDialog(this, "Error al cargar el perfil de usuario.")->show();
         }
+
         reply->deleteLater();
+        manager->deleteLater();
     });
 }
+
+
+
+
 
 /**
  * @brief Envía la petición al servidor para eliminar la cuenta del usuario.
