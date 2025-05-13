@@ -79,7 +79,7 @@ private:
      * @brief Realiza la solicitud de reconexión a una sala específica.
      * @param idPart ID de la partida a la que se desea reincorporar.
      */
-    void rejoin(QString idPart);
+    void rejoin(QString idPart, int cap);
 
     // --- Atributos privados ---
     QJsonArray salas;              ///< Lista de partidas disponibles para reconexión.

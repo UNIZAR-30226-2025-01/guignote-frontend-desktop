@@ -218,9 +218,9 @@ void RejoinWindow::populateSalas() {
             "  background-color: #218838;"
             "}"
             );
-        connect(btn, &QPushButton::clicked, this, [this, idStr]() {
+        connect(btn, &QPushButton::clicked, this, [this, idStr, capacidad]() {
             qDebug() << "Sala" << idStr << "pulsada";
-            rejoin(idStr);
+            rejoin(idStr, capacidad);
         });
 
         // ——— Montamos la fila dentro del contenedor ———
@@ -276,10 +276,11 @@ QString RejoinWindow::loadAuthToken(const QString &userKey) {
  * Crea y configura un QWebSocket con el token y el id_partida,
  * conecta las señales y abre la conexión al servidor.
  */
-void RejoinWindow::rejoin(QString idPart) {
-    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2")
+void RejoinWindow::rejoin(QString idPart, int cap) {
+    QString url = QString("ws://188.165.76.134:8000/ws/partida/?token=%1&id_partida=%2&capacidad=%3")
                       .arg(token)
-                      .arg(idPart);
+                      .arg(idPart)
+                      .arg(cap);
     qDebug() << "Conectando a:" << url;
 
     // Creamos la nueva ventana (EstadoPartida o GameWindow)
