@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QNetworkAccessManager>
+#include <QLabel>
 
 class RangeBarWidget;
 
@@ -16,6 +17,8 @@ private:
     void setupUI();
     QString loadAuthToken();
     void fetchElo();
+
+    QLabel* eloLabel = nullptr;
 
     QString userKey;
     QNetworkAccessManager *networkManager;

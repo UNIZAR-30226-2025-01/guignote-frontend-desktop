@@ -37,7 +37,7 @@ set(PROJECT_SOURCES
     estadopartida.h estadopartida.cpp
     carta.cpp carta.h
     mano.cpp mano.h
-
+    rankswindow.cpp rankswindow.h
 )
 
 qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}
