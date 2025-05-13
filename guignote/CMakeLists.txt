@@ -93,7 +93,6 @@ if(BUILD_TESTING)
         tests/test_inventorywindow.cpp
         tests/test_friendswindow.h
         tests/test_friendswindow.cpp
-<<<<<<< HEAD
         rejoinwindow.h
         rejoinwindow.cpp
         customgameswindow.h customgameswindow.cpp crearcustomgame.h crearcustomgame.cpp
@@ -104,8 +103,6 @@ if(BUILD_TESTING)
 
 
         # ← añade TODA la lógica a probar
-=======
->>>>>>> 3c18bf08d90129a3789331912c77ddbff522c24f
     )
 
     set_source_files_properties(tests/main_tests.cpp PROPERTIES SKIP_AUTOMOC ON)
