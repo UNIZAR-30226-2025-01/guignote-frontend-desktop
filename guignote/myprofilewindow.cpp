@@ -58,7 +58,7 @@ static QDialog* createDialog(QWidget *parent, const QString &message, bool exitA
     QVBoxLayout *layout = new QVBoxLayout(dialog);
     QLabel *label = new QLabel(message, dialog);
     label->setWordWrap(true);
-    label->setStyleSheet("color: white; font-size: 16px;");
+    label->setStyleSheet("color: white; font-size: 16px; background: transparent;");
     label->setAlignment(Qt::AlignCenter);
     layout->addWidget(label);
 
@@ -747,28 +747,33 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
 
                 // ——— Foto de perfil ———
                 QString imageUrl = obj.value("imagen").toString();
-                qDebug() << "URL de la imagen de perfil:" << imageUrl;
+                qDebug() << "[AAA] URL de la imagen de perfil:" << imageUrl;
 
-                // Aquí corregimos el vexing-parse con llaves o con operador =
-                QNetworkRequest imgReq{ QUrl(imageUrl) };
+                QUrl url(imageUrl);
+                QNetworkRequest imgReq(url);
+                qDebug() << "-> imgReq URL =" << imgReq.url();
                 // ó bien: QNetworkRequest imgReq = QNetworkRequest(QUrl(imageUrl));
 
-                QNetworkReply *imgReply = manager->get(imgReq);
-                connect(imgReply, &QNetworkReply::finished, this, [this, imgReply]() {
+                auto *imgManager = new QNetworkAccessManager(this);
+                QNetworkReply *imgReply = imgManager->get(imgReq);
+                connect(imgReply, &QNetworkReply::finished, this, [this, imgReply, imgManager]() {
+                    qDebug() << "Cargamos foto de perfil";
                     if (imgReply->error() == QNetworkReply::NoError) {
                         QByteArray data = imgReply->readAll();
                         QPixmap src;
                         if (src.loadFromData(data)) {
+                            qDebug() << "Foto de perfil cargada";
                             int diam = fotoPerfil->width();
                             QPixmap circ = createCircularImage(src, diam);
                             fotoPerfil->setPixmapImg(circ, diam, diam);
                         } else {
-                            qWarning() << "No se pudo cargar pixmap de la imagen de perfil.";
+                            qDebug() << "No se pudo cargar pixmap de la imagen de perfil.";
                         }
                     } else {
-                        qWarning() << "Error al descargar imagen de perfil:" << imgReply->errorString();
+                        qDebug() << "Error al descargar imagen de perfil:" << imgReply->errorString();
                     }
                     imgReply->deleteLater();
+                    imgManager->deleteLater();
                 });
             }
         } else {

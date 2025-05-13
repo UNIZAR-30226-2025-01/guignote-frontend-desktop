@@ -194,10 +194,8 @@
 
          // Lógica para mostrar el botón
          if (salas.isEmpty() && salasPausadas.isEmpty()) {
-             qDebug() << "No hay salas reconectables ni pausadas.";
              ReconnectButton->hide();
          } else {
-             qDebug() << "Salas reconectables o pausadas encontradas:";
              ReconnectButton->show();
          }
 
