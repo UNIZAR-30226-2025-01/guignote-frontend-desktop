@@ -113,45 +113,6 @@ void EstadoPartida::cargarSkinsJugadores(const QVector<Jugador*>& jugadores, QNe
 EstadoPartida::EstadoPartida(QString miNombre, const QString& token, const QString& wsUrl, int bg, int style,
                              std::function<void()> onSalir, QWidget* parent)
     : QWidget(parent), miNombre(miNombre), onSalir(onSalir), wsUrl(wsUrl), miToken(token) {
-<<<<<<< HEAD
-=======
-    this->bg = bg
-        ;
-    if(this->bg == 0) {
-        this->setStyleSheet(R"(
-            QWidget {
-                background: qradialgradient(
-                    cx:0.5, cy:0.5, radius:1,
-                    fx:0.5, fy:0.5,
-                    stop:0 #1f5a1f,
-                    stop:1 #0a2a08
-                );
-            }
-        )");
-    } else if (this->bg == 1) {
-        this->setStyleSheet(R"(
-            QWidget {
-                background: qradialgradient(
-                    cx:0.5, cy:0.5, radius:1,
-                    fx:0.5, fy:0.5,
-                    stop:0 #5a1f1f,
-                    stop:1 #2a0808
-                );
-            }
-        )");
-    } else {
-        this->setStyleSheet(R"(
-            QWidget {
-                background: qradialgradient(
-                    cx:0.5, cy:0.5, radius:1,
-                    fx:0.5, fy:0.5,
-                    stop:0 #0055AA,
-                    stop:1 #2a0808
-                );
-            }
-        )");
-    }
->>>>>>> refs/remotes/origin/main
 
     //
     // ——— BGM DE PARTIDA ———
