@@ -14,7 +14,6 @@
 
 #include "loginwindow.h"
 #include "loadingwindow.h"
-#include "recoverpasswordwindow.h"
 
 // Inclusión de librerías de Qt necesarias para la interfaz y red
 #include <QVBoxLayout>
@@ -146,18 +145,6 @@ LoginWindow::LoginWindow(QWidget *parent)
     mainLayout->addSpacing(5);
     mainLayout->addWidget(errorLabel, 0, Qt::AlignCenter);
 
-    // Botón "¿Has olvidado tu contraseña?"
-    QPushButton *forgotPasswordButton = new QPushButton("¿Has olvidado tu contraseña?", this);
-    forgotPasswordButton->setStyleSheet(
-        "QPushButton {"
-        "  color: #ffffff;"
-        "  text-decoration: underline;"
-        "  font-size: 14px;"
-        "  background: transparent;"
-        "  border: none;"
-        "}"
-        );
-    mainLayout->addWidget(forgotPasswordButton);
 
     // CheckBox "Recordar contraseña"
     QCheckBox *rememberCheck = new QCheckBox("Recordar contraseña", this);
@@ -182,14 +169,6 @@ LoginWindow::LoginWindow(QWidget *parent)
     )";
     rememberCheck->setStyleSheet(checkBoxStyle);
     mainLayout->addWidget(rememberCheck);
-
-    // Conexión para mostrar la ventana de recuperación de contraseña.
-    connect(forgotPasswordButton, &QPushButton::clicked, this, [=]() {
-        RecoverPasswordWindow *recoverWin = new RecoverPasswordWindow(this);
-        // Centrar la ventana de recuperación respecto al diálogo actual.
-        recoverWin->move(this->geometry().center() - recoverWin->rect().center());
-        recoverWin->show();
-    });
 
     // Botón "Iniciar Sesión" con su estilo personalizado.
     QPushButton *loginButton = new QPushButton("Iniciar Sesión", this);

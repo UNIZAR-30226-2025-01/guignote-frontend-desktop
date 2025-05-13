@@ -41,6 +41,7 @@ set(PROJECT_SOURCES
     rejoinwindow.cpp rejoinwindow.h
     customgameswindow.cpp customgameswindow.h
     crearcustomgame.cpp crearcustomgame.h
+    rankswindow.cpp rankswindow.h
 )
 
 qt_add_executable(guignote MANUAL_FINALIZATION ${PROJECT_SOURCES}

@@ -451,8 +451,23 @@ void EstadoPartida::cargarJugadoresDesdeJson(const QJsonObject& data) {
         }
         jugadores.append(j);
         mapJugadores[j->id] = j;
+
+        QLabel* nameLabel = new QLabel(j->nombre, this);
+        nameLabel->setStyleSheet(R"(
+            QLabel {
+                color: white;
+                font-size: 16px;
+                background-color: rgba(0, 0, 0, 128);
+                border-radius: 4px;
+                padding: 2px 6px;
+            }
+        )");
+        nameLabel->adjustSize();
+        nameLabel->hide();        // lo mostraremos en dibujarEstado()
+        m_labelJugadores[j] = nameLabel;
     }
 }
+
 
 /**
  * @brief Actualiza el estado de la partida según el JSON recibido.
@@ -590,40 +605,7 @@ void EstadoPartida::dibujarEstado() {
     Jugador* yo = mapJugadores.value(miId, nullptr);
     if(!yo || !yo->mano) return;
 
-    for(Jugador* j : jugadores) {
-        if(j->mano) j->mano->dibujar();
-        if (m_labelJugadores.contains(j)) {
-            QLabel* lbl = m_labelJugadores[j];
-            Orientacion orient = j->mano->getOrientacion();
-            QPoint handPos = j->mano->pos();
-            QSize handSize = j->mano->size();
-            int x, y;
 
-            switch (orient) {
-            case Orientacion::DOWN:
-                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
-                y = handPos.y() - lbl->height() - 4;
-                break;
-            case Orientacion::TOP:
-                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
-                y = handPos.y() + handSize.height() + 4;
-                break;
-            case Orientacion::LEFT:
-                x = handPos.x() + handSize.width() + 4;
-                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
-                break;
-            case Orientacion::RIGHT:
-            default:
-                x = handPos.x() - lbl->width() - 4;
-                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
-                break;
-            }
-
-            lbl->move(x, y);
-            lbl->show();
-            lbl->raise();
-        }
-    }
 
     // 2 jugadores (1vs1)
     if(jugadores.size() == 2) {
@@ -706,6 +688,42 @@ void EstadoPartida::dibujarEstado() {
         pausadosLabel->setText(QString("%1/%2").arg(jugadoresPausa).arg(jugadores.size()));
         pausadosLabel->show();
         pausadosLabel->raise();
+    }
+
+    for(Jugador* j : jugadores) {
+        if(j->mano) j->mano->dibujar();
+
+        // Dentro de EstadoPartida::dibujarEstado(), en el bucle for(Jugador* j : jugadores)
+        if (m_labelJugadores.contains(j)) {
+            QLabel* lbl = m_labelJugadores[j];
+            Orientacion orient = j->mano->getOrientacion();
+            QPoint handPos   = j->mano->pos();
+            QSize  handSize  = j->mano->size();
+            int x, y;
+            switch (orient) {
+            case Orientacion::DOWN:
+                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
+                y = handPos.y() - lbl->height() - 4;
+                break;
+            case Orientacion::TOP:
+                x = handPos.x() + handSize.width()/2 - lbl->width()/2;
+                y = handPos.y() + handSize.height() + 4;
+                break;
+            case Orientacion::LEFT:
+                x = handPos.x() + handSize.width() + 4;
+                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
+                break;
+            case Orientacion::RIGHT:
+            default:
+                x = handPos.x() - lbl->width() - 4;
+                y = handPos.y() + handSize.height()/2 - lbl->height()/2;
+                break;
+            }
+
+            lbl->move(x, y);
+            lbl->show();
+            lbl->raise();
+        }
     }
 }
 

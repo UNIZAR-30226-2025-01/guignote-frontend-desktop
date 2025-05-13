@@ -36,6 +36,7 @@
  #include <QUrl>
  #include <QWebSocketProtocol>
  #include <QApplication>
+#include "rankswindow.h"
  
  // Función auxiliar para crear un diálogo modal de sesión expirada.
  static QDialog* createExpiredDialog(QWidget *parent) {

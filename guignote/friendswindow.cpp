@@ -766,7 +766,7 @@ void friendswindow::downloadAndSetAvatar(const QString &imageUrl, Icon *avatarIc
             QByteArray imgData = reply->readAll();
             QPixmap pixmap;
             if (pixmap.loadFromData(imgData)) {
-                int size = avatarIcon->width();  // Usamos el tamaño del Icon
+                int size = 100;  // Usamos el tamaño del Icon
                 QPixmap circular = createCircularImage(pixmap, size);
                 avatarIcon->setPixmapImg(circular, size, size);  // Usamos el método personalizado de Icon
             } else {
