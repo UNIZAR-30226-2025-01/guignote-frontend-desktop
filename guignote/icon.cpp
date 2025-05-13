@@ -63,7 +63,15 @@ void Icon::setImage(const QString &imagePath, int width, int height) {
  * para mantener el aspecto con suavizado.
  */
 
-void Icon::setPixmapImg(const QPixmap &pixmap, int width, int height) {
+void Icon::setPixmapImg(const QPixmap pixmap, int width, int height) {
+    if (pixmap.isNull()) {
+        qDebug() << "QPixmap es nulo. No se puede asignar.";
+        return;
+    }
+    if (!this->parent()) {
+        qDebug() << "Icon inválido o destruido.";
+        return;
+    }
     originalPixmap = pixmap;
     baseWidth = width;
     baseHeight = height;

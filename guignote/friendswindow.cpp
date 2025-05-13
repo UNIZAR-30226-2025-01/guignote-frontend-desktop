@@ -32,6 +32,7 @@
 #include <QListWidget>
 #include <QLineEdit>
 #include <QDebug>
+#include <QPointer>
 #include <QPainter>
 #include <QPainterPath>
 #include "friendsmessagewindow.h"
@@ -754,26 +755,38 @@ QWidget* friendswindow::createSearchResultWidget(const QJsonObject &usuario) {
  * @param imageUrl URL de la imagen.
  * @param avatarIcon Puntero al Icon donde mostrarla.
  */
-
 void friendswindow::downloadAndSetAvatar(const QString &imageUrl, Icon *avatarIcon) {
+    if (!avatarIcon) {
+        qDebug() << "imagen perfil: avatarIcon es nullptr.";
+        return;
+    }
+    if (imageUrl.isEmpty() || !QUrl(imageUrl).isValid()) {
+        qDebug() << "imagen perfil: la URL de la imagen es inválida o está vacía:" << imageUrl;
+        return;
+    }
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     QNetworkRequest request{QUrl(imageUrl)};
-
     QNetworkReply *reply = manager->get(request);
-
-    connect(reply, &QNetworkReply::finished, this, [this, reply, avatarIcon]() {
+    QPointer<friendswindow> weakSelf = this;
+    QPointer<Icon> weakAvatarIcon = avatarIcon;
+    connect(reply, &QNetworkReply::finished, this, [weakSelf, weakAvatarIcon, reply, imageUrl]() {
+        if (!weakSelf || !weakAvatarIcon) {
+            qDebug() << "imagen perfil: error destrucción anticipada.";
+            if (reply) reply->deleteLater();
+            return;
+        }
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray imgData = reply->readAll();
             QPixmap pixmap;
             if (pixmap.loadFromData(imgData)) {
-                int size = 100;  // Usamos el tamaño del Icon
-                QPixmap circular = createCircularImage(pixmap, size);
-                avatarIcon->setPixmapImg(circular, size, size);  // Usamos el método personalizado de Icon
+                int size = 100;
+                QPixmap circular = weakSelf->createCircularImage(pixmap, size);
+                if (weakAvatarIcon) weakAvatarIcon->setPixmapImg(circular, size, size);
             } else {
-                qDebug() << "Error al cargar la imagen.";
+                qDebug() << "Error al cargar la imagen desde QByteArray para" << imageUrl;
             }
         } else {
-            qDebug() << "Error al descargar la imagen: " << reply->errorString();
+            qDebug() << "Error al descargar la imagen" << imageUrl << ":" << reply->errorString();
         }
         reply->deleteLater();
     });
