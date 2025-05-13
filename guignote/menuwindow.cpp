@@ -383,6 +383,7 @@
      inventory = new Icon(this);
      rankings = new Icon(this);
      customGames = new Icon(this);
+     ranks    = new Icon(this);
  
      settings->setImage(":/icons/audio.png", 50, 50);
      friends->setImage(":/icons/friends.png", 60, 60);
@@ -390,6 +391,7 @@
      inventory->setImage(":/icons/chest.png", 50, 50);
      rankings->setImage(":/icons/trophy.png", 50, 50);
      customGames->setImage(":/icons/gameslist.png", 50, 50);
+     ranks    ->setImage(":/icons/ranks.png", 50, 50);
  
      // ------------- EVENTOS DE CLICK EN ICONOS -------------
      connect(settings, &Icon::clicked, [=]() {
@@ -474,6 +476,13 @@
          });
          centerTimer->start();
      });
+     connect(ranks, &Icon::clicked, this, [=]() {
+         // (Versión sin imagen “oscurecida”; ajusta si añades una.)
+         RanksWindow *rw = new RanksWindow(userKey, this);
+         rw->setModal(true);
+         rw->exec();
+     });
+
      connect(inventory, &Icon::clicked, this, [this]() {
          if (!nameHasLoaded) return;
          inventory->setImage(":/icons/darkenedchest.png", 60, 60);
@@ -678,6 +687,7 @@
          customGames,
          rankings,
          inventory,
+         ranks,
          settings,
          exit
      };
