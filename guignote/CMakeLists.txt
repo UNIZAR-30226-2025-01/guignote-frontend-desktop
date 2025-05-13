@@ -96,6 +96,7 @@ if(BUILD_TESTING)
         rejoinwindow.h
         rejoinwindow.cpp
         customgameswindow.h customgameswindow.cpp crearcustomgame.h crearcustomgame.cpp
+        rankswindow.h rankswindow.cpp
 
 
 
