@@ -646,7 +646,7 @@ void MyProfileWindow::loadNameAndStats(const QString &userKey) {
                 QJsonObject obj = doc.object();
                 // Actualiza userLabel con nombre y ELO.
                 QString nombre = obj.value("nombre").toString();
-                int elo = obj.value("ELO").toInt();
+                int elo = obj.value("elo").toInt();
                 QString updatedText = QString(
                                           "<span style='font-size: 24px; font-weight: bold; color: white;'>%1 (%2)</span><br>"
                                           "<span style='font-size: 20px; font-weight: normal; color: white;'>Rango</span>"

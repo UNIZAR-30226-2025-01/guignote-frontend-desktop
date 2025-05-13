@@ -171,7 +171,7 @@ void RanksWindow::fetchElo() {
     if (token.isEmpty()) return;
 
     QNetworkRequest req(QUrl("http://188.165.76.134:8000/elo/auth/"));
-    req.setRawHeader("Auth", token.toUtf8());
+    req.setRawHeader("Authorization", "Bearer " + token.toUtf8());
     auto *reply = networkManager->get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
         if (reply->error() == QNetworkReply::NoError) {

@@ -436,8 +436,8 @@ QWidget* friendswindow::createFriendWidget(const QJsonObject &amigo) {
     layout->addLayout(buttonLayout);
 
     // Conexiones para los botones
-    connect(profileButton, &QPushButton::clicked, [this]() {
-        UserProfileWindow *profileWin = new UserProfileWindow(this);
+    connect(profileButton, &QPushButton::clicked, [this, friendId]() {
+        UserProfileWindow *profileWin = new UserProfileWindow(this, userKey, friendId);
         profileWin->setWindowModality(Qt::ApplicationModal);
         profileWin->move(this->geometry().center() - profileWin->rect().center());
         profileWin->show();

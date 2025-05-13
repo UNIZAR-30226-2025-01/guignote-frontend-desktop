@@ -1,12 +1,12 @@
 /**
- * @file userprofilewindow.h
- * @brief Declaración de la clase UserProfileWindow, ventana de perfil de otro usuario.
+ * @file myprofilewindow.h
+ * @brief Declaración de la clase MyProfileWindow, interfaz del perfil de usuario.
  *
  * Este archivo forma parte del Proyecto de Software 2024/2025
  * del Grado en Ingeniería Informática en la Universidad de Zaragoza.
  *
- * La clase UserProfileWindow proporciona una ventana para visualizar el perfil de otro usuario,
- * mostrando su nombre, ELO, estadísticas y foto de perfil, obtenidos desde el backend.
+ * La clase MyProfileWindow proporciona una ventana donde el usuario puede visualizar
+ * su perfil, incluyendo nombre, ELO, estadísticas, y cambiar su foto de perfil.
  */
 
 #ifndef USERPROFILEWINDOW_H
@@ -20,11 +20,11 @@
 #include "icon.h"
 
 /**
- * @class UserProfileWindow
- * @brief Ventana de perfil de un usuario (no editable).
+ * @class MyProfileWindow
+ * @brief Ventana de perfil de usuario.
  *
- * Permite consultar información de otro usuario, como su ELO, estadísticas generales
- * y foto de perfil. No permite edición, a diferencia del perfil personal.
+ * Representa una interfaz donde el usuario puede consultar su información personal,
+ * estadísticas del juego, y modificar su foto de perfil.
  */
 class UserProfileWindow : public QDialog {
     Q_OBJECT
@@ -32,45 +32,38 @@ class UserProfileWindow : public QDialog {
 public:
     /**
      * @brief Constructor de la ventana de perfil.
-     * @param parent Widget padre, por defecto nullptr.
+     * @param userKey Clave del usuario para autenticación.
+     * @param parent Widget padre (opcional).
      */
-    explicit UserProfileWindow(QWidget *parent = nullptr);
+    explicit UserProfileWindow( QWidget *parent = nullptr, const QString &userKey = "", QString friendId = "" );
 
 private:
     // --- Elementos de la UI ---
-    QVBoxLayout *mainLayout;        ///< Layout principal de la ventana.
-    QLabel *titleLabel;             ///< Título de la ventana.
-    QPushButton *closeButton;       ///< Botón para cerrar la ventana.
-    Icon *fotoPerfil;               ///< Imagen circular del perfil del usuario.
-    QLabel *userLabel;              ///< Muestra el nombre y ELO del usuario.
-    QLabel *statsLabel;             ///< Muestra estadísticas obtenidas del servidor.
-    QPushButton *logOutButton;      ///< Botón de cierre de sesión (oculto o desactivado en este caso).
+    QVBoxLayout   *mainLayout;     ///< Layout principal de la ventana.
+    QLabel        *titleLabel;     ///< Título del perfil.
+    QPushButton   *closeButton;    ///< Botón para cerrar la ventana.
+    Icon          *fotoPerfil;     ///< Imagen de perfil del usuario.
+    QLabel        *userLabel;      ///< Etiqueta que muestra el nombre y ELO.
+    QLabel        *statsLabel;     ///< Estadísticas del usuario.
 
-    // --- Métodos privados para construir la interfaz ---
+    QString m_userKey;             ///< Clave del usuario actual.
+
+    // --- Métodos de configuración de UI ---
     void setupUI();
     QHBoxLayout* createHeaderLayout();
     QVBoxLayout* createProfileLayout();
-    QHBoxLayout* createBottomLayout();
+    QPixmap createCircularImage(const QPixmap &src, int size);
+
+    // --- Backend y lógica ---
+    QString loadAuthToken(const QString &userKey);
 
     /**
-     * @brief Genera una imagen circular a partir de una ruta.
-     * @param imagePath Ruta de la imagen a cargar.
-     * @param size Diámetro deseado de la imagen circular.
-     * @return Pixmap con forma circular.
+     * @brief Carga el nombre, ELO y estadísticas del usuario desde el backend.
+     * @param userKey Clave del usuario.
      */
-    QPixmap createCircularImage(const QString &imagePath, int size);
+    void loadNameAndStats(const QString &userKey);
 
-    // --- Métodos de comunicación con backend ---
-    /**
-     * @brief Carga el token de autenticación para futuras peticiones.
-     * @return Token del usuario autenticado.
-     */
-    QString loadAuthToken();
-
-    /**
-     * @brief Consulta el nombre, ELO y estadísticas del usuario desde el servidor.
-     */
-    void loadNameAndStats();
+    QString friendId;
 };
 
 #endif // USERPROFILEWINDOW_H

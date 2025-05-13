@@ -345,7 +345,7 @@
                      // Se extrae el nombre del usuario y otros datos
                      QString nombre = jsonObj.value("nombre").toString();
                      this->usr = nombre;
-                     int ELO = 0;            // Actualiza si dispones de este dato
+                     int ELO = jsonObj.value("elo").toInt(); // Actualiza si dispones de este dato
                      QString rank = "Rango"; // Actualiza si se recibe el rango
  
                      QString UsrELORank = QString(
