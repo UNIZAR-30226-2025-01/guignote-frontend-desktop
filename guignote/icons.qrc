@@ -26,13 +26,12 @@
         <file>icons/darkenedaudio.png</file>
         <file>icons/gameslist.png</file>
         <file>icons/darkenedgameslist.png</file>
-        <file>icons/yogi.png</file>
-        <file>icons/sword.png</file>
-        <file>icons/sofa.png</file>
-        <file>icons/flip-flops.png</file>
-        <file>icons/chalice.png</file>
-        <file>icons/beer.png</file>
         <file>icons/ranks.png</file>
+        <file>icons/yogi.png</file>
+        <file>icons/sofa.png</file>
+        <file>icons/menu.png</file>
+        <file>icons/flip-flops.png</file>
+        <file>icons/beer.png</file>
         <file>icons/80.png</file>
     </qresource>
 </RCC>

@@ -61,6 +61,7 @@ private:
     QPropertyAnimation *fadeInAnim;  ///< Animación de aparición al entrar a una pestaña.
 
     QWidget        *deckPage;
+    QWidget        *matPage;
 
     // Efectos visuales aplicados a los contenidos
     QGraphicsOpacityEffect *deckEffect; ///< Efecto de opacidad para la vista de barajas.
@@ -76,7 +77,13 @@ private:
     /// ID de la skin que viene equipada desde el servidor
     int m_equippedSkinId{-1};
 
+    /// ID del tapete que viene equipado desde el servidor
+    int m_equippedMatId{-1};
+
+
     void populateDeckPage(const QJsonArray &skins);
+
+    void populateMatPage(const QJsonArray &mats);
 
     /**
      * @brief Configura los elementos de la interfaz de usuario.
@@ -94,6 +101,9 @@ private slots:
     void onUnlockedSkinsReply(QNetworkReply *reply);
 
     void onDeckSelected(int skinId);
+
+    void onUnlockedMatsReply(QNetworkReply *reply);
+    void onMatSelected(int matId);
 };
 
 #endif // INVENTORYWINDOW_H
