@@ -244,7 +244,7 @@
      });
      connect(boton2v2, &ImageButton::clicked, this, [this, userKey]() {
          if (!nameHasLoaded) return;
-         jugarPartida( userKey, token, 4);
+         jugarPartida(userKey, token, 4);
      });
  
       // ------------- BOTON DE RECONEXION -------------
